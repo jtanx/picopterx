@@ -3,6 +3,13 @@
 cmake_minimum_required (VERSION 2.6)
 project (picopter)
 
+#Versioning
+execute_process (COMMAND git rev-parse HEAD OUTPUT_VARIABLE PICOPTER_VERSION)
+execute_process (COMMAND git  show -s --format=%ci HEAD
+				 OUTPUT_STRIP_TRAILING_WHITESPACE
+				 OUTPUT_VARIABLE PICOPTER_DATE
+)
+
 #Find prerequisite packages
 #find_package (OpenCV REQUIRED)
 

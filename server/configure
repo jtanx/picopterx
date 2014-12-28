@@ -6,6 +6,11 @@ function log_note() {
     echo -e "\e[32m$@\e[0m"
 }
 
+if [ -f CMakeCache.txt ]; then
+	log_note "Removing CMake cache files..."
+	rm -rf CMakeCache.txt CMakeFiles
+fi;
+
 if [ "$(uname -o)" = "Msys" ]; then
 	log_note "Generating makefiles for MSYS2..."
 	cmake -G"MSYS Makefiles" -DCMAKE_SYSTEM_PREFIX_PATH:PATH=/mingw32/i686-w64-mingw32 .

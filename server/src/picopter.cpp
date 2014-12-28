@@ -7,8 +7,16 @@
  
  using namespace std;
  
+ /**
+  * @brief A test class.
+  */
  class TESTER {
     public:
+    
+    /**
+     * @brief A test method
+     * IT DOES NOTHING
+     */
     void test() { Log(LOG_WARNING, "HAHA"); }
  };
  
