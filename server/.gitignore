@@ -1,4 +1,5 @@
 bin/
+doc/
 CMakeFiles/
 
 include/config.h
