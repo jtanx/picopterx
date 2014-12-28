@@ -22,7 +22,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/log.h 
 )
 
-#Generate the configure file
+#Generate the config file
 if (UNIX AND NOT CYGWIN)
 	set (USE_SYSLOG 1)
 endif()
