@@ -1,0 +1,15 @@
+#!/bin/sh
+#Simple script to generate the makefiles using CMake
+
+# Green text
+function log_note() {
+    echo -e "\e[32m$@\e[0m"
+}
+
+if [ "$(uname -o)" = "Msys" ]; then
+	log_note "Generating makefiles for MSYS2..."
+	cmake -G"MSYS Makefiles" -DCMAKE_SYSTEM_PREFIX_PATH:PATH=/mingw32/i686-w64-mingw32 .
+else
+	log_note "Generating makefiles..."
+	cmake .
+fi;

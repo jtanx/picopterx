@@ -1,0 +1,9 @@
+bin/
+CMakeFiles/
+
+include/config.h
+
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+install_manifest.txt

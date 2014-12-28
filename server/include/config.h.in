@@ -1,0 +1,11 @@
+/**
+ * @file config.h
+ * @brief System-specific and compile-time specific configuration parameters.
+ */
+ 
+#ifndef _CONFIG_H
+#define _CONFIG_H 
+
+#cmakedefine USE_SYSLOG
+
+#endif // _CONFIG_H
