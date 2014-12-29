@@ -9,8 +9,6 @@
 #include <cstdarg>
 #include <unistd.h>
 
-using namespace std;
-
 static const char * unspecified_funct = "???";
 
 /**
