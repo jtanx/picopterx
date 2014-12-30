@@ -3,6 +3,9 @@
 cmake_minimum_required (VERSION 2.6)
 project (picopter)
 
+#Includes
+include(CheckCSourceCompiles)
+
 #Versioning
 execute_process (COMMAND git rev-parse HEAD OUTPUT_VARIABLE PICOPTER_VERSION)
 execute_process (COMMAND git  show -s --format=%ci HEAD
@@ -16,6 +19,7 @@ execute_process (COMMAND git  show -s --format=%ci HEAD
 #Set src and include folders
 set (PI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set (PI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set (PI_EMULATE ${CMAKE_CURRENT_SOURCE_DIR}/emulation)
 #Set the output folder
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -23,11 +27,27 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set (SOURCE
 	 ${PI_SRC}/log.cpp
 	 ${PI_SRC}/picopter.cpp
+	 ${PI_SRC}/gpio.cpp
 )
 set (HEADERS
 	 ${PI_INCLUDE}/common.h
 	 ${PI_INCLUDE}/log.h 
+	 ${PI_INCLUDE}/gpio.h
+	 ${PI_INCLUDE}/picopter.h
 )
+
+#Check if we're building on the pi
+CHECK_C_SOURCE_COMPILES ("
+	#include <stdio.h>
+	#ifndef __arm__
+	#error Not building on the pi
+	#endif
+	int main(){return 0;}
+" IS_ON_PI)
+
+if (NOT IS_ON_PI)
+	include_directories (${PI_EMULATE})
+endif()
 
 #Generate the config file
 if (UNIX AND NOT CYGWIN)

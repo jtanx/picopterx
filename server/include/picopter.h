@@ -11,5 +11,8 @@
 #include "common.h"
 #include "log.h"
 
+//Modules
+#include "gpio.h"
+
 
 #endif // _PICOPTER_H

@@ -12,5 +12,8 @@
 /* Do we use syslog? */
 #cmakedefine USE_SYSLOG
 
+/* Are we running on the pi? */
+#cmakedefine IS_ON_PI
+
 
 #endif // _CONFIG_H
