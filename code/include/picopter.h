@@ -13,6 +13,7 @@
 
 //Modules
 #include "gpio.h"
+#include "buzzer.h"
 
 
 #endif // _PICOPTER_H
