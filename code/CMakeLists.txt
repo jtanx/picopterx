@@ -17,24 +17,34 @@ execute_process (COMMAND git  show -s --format=%ci HEAD
 #find_package (OpenCV REQUIRED)
 
 #Set src and include folders
-set (PI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set (PI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set (PI_EMULATE ${CMAKE_CURRENT_SOURCE_DIR}/emulation)
+set (PI_SRC ${CMAKE_BINARY_DIR}/src CACHE INTERNAL "PI_SRC")
+set (PI_INCLUDE ${CMAKE_BINARY_DIR}/include)
+set (PI_EMULATE ${CMAKE_BINARY_DIR}/emulation)
+set (PI_DOC ${CMAKE_BINARY_DIR}/doc)
+
 #Set the output folder
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-#Set the included files
-set (SOURCE
-	 ${PI_SRC}/log.cpp
-	 ${PI_SRC}/picopter.cpp
-	 ${PI_SRC}/gpio.cpp
-)
-set (HEADERS
-	 ${PI_INCLUDE}/common.h
-	 ${PI_INCLUDE}/log.h 
-	 ${PI_INCLUDE}/gpio.h
-	 ${PI_INCLUDE}/picopter.h
-)
+#Documentation (if Doxygen is installed)
+set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${PI_DOC})
+find_package (Doxygen)
+find_package (latex)
+if (DOXYGEN_FOUND)
+	if (LATEX_COMPILER)
+	add_custom_target (doc
+		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		COMMAND make -C ${CMAKE_CURRENT_BINARY_DIR}/doc/latex
+		COMMENT "Generating code documentation..." VERBATIM
+	)
+	else(LATEX_COMPILER)
+	add_custom_target (doc
+		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		COMMENT "Generating code documentation..." VERBATIM
+	)
+	endif(LATEX_COMPILER)
+endif(DOXYGEN_FOUND)
 
 #Check if we're building on the pi
 CHECK_C_SOURCE_COMPILES ("
@@ -67,5 +77,8 @@ set (CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_LINK_FLAGS}")
 #Pretty filenames (see log.h)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst src/,,$<)\"'")
 
-#Make the executable
-add_executable(picopter ${HEADERS} ${SOURCE})
+#Add the base module
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/base)
+
+#Add in the server executable
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/server)

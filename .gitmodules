@@ -1,0 +1,6 @@
+[submodule "server/third_party/PiBits"]
+	path = server/third_party/PiBits
+	url = https://github.com/richardghirst/PiBits
+[submodule "server/third_party/XSens"]
+	path = server/third_party/XSens
+	url = https://github.com/jtanx/XSens

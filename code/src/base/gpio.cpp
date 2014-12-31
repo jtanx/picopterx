@@ -1,7 +1,8 @@
 /**
  * @file gpio.cpp
  * @brief GPIO handling code.
- * Uses the sysfs approach to interface with the GPIO pins on the rPi.
+ * Uses wiringPi to control the GPIO pins on the rPi.
+ * PWM (through the GPIO pins) is done through ServoBlaster.
  */
 
 #include "picopter.h"
