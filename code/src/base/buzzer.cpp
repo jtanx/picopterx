@@ -71,14 +71,14 @@ void Buzzer::soundLoop() {
  * If a tone is already being played, then that is stopped and the new tone
  * is played instead.
  * @param duration The length of time to play the sound, in ms
- * @param frequency The frequency of the sound, in Hz (max 5000Hz)
+ * @param frequency The frequency of the sound, in Hz (10-5000Hz).
  * @param volume The loudness of the sound, as a percentage (0 - 100%)
  */
 void Buzzer::play(int duration, int frequency, int volume) {
     m_quiet = true;
     
     std::unique_lock<std::mutex> lock(m_mutex);
-    m_period = 1000000 / picopter::clamp(frequency, 0, 5000);
+    m_period = 1000000 / picopter::clamp(frequency, 10, 5000);
     m_dutyCycle = (m_period * picopter::clamp(volume, 0, 100)) / 200;
     m_count = (1000 * duration) / m_period;
     
