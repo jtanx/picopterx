@@ -2,7 +2,6 @@
  * @file gpio.cpp
  * @brief GPIO handling code.
  * Uses wiringPi to control the GPIO pins on the rPi.
- * PWM (through the GPIO pins) is done through ServoBlaster.
  */
 
 #include "picopter.h"
@@ -22,9 +21,9 @@ void gpio::init() {
     
     if (!g_gpio_initted) {
         wiringPiSetup();
-		pinMode(gpio::MODE_PIN, INPUT);
-		pinMode(gpio::BUZZER_PIN, OUTPUT);
-		
+        pinMode(gpio::MODE_PIN, INPUT);
+        pinMode(gpio::BUZZER_PIN, OUTPUT);
+        
         g_gpio_initted = true;
     }
 }

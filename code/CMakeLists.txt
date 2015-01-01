@@ -7,7 +7,10 @@ project (picopter)
 include(CheckCSourceCompiles)
 
 #Versioning
-execute_process (COMMAND git rev-parse HEAD OUTPUT_VARIABLE PICOPTER_VERSION)
+execute_process (COMMAND git rev-parse HEAD 
+				 OUTPUT_STRIP_TRAILING_WHITESPACE
+				 OUTPUT_VARIABLE PICOPTER_VERSION
+)
 execute_process (COMMAND git  show -s --format=%ci HEAD
 				 OUTPUT_STRIP_TRAILING_WHITESPACE
 				 OUTPUT_VARIABLE PICOPTER_DATE

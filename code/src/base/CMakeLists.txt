@@ -8,6 +8,7 @@ set (SOURCE
 	 ${PI_BASE}/log.cpp
 	 ${PI_BASE}/gpio.cpp
 	 ${PI_BASE}/buzzer.cpp
+	 ${PI_BASE}/flightboard.cpp
 )
 set (HEADERS
 	 ${PI_INCLUDE}/common.h
@@ -15,6 +16,8 @@ set (HEADERS
 	 ${PI_INCLUDE}/gpio.h
 	 ${PI_INCLUDE}/buzzer.h
 	 ${PI_INCLUDE}/picopter.h
+	 ${PI_INCLUDE}/flightboard.h
+	 ${PI_BASE}/flightboard-private.h
 )
 
 #Compile as a static library

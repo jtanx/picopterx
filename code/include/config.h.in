@@ -6,7 +6,7 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H 
 
-#define PICOPTER_VERSION ${PICOPTER_VERSION}
+#define PICOPTER_VERSION "${PICOPTER_VERSION}"
 #define PICOPTER_DATE "${PICOPTER_DATE}"
 
 /* Do we use syslog? */

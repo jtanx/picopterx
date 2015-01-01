@@ -13,7 +13,8 @@
 
 //Modules
 #include "gpio.h"
-#include "buzzer.h" 
+#include "buzzer.h"
+#include "flightboard.h"
 
 namespace picopter {
     template <typename T>

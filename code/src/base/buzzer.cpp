@@ -4,7 +4,7 @@
  * Uses wiringPi and a GPIO pin for driving the buzzer with software based PWM.
  */
 
-#include "picopter.h" 
+#include "picopter.h"
 #include <wiringPi.h>
  
 using picopter::Buzzer;
