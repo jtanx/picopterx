@@ -12,11 +12,14 @@
 using namespace picopter;
 
 static bool g_gpio_initted = false;
+static std::mutex g_mutex;
 
 /**
  * Initialises the GPIO pins, if necessary.
  */
 void gpio::init() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    
     if (!g_gpio_initted) {
         wiringPiSetup();
 		pinMode(gpio::MODE_PIN, INPUT);
@@ -28,6 +31,8 @@ void gpio::init() {
 
 /**
  * Determines if autonomous mode has been enabled by the user.
+ * Assumes that gpio::init has already been called.
+ * Probably not thread-safe.
  * @return true iff the user has enabled the switch for autonomous mode
  */
 bool gpio::isAutoMode() {
@@ -36,6 +41,8 @@ bool gpio::isAutoMode() {
 
 /**
  * Turns the buzzer on or off.
+ * Assumes that gpio::init has already been called.
+ * Probably not thread-safe.
  * @param value Indicates whether the buzzer should be on (true) or off (false).
  */
 void gpio::setBuzzer(bool value) {

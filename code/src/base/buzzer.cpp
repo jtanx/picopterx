@@ -1,15 +1,14 @@
 /**
  * @file buzzer.cpp
  * @brief Buzzer manipulation code.
- * Uses wiringPi to control the GPIO pins on the rPi.
- * PWM (through the GPIO pins) is done through ServoBlaster.
+ * Uses wiringPi and a GPIO pin for driving the buzzer with software based PWM.
  */
 
 #include "picopter.h" 
 #include <wiringPi.h>
  
 using picopter::Buzzer;
-
+using picopter::gpio::setBuzzer;
 using hrc = std::chrono::high_resolution_clock;
  
 /**
@@ -21,9 +20,7 @@ Buzzer::Buzzer()
 , m_stop(false)
 , m_quiet(false)
 {
-    wiringPiSetup();
-    pinMode(BUZZER_PIN, OUTPUT);
-    
+    picopter::gpio::init();
     m_worker = std::thread(&Buzzer::soundLoop, this);
 }
 
@@ -51,18 +48,16 @@ void Buzzer::soundLoop() {
         
         auto start = hrc::now();
         for (int n = 0; m_running && !m_stop && !m_quiet && n < m_count; n++) {
-            digitalWrite(MODE_PIN, HIGH);
+            setBuzzer(HIGH);
             delayMicroseconds(m_dutyCycle);
-            digitalWrite(MODE_PIN, LOW);
+            setBuzzer(LOW);
             delayMicroseconds(m_period - m_dutyCycle);
         }
         
         std::chrono::duration<double> elapsed = hrc::now() - start;
         Log(LOG_INFO, "Play time: %lf", elapsed.count());
         
-        digitalWrite(MODE_PIN, LOW);
         m_running = false;
-        m_signaller.notify_one();
     }
 }
 
