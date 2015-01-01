@@ -10,18 +10,32 @@ namespace picopter {
     class Buzzer {
         public:
             Buzzer();
-            void play(double duration, double frequency, double volume);
+            virtual ~Buzzer();
+            void play(int duration, int frequency, int volume);
             void stop();
         private:
+            /** The GPIO pin of the buzzer (wiringPi numbering) **/
             static const int BUZZER_PIN = 2;
-            static const int SLEEP_PERIOD = 5;
-            std::mutex mutex;
-            std::atomic<bool> running;
-            std::atomic<bool> stopWorker;
-            std::thread worker;
+            /** Internal mutex to interact with the worker thread **/
+            std::mutex m_mutex;
+            /** Condition to signal the worker thread to wake up **/
+            std::condition_variable m_signaller;
+            /** Indicates if the worker thread is currently playing a sound **/
+            std::atomic<bool> m_running;
+            /** Indicates that the thread should quit **/
+            std::atomic<bool> m_stop;
+            /** Indicates that the thread should stop playing any sound **/
+            std::atomic<bool> m_quiet;
+            /** The worker thread **/
+            std::thread m_worker;
+            /** The number of cycles to be played **/
+            int m_count;
+            /** The time of one period (cycle), in microseconds **/
+            int m_period;
+            /** The time per period that is spent ON **/
+            int m_dutyCycle;
             
-            int quantize(int value);
-            void soundLoop(int duration, int period, int dutyCycle);
+            void soundLoop();
     };
 }
 

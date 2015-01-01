@@ -89,6 +89,7 @@ void LogEx(int level, const char * funct, const char * file, int line, ...)
     syslog(level, "%s: %s (%s:%d) - %s", severity, funct, file, line, buffer);
 #else
     fprintf(stderr, "%s: %s (%s:%d) - %s\n", severity, funct, file, line, buffer);
+    fflush(stderr);
 #endif
 }
 
@@ -127,6 +128,7 @@ void FatalEx(const char * funct, const char * file, int line, ...)
     syslog(LOG_CRIT, "FATAL: %s (%s:%d) - %s", funct, file, line, buffer);
 #else
     fprintf(stderr, "FATAL: %s (%s:%d) - %s\n", funct, file, line, buffer);
+    fflush(stderr);
 #endif
 
     exit(EXIT_FAILURE);

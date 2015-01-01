@@ -19,8 +19,10 @@ class TESTER {
 };
  
 int main(int argc, char *argv[]) {
-    Log(LOG_NOTICE, "TEST");
-    TESTER t;
-    t.test();
+    Log(LOG_NOTICE, "BUZZER TEST STARTED");
+    picopter::Buzzer b;
+    
+    b.play(1000, 200, 80);
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     return 0;
 }
