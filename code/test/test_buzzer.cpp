@@ -8,7 +8,7 @@ using picopter::Buzzer;
 
 TEST(BuzzerTest, TestNegativeDuration) {
     Buzzer b;
-    b.play(-1, 100, 100);
+    b.play(-100, 100, 100);
     sleep_for(milliseconds(600));
 }
 

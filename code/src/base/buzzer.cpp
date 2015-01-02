@@ -82,7 +82,7 @@ void Buzzer::play(int duration, int frequency, int volume) {
     std::unique_lock<std::mutex> lock(g_buzzer_mutex);
     m_period = 1000000 / picopter::clamp(frequency, 10, 5000);
     m_dutyCycle = (m_period * picopter::clamp(volume, 0, 100)) / 200;
-    m_count = (1000 * duration) / m_period;
+    m_count = (1000 * std::max(duration, 0)) / m_period;
     
     m_quiet = false;
     m_running = true;
