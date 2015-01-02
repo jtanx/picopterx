@@ -25,7 +25,9 @@ FlightBoard::FlightBoard()
     if (m_fp == NULL) {
         throw std::invalid_argument("Could not connect to servoblaster");
     }
+    m_activated = true;
     actuate();
+    m_activated = false;
 }
 
 /**
