@@ -15,4 +15,4 @@ set (HEADERS
 add_executable (picopter ${HEADERS} ${SOURCE})
 
 #Link it with the base module
-target_link_libraries (picopter PUBLIC picopter_base)
+target_link_libraries (picopter LINK_PUBLIC picopter_base)

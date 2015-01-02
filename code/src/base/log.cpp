@@ -85,7 +85,7 @@ void LogEx(int level, const char * funct, const char * file, int line, ...)
             break;
     }
 
-#if USE_SYSLOG
+#ifdef USE_SYSLOG
     syslog(level, "%s: %s (%s:%d) - %s", severity, funct, file, line, buffer);
 #else
     fprintf(stderr, "%s: %s (%s:%d) - %s\n", severity, funct, file, line, buffer);
@@ -124,7 +124,7 @@ void FatalEx(const char * funct, const char * file, int line, ...)
     if (funct == NULL)
         funct = unspecified_funct;
 
-#if USE_SYSLOG
+#ifdef USE_SYSLOG
     syslog(LOG_CRIT, "FATAL: %s (%s:%d) - %s", funct, file, line, buffer);
 #else
     fprintf(stderr, "FATAL: %s (%s:%d) - %s\n", funct, file, line, buffer);
