@@ -2,10 +2,12 @@ bin/
 lib/
 doc/
 CMakeFiles/
+Testing/
 
 include/config.h
 
 CMakeCache.txt
+CTestTestfile.cmake
 Makefile
 cmake_install.cmake
 install_manifest.txt
