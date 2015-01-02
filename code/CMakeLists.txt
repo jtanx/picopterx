@@ -83,10 +83,12 @@ set (CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_LINK_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst src/,,$<)\"'")
 
 #Setup the testing framework (gtest)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
-enable_testing()
-include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+if (test)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
+	enable_testing()
+	include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+endif()
 
 #Add the base module
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/base)
