@@ -15,7 +15,7 @@
 #define Log(level, ...) LogEx(level, __PRETTY_FUNCTION__, __FILENAME__, __LINE__, __VA_ARGS__)
 #define Fatal(...) FatalEx(__PRETTY_FUNCTION__, __FILENAME__, __LINE__, __VA_ARGS__)
 
-#if USE_SYSLOG
+#ifdef USE_SYSLOG
 #include <syslog.h>
 #else
 //Replicate the syslog log levels
