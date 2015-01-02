@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #Simple script to generate the makefiles using CMake
 
 # Green text
