@@ -10,6 +10,13 @@
 using picopter::Buzzer;
 using picopter::gpio::setBuzzer;
 using hrc = std::chrono::high_resolution_clock;
+
+/* 
+ * We use a single mutex for all buzzer instances because
+ * only one of them may be playing a sound through the buzzer at any
+ * one time.
+ */
+std::mutex Buzzer::g_buzzer_mutex;
  
 /**
  * Creates a new Buzzer instance.
@@ -40,7 +47,7 @@ Buzzer::~Buzzer() {
  * Blocks until it is signalled to either exit or play a sound.
  */
 void Buzzer::soundLoop() {
-    std::unique_lock<std::mutex> lock(m_mutex);
+    std::unique_lock<std::mutex> lock(g_buzzer_mutex);
     
     while (!m_stop) {
         m_signaller.wait(lock, [this]{return m_running || m_stop;});
@@ -72,7 +79,7 @@ void Buzzer::soundLoop() {
 void Buzzer::play(int duration, int frequency, int volume) {
     m_quiet = true;
     
-    std::unique_lock<std::mutex> lock(m_mutex);
+    std::unique_lock<std::mutex> lock(g_buzzer_mutex);
     m_period = 1000000 / picopter::clamp(frequency, 10, 5000);
     m_dutyCycle = (m_period * picopter::clamp(volume, 0, 100)) / 200;
     m_count = (1000 * duration) / m_period;

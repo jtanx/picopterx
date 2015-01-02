@@ -23,6 +23,8 @@ int main(int argc, char *argv[]) {
     picopter::Buzzer b;
     
     b.play(1000, 200, 80);
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    b.play(1000, 100, 80);
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     return 0;
 }

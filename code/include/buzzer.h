@@ -14,10 +14,8 @@ namespace picopter {
             void play(int duration, int frequency, int volume);
             void stop();
         private:
-            /** The GPIO pin of the buzzer (wiringPi numbering) **/
-            static const int BUZZER_PIN = 2;
             /** Internal mutex to interact with the worker thread **/
-            std::mutex m_mutex;
+            static std::mutex g_buzzer_mutex;
             /** Condition to signal the worker thread to wake up **/
             std::condition_variable m_signaller;
             /** Indicates if the worker thread is currently playing a sound **/
