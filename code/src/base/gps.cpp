@@ -71,8 +71,14 @@ void GPS::gpsLoop() {
                 d.err.lat = data->fix.epy;
                 d.fix.lon = data->fix.longitude;
                 d.err.lon = data->fix.epx;
-                d.timestamp = data->time;
+                d.timestamp = data->fix.time;
                 m_data = d;
+                
+                std::cout << d.fix.lat << std::endl;
+                std::cout << d.fix.lon << std::endl;
+                std::cout << d.err.lat << std::endl;
+                std::cout << d.err.lon << std::endl;
+                std::cout << d.timestamp << std::endl;
                 
                 tp = steady_clock::now();
             }

@@ -3,6 +3,14 @@
 cmake_minimum_required (VERSION 2.6)
 project (picopter)
 
+#Text colours
+string (ASCII 27 Esc)
+set (ColourReset "${Esc}[m")
+set (ColourBold  "${Esc}[1m")
+set (Red         "${Esc}[31m")
+set(Green       "${Esc}[32m")
+set(Yellow      "${Esc}[33m")
+
 #Includes
 include (CheckCSourceCompiles)
 include (FindPkgConfig)
@@ -20,6 +28,12 @@ execute_process (COMMAND git  show -s --format=%ci HEAD
 #Find prerequisite packages
 #find_package (OpenCV REQUIRED)
 
+#Check for gpsd
+pkg_check_modules (LIBGPS libgps)
+include_directories (${LIBGPS_INCLUDE_DIRS})
+link_directories (${LIBGPS_LIBRARY_DIRS})
+set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
+
 #Set src and include folders
 set (PI_SRC ${CMAKE_BINARY_DIR}/src CACHE INTERNAL "PI_SRC")
 set (PI_INCLUDE ${CMAKE_BINARY_DIR}/include)
@@ -33,8 +47,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 #Documentation (if Doxygen is installed)
 set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${PI_DOC})
-find_package (Doxygen)
-find_package (latex)
+find_package (Doxygen QUIET)
+find_package (latex QUIET)
 if (DOXYGEN_FOUND)
 	if (LATEX_COMPILER)
 	add_custom_target (doc
@@ -63,6 +77,14 @@ CHECK_C_SOURCE_COMPILES ("
 
 if (NOT IS_ON_PI)
 	include_directories (${PI_EMULATE})
+	message (WARNING "${Yellow}Using the emulation files - ${ColourBold}remember to check on the RPi!${ColourReset}")
+elseif (NOT LIBGPS_FOUND)
+	message (FATAL_ERROR "${Red}Building on the RPi without gpsd${ColourReset}")
+endif()
+
+if (NOT LIBGPS_FOUND)
+	message (WARNING "${Yellow}Emulating libgps - beware bogus values!${ColourReset}")
+	include_directories(${PI_EMULATE}/gps-emu)
 endif()
 
 #Generate the config file

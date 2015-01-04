@@ -1,10 +1,5 @@
 #Base module (common components)
 
-#Check for gpsd
-pkg_check_modules (LIBGPS libgps)
-include_directories (${LIBGPS_INCLUDE_DIRS})
-link_directories (${LIBGPS_LIBRARY_DIRS})
-
 #Set the source path
 set (PI_BASE ${PI_SRC}/base)
 

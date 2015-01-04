@@ -6,6 +6,12 @@
 #ifndef _LIBGPSMM_STUB_H
 #define _LIBGPSMM_STUB_H
 
+#include <config.h>
+
+#ifdef IS_REAL_LIBGPS
+#error The order of directory inclusion is broken. Do not include the folder containing this file when you have libgps installed.
+#endif
+
 #include <thread>
 #include <chrono>
 #include <cstdlib>
@@ -17,8 +23,8 @@
 #define LATLON_SET 1
 
 struct gps_data_t {
-    double time;
     struct fix {
+        double time;
         double latitude;
         double epy;
         double longitude;

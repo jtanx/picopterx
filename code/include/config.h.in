@@ -15,5 +15,7 @@
 /* Are we running on the pi? */
 #cmakedefine IS_ON_PI
 
+/* Are we using the real libgps? */
+#cmakedefine IS_REAL_LIBGPS
 
 #endif // _CONFIG_H
