@@ -9,6 +9,7 @@ written in C++, conforming to the C++11 standard.
 * make
 * gcc/g++ >= 4.7 (4.8 or later is recommended)
 * gpsd, libgps-dev (hexacopter only)
+
 ### Optionals
 * Doxygen (for generating source code documentation)
 * LaTeX (for generating source code documentation)
@@ -22,8 +23,10 @@ Ensure you have git installed:
 Now install the compiler:
 * At the time of writing, Debian Wheezy bundles gcc 4.7. If you want to install a later version, [see this guide](http://somewideopenspace.wordpress.com/2014/02/28/gcc-4-8-on-raspberry-pi-wheezy/).
 
-    sudo apt-get install make cmake gcc g++
-	
+~~~~~
+sudo apt-get install make cmake gcc g++
+~~~~~
+
 If you are building on the hexacopter (RPi),
 
     sudo apt-get install gpsd libgps-dev python-gps gpsd-clients
