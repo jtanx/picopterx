@@ -30,10 +30,11 @@ int main(int argc, char *argv[]) {
     b.play(1000, 1200, 100);
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     
-    while(true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    if (argc > 1 && !strcmp(argv[1], "--loop")) {
+        while(true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
     }
-    
     
     std::cout << gps.timeSinceLastFix();
     return 0;

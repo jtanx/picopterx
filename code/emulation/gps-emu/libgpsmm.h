@@ -35,7 +35,7 @@ struct gps_data_t {
 
 class gpsmm {
     public:
-        gpsmm(const char *host, const char *port) : m_dat{0,{},LATLON_SET} {
+        gpsmm(const char *host, const char *port) : m_dat{{},LATLON_SET} {
             srand(time(NULL));
         };
         virtual ~gpsmm() {};
