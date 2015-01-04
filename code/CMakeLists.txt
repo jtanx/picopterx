@@ -4,7 +4,8 @@ cmake_minimum_required (VERSION 2.6)
 project (picopter)
 
 #Includes
-include(CheckCSourceCompiles)
+include (CheckCSourceCompiles)
+include (FindPkgConfig)
 
 #Versioning
 execute_process (COMMAND git rev-parse HEAD 

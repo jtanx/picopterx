@@ -110,7 +110,7 @@ void FlightBoard::setRudder(int speed) {
  * @param pos The gimbal angle, in degrees (0 to 90)
  */
 void FlightBoard::setGimbal(int pos) {
-    m_currentData.gimbal = picopter::clamp(pos, -100, 100);
+    m_currentData.gimbal = picopter::clamp(pos, 0, 90);
     setChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
 }
 
