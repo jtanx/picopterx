@@ -10,7 +10,7 @@
 using namespace picopter;
 using std::chrono::duration_cast;
 using std::chrono::seconds;
-typedef std::chrono::steady_clock steady_clock;
+using steady_clock = std::chrono::steady_clock;
 
 /**
  * Constructor. Establishes a connection to gpsd, assuming it is running
@@ -27,12 +27,6 @@ GPS::GPS()
         throw std::invalid_argument("gpsd is not running");
     }
     m_worker = std::thread(&GPS::gpsLoop, this);
-    
-    std::cout << m_data.load().fix.lat << std::endl;
-    std::cout << m_data.load().fix.lon << std::endl;
-    std::cout << m_data.load().err.lat << std::endl;
-    std::cout << m_data.load().err.lon << std::endl;
-    std::cout << m_data.load().timestamp << std::endl;
     
     Log(LOG_INFO, "IS GPSData LOCK FREE? %d", m_data.is_lock_free());
     Log(LOG_INFO, "IS m_last_fix LOCK FREE? %d", m_last_fix.is_lock_free());
@@ -74,11 +68,10 @@ void GPS::gpsLoop() {
                 d.timestamp = data->fix.time;
                 m_data = d;
                 
-                std::cout << d.fix.lat << std::endl;
-                std::cout << d.fix.lon << std::endl;
-                std::cout << d.err.lat << std::endl;
-                std::cout << d.err.lon << std::endl;
-                std::cout << d.timestamp << std::endl;
+                
+                time_t t = (time_t) d.timestamp;
+                Log(LOG_INFO, "Current fix: (%.6f +/- %.1fm, %.6f +/- %.1fm) at %s",
+                    d.fix.lat, d.err.lat, d.fix.lon, d.err.lon, ctime(&t));
                 
                 tp = steady_clock::now();
             }

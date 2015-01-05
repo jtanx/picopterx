@@ -12,20 +12,6 @@
 static const char * unspecified_funct = "???";
 
 /**
- * Returns the function name and class from a __PRETTY_FUNCTION__ string.
- * @param pfn The result from __PRETTY_FUNCTION__
- */
-static inline const std::string prettyName(const std::string &pfn)
-{
-    size_t start = pfn.find(" "), end = pfn.find("(");
-    if (start == std::string::npos || end == std::string::npos) {
-        return pfn;
-    }
-    return pfn.substr(start + 1, end - start - 1);
-}
-
-
-/**
  * Print a message to stderr and log it via syslog. 
  * The message must be less than BUFSIZ characters long, or it will be truncated.
  * @param level Specify how severe the message is.
@@ -59,10 +45,22 @@ void LogEx(int level, const char * funct, const char * file, int line, ...)
     vsnprintf(buffer, BUFSIZ, fmt, va);
     va_end(va);
 
+    std::string fn;
     if (funct == NULL)
-        funct = unspecified_funct;
-    else
-        funct = prettyName(funct).c_str();
+        fn = unspecified_funct;
+    else { //Get the function/method name only
+        const char *p1 = strchr(funct, ' '), *p2 = strchr(funct, '(');
+        if (p2) {
+            if (p1) { //Got space; must be function/method
+                fn = std::string(p1+1, p2-p1-1);
+            } else { //No space; must be ctor
+                fn = std::string(funct, p2-funct);
+            }
+        } else {
+            fn = unspecified_funct;
+            std::cout << funct << std::endl;
+        }
+    }
 
     // Make a human readable severity string
     const char *severity;
@@ -86,9 +84,9 @@ void LogEx(int level, const char * funct, const char * file, int line, ...)
     }
 
 #ifdef USE_SYSLOG
-    syslog(level, "%s: %s (%s:%d) - %s", severity, funct, file, line, buffer);
+    syslog(level, "%s: %s (%s:%d) - %s", severity, fn.c_str(), file, line, buffer);
 #else
-    fprintf(stderr, "%s: %s (%s:%d) - %s\n", severity, funct, file, line, buffer);
+    fprintf(stderr, "%s: %s (%s:%d) - %s\n", severity, fn.c_str(), file, line, buffer);
     fflush(stderr);
 #endif
 }

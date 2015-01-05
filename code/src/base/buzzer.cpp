@@ -51,19 +51,20 @@ void Buzzer::soundLoop() {
     
     while (!m_stop) {
         m_signaller.wait(lock, [this]{return m_running || m_stop;});
-        Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
-        
-        auto start = hrc::now();
-        for (int n = 0; m_running && !m_stop && !m_quiet && n < m_count; n++) {
-            setBuzzer(HIGH);
-            delayMicroseconds(m_dutyCycle);
-            setBuzzer(LOW);
-            delayMicroseconds(m_period - m_dutyCycle);
+        if (!m_stop) {
+            Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
+            
+            auto start = hrc::now();
+            for (int n = 0; m_running && !m_stop && !m_quiet && n < m_count; n++) {
+                setBuzzer(HIGH);
+                delayMicroseconds(m_dutyCycle);
+                setBuzzer(LOW);
+                delayMicroseconds(m_period - m_dutyCycle);
+            }
+            
+            std::chrono::duration<double> elapsed = hrc::now() - start;
+            Log(LOG_INFO, "Play time: %lf", elapsed.count());
         }
-        
-        std::chrono::duration<double> elapsed = hrc::now() - start;
-        Log(LOG_INFO, "Play time: %lf", elapsed.count());
-        
         m_running = false;
     }
 }
