@@ -8,7 +8,7 @@ written in C++, conforming to the C++11 standard.
 * cmake >= 2.6 (version 3 is recommended)
 * make
 * gcc/g++ >= 4.7 (4.8 or later is recommended)
-* gpsd, libgps-dev (hexacopter only)
+* gpsd, libgps-dev (hexacopter only, or otherwise *nix with a GPS/`gpsfake`)
 
 ### Optionals
 * Doxygen (for generating source code documentation)
@@ -38,11 +38,8 @@ If you want to build the documentation (not recommended for the RPi; installatio
 ## Building
 
 ~~~~~
-git clone https://github.com/jtanx/picopterx
-cd picopterx
-git submodule init
-git submodule update
-cd code
+git clone --recursive https://github.com/jtanx/picopterx
+cd picopterx/code
 ./configure
 make
 ~~~~~ 
@@ -50,20 +47,32 @@ make
 If you want to make the test suite too, then do this instead:
 
 ~~~~~~
-git clone https://github.com/jtanx/picopterx
-cd picopterx
-git submodule init
-git submodule update
-cd code
+git clone --recursive https://github.com/jtanx/picopterx
+cd picopterx/code
 ./configure -Dtest=ON
 make
 ~~~~~
 
-To make the source code documentation:
+To make the source code documentation (CMake version 3 or greater only):
 
 ~~~~~~
 make doc
 ~~~~~~
 
-If you have CMake version 3 or greater and you have Doxygen and LaTeX installed,
-the output will be in `doc/latex/refman.pdf`.
+Otherwise (assuming you have Doxygen and LaTeX installed):
+
+~~~~~
+cd picopterx
+doxygen
+cd doc/latex
+make
+~~~~~
+
+The documentation is located at `doc/latex/refman.pdf`.
+
+
+To run the test suite:
+
+~~~~~
+make test
+~~~~~
