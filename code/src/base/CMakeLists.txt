@@ -30,3 +30,4 @@ target_link_libraries(picopter_base LINK_PUBLIC atomic)
 
 #Link to gpsd, if present
 target_link_libraries(picopter_base LINK_PRIVATE ${LIBGPS_LIBRARIES})
+target_link_libraries(picopter_base LINK_PRIVATE ${XSENS_LIBRARIES})

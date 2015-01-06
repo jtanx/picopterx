@@ -14,6 +14,7 @@ set(Yellow      "${Esc}[33m")
 #Includes
 include (CheckCSourceCompiles)
 include (FindPkgConfig)
+include (ExternalProject)
 
 #Versioning
 execute_process (COMMAND git rev-parse HEAD 
@@ -25,15 +26,6 @@ execute_process (COMMAND git  show -s --format=%ci HEAD
 				 OUTPUT_VARIABLE PICOPTER_DATE
 )
 
-#Find prerequisite packages
-#find_package (OpenCV REQUIRED)
-
-#Check for gpsd
-pkg_check_modules (LIBGPS libgps)
-include_directories (${LIBGPS_INCLUDE_DIRS})
-link_directories (${LIBGPS_LIBRARY_DIRS})
-set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
-
 #Set src and include folders
 set (PI_SRC ${CMAKE_BINARY_DIR}/src CACHE INTERNAL "PI_SRC")
 set (PI_INCLUDE ${CMAKE_BINARY_DIR}/include)
@@ -44,6 +36,30 @@ set (PI_DOC ${CMAKE_BINARY_DIR}/doc)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+#Find prerequisite packages
+#find_package (OpenCV REQUIRED)
+
+#Check for gpsd
+pkg_check_modules (LIBGPS libgps)
+include_directories (${LIBGPS_INCLUDE_DIRS})
+link_directories (${LIBGPS_LIBRARY_DIRS})
+set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
+
+#Set XSens stuff
+ExternalProject_Add (XSENS
+	PREFIX ${CMAKE_BINARY_DIR}/third_party/XSens
+	SOURCE_DIR ${CMAKE_BINARY_DIR}/third_party/XSens
+	CONFIGURE_COMMAND ""
+	BUILD_COMMAND make static
+	INSTALL_COMMAND ""
+	BUILD_IN_SOURCE 1
+)
+ExternalProject_Get_Property (XSENS SOURCE_DIR)
+ExternalProject_Get_Property (XSENS BINARY_DIR)
+include_directories (${SOURCE_DIR})
+link_directories (${BINARY_DIR})
+set (XSENS_LIBRARIES cmt CACHE INTERNAL "XSENS_LIBRARIES")
 
 #Documentation (if Doxygen is installed)
 set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${PI_DOC})
