@@ -12,6 +12,16 @@
 static const char * unspecified_funct = "???";
 
 /**
+ * Initialises the logger. Should be called at the start of a program.
+ */
+void LogInit()
+{
+#ifdef USE_SYSLOG
+    openlog("picopter", LOG_PID | LOG_PERROR, LOG_USER);
+#endif
+}
+
+/**
  * Print a message to stderr and log it via syslog. 
  * The message must be less than BUFSIZ characters long, or it will be truncated.
  * @param level Specify how severe the message is.

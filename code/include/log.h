@@ -7,6 +7,8 @@
 #ifndef _LOG_H
 #define _LOG_H
 
+#include "config.h"
+
 /* To get around a 'pedantic' C99 rule that you must have at least 1 
    variadic arg, combine fmt into that. Note the use of __FILENAME__ instead
    of __FILE__. This is custom defined by the makefile (see CMakeLists.txt),
@@ -23,6 +25,7 @@
 enum {LOG_ERR=0, LOG_WARNING=1, LOG_NOTICE=2, LOG_INFO=3, LOG_DEBUG=4};
 #endif
 
+extern void LogInit();
 extern void LogEx(int level, const char * funct, const char * file, int line, ...);
 extern void FatalEx(const char * funct, const char * file, int line, ...);  
 

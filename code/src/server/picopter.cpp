@@ -19,6 +19,7 @@ class TESTER {
 };
  
 int main(int argc, char *argv[]) {
+    LogInit();
     Log(LOG_NOTICE, "BUZZER TEST STARTED");
     picopter::Buzzer b;
     picopter::GPS gps;

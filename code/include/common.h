@@ -6,6 +6,8 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include "config.h"
+
 #include <iostream>
 #include <string>
 
