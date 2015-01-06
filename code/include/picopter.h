@@ -16,6 +16,7 @@
 #include "buzzer.h"
 #include "flightboard.h"
 #include "gps_feed.h"
+#include "imu_feed.h"
 
 namespace picopter {
     template <typename T>
