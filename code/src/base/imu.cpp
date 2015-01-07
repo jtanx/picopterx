@@ -12,6 +12,11 @@ using picopter::IMUData;
 
 const char *IMU::IMU_DEVICE = "/dev/ttyUSB0";
 
+/**
+ * Constructor. Uses the XSens library to establish a connection to the IMU.
+ * Once established, starts the worker thread to receive data from the IMU.
+ * @throws std::invalid_argument if IMU intialisation fails (e.g. disconnected)
+ */
 IMU::IMU()
 : m_data{}
 , m_quit(false)
@@ -26,7 +31,7 @@ IMU::IMU()
     CmtDeviceMode mode(CMT_OUTPUTMODE_ORIENT, 
                        CMT_OUTPUTSETTINGS_TIMESTAMP_SAMPLECNT | 
                        CMT_OUTPUTSETTINGS_ORIENTMODE_EULER, 
-                       10);
+                       10 /* Sampling frequency */);
     if(m_device->setDeviceMode(mode, false, CMT_DID_BROADCAST)  != XRV_OK) {
         throw std::invalid_argument("Could not set the IMU device mode");
     } else if (m_device->gotoMeasurement() != XRV_OK) {
@@ -36,6 +41,9 @@ IMU::IMU()
     m_worker = std::thread(&IMU::imuLoop, this);
 }
 
+/**
+ * Destructor. Stops the worker thread and closes the connection to the IMU.
+ */
 IMU::~IMU() {
     m_quit = true;
     m_worker.join();
@@ -43,19 +51,27 @@ IMU::~IMU() {
     delete m_device;
 }
 
+/**
+ * Get the latest IMU data, if available.
+ * Unavailable values are indicated with NaN.
+ */
 void IMU::getLatest(IMUData *d) {
     std::lock_guard<std::mutex> lock(m_mutex);
     *d = m_data;
 }
 
+/**
+ * Worker thread.
+ * Receives data from the IMU and updates the latest information as necessary.
+ */
 void IMU::imuLoop() {
-    Packet *msg = new Packet(1, 0);
+    Packet msg(1, 0); // 1 sensor, and not the XBus master (whatever that is).
     
     while (!m_quit) {
-        if (m_device->waitForDataMessage(msg) != XRV_OK) {
+        if (m_device->waitForDataMessage(&msg) != XRV_OK) {
             Log(LOG_WARNING, "Could not get IMU data");
         } else {
-            CmtEuler angles = msg->getOriEuler();
+            CmtEuler angles = msg.getOriEuler();
             std::lock_guard<std::mutex> lock(m_mutex);
             
             m_data.pitch = angles.m_pitch;
@@ -65,6 +81,4 @@ void IMU::imuLoop() {
                 m_data.pitch, m_data.roll, m_data.yaw);
         }
     }
-    
-    delete msg;
 }

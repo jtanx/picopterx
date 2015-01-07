@@ -14,11 +14,11 @@ namespace picopter {
      * Contains a unit of information from the IMU.
      */
     typedef struct IMUData {
-        /** Roll of the IMU speed, -pi to pi **/
+        /** Roll of the IMU, -pi to pi **/
         double roll = NAN;
-        /** Elevator speed, -pi to pi **/
+        /** Pitch of the IMU, -pi to pi **/
         double pitch = NAN;
-        /** Rudder speed, -pi to pi **/
+        /** Yaw of the IMU, -pi to pi **/
         double yaw = NAN;
     } IMUData;
 
@@ -32,7 +32,9 @@ namespace picopter {
             void getLatest(IMUData *d);
             
         private:
+            /** Path to the IMU device; e.g. /dev/ttyUSB0 **/
             static const char *IMU_DEVICE;
+            /** Read timeout from the IMU in ms **/
             static const int IMU_TIMEOUT = 500;
             IMUData m_data;
             
