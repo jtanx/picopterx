@@ -3,8 +3,8 @@
  * @brief GPS interaction code.
  */
 
-#ifndef _GPS_H
-#define _GPS_H
+#ifndef _PICOPTERX_GPS_H
+#define _PICOPTERX_GPS_H
 
 #include <cmath>
 
@@ -61,4 +61,4 @@ namespace picopter {
     };
 }
 
-#endif //_GPS_H
+#endif // _PICOPTERX_GPS_H

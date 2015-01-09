@@ -3,8 +3,8 @@
  * @brief System-specific and compile-time specific configuration parameters.
  */
  
-#ifndef _CONFIG_H
-#define _CONFIG_H 
+#ifndef _PICOPTERX_CONFIG_H
+#define _PICOPTERX_CONFIG_H
 
 #define PICOPTER_VERSION "${PICOPTER_VERSION}"
 #define PICOPTER_DATE "${PICOPTER_DATE}"
@@ -18,4 +18,4 @@
 /* Are we using the real libgps? */
 #cmakedefine IS_REAL_LIBGPS
 
-#endif // _CONFIG_H
+#endif // _PICOPTERX_CONFIG_H

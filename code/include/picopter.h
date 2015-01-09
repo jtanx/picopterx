@@ -3,13 +3,14 @@
  * @brief The main include file
  */
 
-#ifndef _PICOPTER_H
-#define _PICOPTER_H
+#ifndef _PICOPTERX_PICOPTER_H
+#define _PICOPTERX_PICOPTER_H
 
 //Base includes
 #include "config.h"
 #include "common.h"
 #include "log.h"
+#include "opts.h"
 
 //Modules
 #include "gpio.h"
@@ -26,4 +27,4 @@ namespace picopter {
 }
 
 
-#endif // _PICOPTER_H
+#endif // _PICOPTERX_PICOPTER_H

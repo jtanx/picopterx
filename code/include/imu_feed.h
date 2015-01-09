@@ -3,8 +3,8 @@
  * @brief Defines the IMU class.
  */
 
-#ifndef _IMU_H
-#define _IMU_H
+#ifndef _PICOPTERX_IMU_H
+#define _PICOPTERX_IMU_H
 
 //Forward declaration of Cmt3 from XSens
 namespace xsens {class Cmt3;}
@@ -48,4 +48,4 @@ namespace picopter {
     };
 }
 
-#endif //_IMU_H
+#endif // _PICOPTERX_IMU_H

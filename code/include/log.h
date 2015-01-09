@@ -4,8 +4,8 @@
  *        program after a fatal error
  */
 
-#ifndef _LOG_H
-#define _LOG_H
+#ifndef _PICOPTERX_LOG_H
+#define _PICOPTERX_LOG_H
 
 #include "config.h"
 
@@ -29,4 +29,4 @@ extern void LogInit();
 extern void LogEx(int level, const char * funct, const char * file, int line, ...);
 extern void FatalEx(const char * funct, const char * file, int line, ...);  
 
-#endif //_LOG_H
+#endif // _PICOPTERX_LOG_H

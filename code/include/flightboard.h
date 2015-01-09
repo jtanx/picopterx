@@ -3,8 +3,8 @@
  * @brief Defines the FlightBoard class.
  */
 
-#ifndef _FLIGHTBOARD_H
-#define _FLIGHTBOARD_H
+#ifndef _PICOPTERX_FLIGHTBOARD_H
+#define _PICOPTERX_FLIGHTBOARD_H
 
 namespace picopter {
     /**
@@ -51,4 +51,4 @@ namespace picopter {
     };
 }
 
-#endif //_FLIGHTBOARD_H
+#endif // _PICOPTERX_FLIGHTBOARD_H

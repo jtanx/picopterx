@@ -3,8 +3,8 @@
  * @brief Commonly included headers
  */
 
-#ifndef _COMMON_H
-#define _COMMON_H
+#ifndef _PICOPTERX_COMMON_H
+#define _PICOPTERX_COMMON_H
 
 #include "config.h"
 
@@ -21,4 +21,4 @@
 #include <cstdlib>
 #include <cstring>
 
-#endif // _COMMON_H
+#endif // _PICOPTERX_COMMON_H

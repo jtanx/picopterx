@@ -3,8 +3,8 @@
  * @brief Methods to control the buzzer
  */
 
-#ifndef _BUZZER_H
-#define _BUZZER_H
+#ifndef _PICOPTERX_BUZZER_H
+#define _PICOPTERX_BUZZER_H
 
 namespace picopter {
     class Buzzer {
@@ -37,4 +37,4 @@ namespace picopter {
     };
 }
 
-#endif // _BUZZER_H
+#endif // _PICOPTERX_BUZZER_H

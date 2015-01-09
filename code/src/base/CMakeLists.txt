@@ -6,6 +6,7 @@ set (PI_BASE ${PI_SRC}/base)
 #Set the included files
 set (SOURCE
 	 ${PI_BASE}/log.cpp
+	 ${PI_BASE}/opts.cpp
 	 ${PI_BASE}/gpio.cpp
 	 ${PI_BASE}/buzzer.cpp
 	 ${PI_BASE}/flightboard.cpp
@@ -15,6 +16,7 @@ set (SOURCE
 set (HEADERS
 	 ${PI_INCLUDE}/common.h
 	 ${PI_INCLUDE}/log.h 
+	 ${PI_INCLUDE}/opts.h
 	 ${PI_INCLUDE}/gpio.h
 	 ${PI_INCLUDE}/buzzer.h
 	 ${PI_INCLUDE}/picopter.h

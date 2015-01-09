@@ -3,8 +3,8 @@
  * @brief gpio class defines
  */
 
-#ifndef _GPIO_H
-#define _GPIO_H
+#ifndef _PICOPTERX_GPIO_H
+#define _PICOPTERX_GPIO_H
 
 namespace picopter {
     /**
@@ -23,4 +23,4 @@ namespace picopter {
     }
 }
 
-#endif //_GPIO_H
+#endif // _PICOPTERX_GPIO_H
