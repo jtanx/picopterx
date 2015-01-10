@@ -7,6 +7,12 @@
 
 using picopter::Options;
 
-Options::Options() {
+Options::Options(const char *file) {
 
 }
+
+/**
+ * Constructs an options class with no initial file.
+ * This is the same as calling Options::Options(NULL).
+ */
+Options::Options() : Options(NULL) {}
