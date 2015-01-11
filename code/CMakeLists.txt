@@ -1,6 +1,6 @@
 #picopter cmake configuration file
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.8)
 project (picopter)
 
 #Text colours
@@ -8,8 +8,8 @@ string (ASCII 27 Esc)
 set (ColourReset "${Esc}[m")
 set (ColourBold  "${Esc}[1m")
 set (Red         "${Esc}[31m")
-set(Green       "${Esc}[32m")
-set(Yellow      "${Esc}[33m")
+set (Green       "${Esc}[32m")
+set (Yellow      "${Esc}[33m")
 
 #Includes
 include (CheckCSourceCompiles)
@@ -27,15 +27,15 @@ execute_process (COMMAND git  show -s --format=%ci HEAD
 )
 
 #Set src and include folders
-set (PI_SRC ${CMAKE_BINARY_DIR}/src CACHE INTERNAL "PI_SRC")
-set (PI_INCLUDE ${CMAKE_BINARY_DIR}/include)
-set (PI_EMULATE ${CMAKE_BINARY_DIR}/emulation)
-set (PI_DOC ${CMAKE_BINARY_DIR}/doc)
+set (PI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set (PI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set (PI_EMULATE ${CMAKE_CURRENT_SOURCE_DIR}/emulation)
+set (PI_DOC ${CMAKE_CURRENT_SOURCE_DIR}/doc)
 
 #Set the output folder
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 #Find prerequisite packages
 #find_package (OpenCV REQUIRED)
@@ -57,15 +57,15 @@ find_package (latex QUIET)
 if (DOXYGEN_FOUND)
 	if (LATEX_COMPILER)
 	add_custom_target (doc
-		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-		COMMAND make -C ${CMAKE_CURRENT_BINARY_DIR}/doc/latex
+		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		COMMAND make -C "${PI_DOC}/latex"
 		COMMENT "Generating code documentation..." VERBATIM
 	)
 	else(LATEX_COMPILER)
 	add_custom_target (doc
-		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		COMMENT "Generating code documentation..." VERBATIM
 	)
 	endif(LATEX_COMPILER)
@@ -108,18 +108,22 @@ set (CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COMPILE_FLAGS}")
 set (CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_LINK_FLAGS}")
 
 #Pretty filenames (see log.h)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst src/,,$<)\"'")
+if (NOT MSYS AND NOT CYGWIN)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(abspath $<))\"'")
+else ()
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(shell cygpath -m $(abspath $<)))\"'")
+endif()
 
 #Setup the testing framework (gtest)
 if (test)
-	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
-	enable_testing()
-	include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+	add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
+	enable_testing ()
+	include_directories (${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+	add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
 #Add the base module
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/base)
+add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/src/base)
 
 #Add in the server executable
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/server)
+add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/src/server)

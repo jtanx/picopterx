@@ -1,19 +1,17 @@
 #Base module (common components)
 
-#Set the source path
-set (PI_BASE ${PI_SRC}/base)
-
 #Set the included files
 set (SOURCE
-	 ${PI_BASE}/log.cpp
-	 ${PI_BASE}/opts.cpp
-	 ${PI_BASE}/gpio.cpp
-	 ${PI_BASE}/buzzer.cpp
-	 ${PI_BASE}/flightboard.cpp
-	 ${PI_BASE}/gps.cpp
-	 ${PI_BASE}/imu.cpp
+	 log.cpp
+	 opts.cpp
+	 gpio.cpp
+	 buzzer.cpp
+	 flightboard.cpp
+	 gps.cpp
+	 imu.cpp
 )
 set (HEADERS
+	 flightboard-private.h
 	 ${PI_INCLUDE}/common.h
 	 ${PI_INCLUDE}/log.h 
 	 ${PI_INCLUDE}/opts.h
@@ -21,7 +19,6 @@ set (HEADERS
 	 ${PI_INCLUDE}/buzzer.h
 	 ${PI_INCLUDE}/picopter.h
 	 ${PI_INCLUDE}/flightboard.h
-	 ${PI_BASE}/flightboard-private.h
 	 ${PI_INCLUDE}/gps_feed.h
 	 ${PI_INCLUDE}/imu_feed.h
 )

@@ -12,7 +12,8 @@
 /* To get around a 'pedantic' C99 rule that you must have at least 1 
    variadic arg, combine fmt into that. Note the use of __FILENAME__ instead
    of __FILE__. This is custom defined by the makefile (see CMakeLists.txt),
-   which removes the absolute path from the file name.
+   which removes the absolute path from the file name. Credit:
+   http://stackoverflow.com/questions/8487986/file-macro-shows-full-path
 */
 #define Log(level, ...) LogEx(level, __PRETTY_FUNCTION__, __FILENAME__, __LINE__, __VA_ARGS__)
 #define Fatal(...) FatalEx(__PRETTY_FUNCTION__, __FILENAME__, __LINE__, __VA_ARGS__)

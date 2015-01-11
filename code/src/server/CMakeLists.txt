@@ -1,11 +1,8 @@
 #The actual server executable
 
-#Set the source path
-set (PI_SERVER ${PI_SRC}/server)
-
 #Set the included files
 set (SOURCE
-	 ${PI_SERVER}/picopter.cpp
+	 picopter.cpp
 )
 set (HEADERS
 

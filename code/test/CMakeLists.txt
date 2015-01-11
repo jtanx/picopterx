@@ -1,11 +1,8 @@
 #Testing module (gtest)
 
-#Set the source path
-set (PI_TEST ${CMAKE_BINARY_DIR}/test)
-
 #Set the included files
 set (SOURCE
-	 ${PI_TEST}/test_buzzer.cpp
+	 test_buzzer.cpp
 )
 set (HEADERS
 	 

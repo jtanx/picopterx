@@ -5,19 +5,6 @@
  
 #include "picopter.h"
  
-/**
-  * @brief A test class.
-  */
-class TESTER {
-    public:
-   
-    /**
-     * @brief A test method
-     * IT DOES NOTHING
-     */
-    void test() { Log(LOG_WARNING, "HAHA"); }
-};
- 
 int main(int argc, char *argv[]) {
     LogInit();
     Log(LOG_NOTICE, "BUZZER TEST STARTED");
