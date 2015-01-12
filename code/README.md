@@ -5,15 +5,16 @@ written in C++, conforming to the C++11 standard.
 
 ## Requirements
 * git
-* cmake >= 2.6 (version 3 is recommended)
+* cmake >= 2.8 (version 3 is recommended)
 * make
 * gcc/g++ >= 4.7 (4.8 or later is recommended)
 * gpsd, libgps-dev (hexacopter only, or otherwise *nix with a GPS/`gpsfake`)
+* wiringPi (TBA)
 
 ### Optionals
 * Doxygen (for generating source code documentation)
 * LaTeX (for generating source code documentation)
-* python-gps (for `gpsfake`), gpsd-clients (for `cgps`)
+* `python-gps` (for `gpsfake`), `gpsd-clients` (for `cgps`)
 
 ## Installation
 Ensure you have git installed:
