@@ -8,10 +8,6 @@
 
 #define OPT_FAMILY_DEFAULT "picopter"
 
-namespace rapidjson {
-    class Document;
-}
-
 namespace picopter {
     /**
      * Provides methods to persistently store and retrieve options.
@@ -24,17 +20,10 @@ namespace picopter {
             
             void SetFamily(const char *family);
             
-            int GetInt(const char *key, int otherwise);
-            int GetInt(const char *key);
-            
-            int GetBool(const char *key, bool otherwise);
-            int GetBool(const char *key);
-            
-            std::string GetString(const char *key, const char *otherwise);
-            std::string GetString(const char *key);
-            
-            double GetReal(const char *key, double otherwise);
-            double GetReal(const char *key);
+            int GetInt(const char *key, int otherwise = 0);
+            int GetBool(const char *key, bool otherwise = false);
+            std::string GetString(const char *key, const char *otherwise = "");
+            double GetReal(const char *key, double otherwise = 0.0f);
             
             template<typename T>
             bool Store(const char *key, const T& val);
@@ -45,7 +34,7 @@ namespace picopter {
             std::string m_file;
             std::string m_family;
             
-            rapidjson::Document *d = nullptr;
+            void *m_doc; //Because screw forward-declaring rapidjson
     };
 }
 

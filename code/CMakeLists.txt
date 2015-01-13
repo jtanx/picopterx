@@ -31,6 +31,7 @@ set (PI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set (PI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set (PI_EMULATE ${CMAKE_CURRENT_SOURCE_DIR}/emulation)
 set (PI_DOC ${CMAKE_CURRENT_SOURCE_DIR}/doc)
+set (PI_THIRD_PARTY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
 #Set the output folder
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -47,8 +48,11 @@ link_directories (${LIBGPS_LIBRARY_DIRS})
 set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
 
 #Set XSens stuff
-add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/third_party/XSens)
+add_subdirectory (${PI_THIRD_PARTY}/XSens)
 include_directories (${XSens_SOURCE_DIR})
+
+#Include rapidjson
+include_directories (${PI_THIRD_PARTY}/rapidjson)
 
 #Documentation (if Doxygen is installed)
 set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${PI_DOC})
@@ -116,14 +120,14 @@ endif()
 
 #Setup the testing framework (gtest)
 if (test)
-	add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/third_party/googletest)
+	add_subdirectory (${PI_THIRD_PARTY}/googletest)
 	enable_testing ()
 	include_directories (${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 	add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/test)
 endif()
 
 #Add the base module
-add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/src/base)
+add_subdirectory (${PI_SRC}/base)
 
 #Add in the server executable
-add_subdirectory (${CMAKE_CURRENT_SOURCE_DIR}/src/server)
+add_subdirectory (${PI_SRC}/server)

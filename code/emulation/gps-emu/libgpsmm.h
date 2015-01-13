@@ -1,6 +1,7 @@
 /**
  * @file libgpsmm.h
- * @brief Emulation of libgpsmm
+ * @brief A *very thin* emulation of libgpsmm.
+ * Will always return that there is data, but with all values zeroed.
  */
 
 #ifndef _LIBGPSMM_STUB_H
