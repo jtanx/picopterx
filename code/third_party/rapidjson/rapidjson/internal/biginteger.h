@@ -252,7 +252,10 @@ private:
             (*outHigh)++;
         return low;
 #elif (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)) && defined(__x86_64__)
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wpedantic"
         unsigned __int128 p = static_cast<unsigned __int128>(a) * static_cast<unsigned __int128>(b);
+#   pragma GCC diagnostic pop
         p += k;
         *outHigh = p >> 64;
         return static_cast<uint64_t>(p);
