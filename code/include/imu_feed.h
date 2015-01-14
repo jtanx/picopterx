@@ -44,6 +44,7 @@ namespace picopter {
             
             xsens::Cmt3 *m_device;
             
+            IMU(const IMU& other);
             void imuLoop();
     };
 }

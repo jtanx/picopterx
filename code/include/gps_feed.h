@@ -57,6 +57,7 @@ namespace picopter {
             std::thread m_worker;
             gpsmm *m_gps_rec;
             
+            GPS(const GPS& other);
             void gpsLoop();
     };
 }

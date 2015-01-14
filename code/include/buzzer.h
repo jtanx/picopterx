@@ -33,6 +33,7 @@ namespace picopter {
             /** The time per period that is spent ON **/
             int m_dutyCycle;
             
+            Buzzer(const Buzzer& other);
             void soundLoop();
     };
 }

@@ -35,6 +35,8 @@ namespace picopter {
             std::string m_family;
             
             void *m_doc; //Because screw forward-declaring rapidjson
+            
+            Options(const Options &other);
     };
 }
 
