@@ -21,7 +21,7 @@ namespace picopter {
             void SetFamily(const char *family);
             
             int GetInt(const char *key, int otherwise = 0);
-            int GetBool(const char *key, bool otherwise = false);
+            bool GetBool(const char *key, bool otherwise = false);
             std::string GetString(const char *key, const char *otherwise = "");
             double GetReal(const char *key, double otherwise = 0.0f);
             

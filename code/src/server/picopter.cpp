@@ -10,6 +10,13 @@ int main(int argc, char *argv[]) {
     Log(LOG_NOTICE, "BUZZER TEST STARTED");
     picopter::Buzzer b;
     picopter::GPS gps;
+    picopter::Options o;
+    
+    //o.Store("test", "JAJAJA");
+    o.Save();
+    o.SetFamily("GPS");
+    o.Save();
+    /*
     
     b.play(1000, 200, 80);
     std::this_thread::sleep_for(std::chrono::milliseconds(400));
@@ -24,6 +31,6 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    std::cout << gps.timeSinceLastFix();
+    std::cout << gps.timeSinceLastFix();*/
     return 0;
 }
