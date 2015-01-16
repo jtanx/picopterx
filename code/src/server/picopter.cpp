@@ -11,10 +11,25 @@ int main(int argc, char *argv[]) {
     picopter::Buzzer b;
     picopter::GPS gps;
     picopter::Options o;
+    const char *t = "AAA";
     
-    //o.Store("test", "JAJAJA");
+    o.Set("test21142", t);
+    o.Set("test", "JAJAJA");
+    o.Set("TEST", "JAJAJA");
+    o.Set("TEST2", 1.233);
+    o.Set("TEST3", true);
+    o.Set("TEST3", 20);
     o.Save();
     o.SetFamily("GPS");
+    std::cout << o.GetInt("NO") << std::endl;
+    o.Set("NO", 20);
+    std::cout << o.GetInt("NO") << std::endl;
+    o.Set("NO", "JJAA");
+    std::cout << o.GetInt("NO") << std::endl;
+    std::cout << o.GetString("NO") << std::endl;
+    std::cout << o.Remove("NO") << std::endl;
+    std::cout << o.Remove("NO") << std::endl;
+    
     o.Save();
     /*
     
