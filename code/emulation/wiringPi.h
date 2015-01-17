@@ -1,6 +1,6 @@
 /**
  * @file wiringPi.h
- * @brief Simple stub file to get 'wiringPi' when not compiling on the rPi
+ * @brief Simple stub file to get 'wiringPi' when not compiling on the RPi
  */
 #ifndef _WIRINGPI_STUB_H
 #define _WIRINGPI_STUB_H

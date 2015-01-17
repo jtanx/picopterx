@@ -8,7 +8,7 @@
 
 namespace picopter {
     /**
-     * Controls the GPIO pins on the rPi, including PWM functionality.
+     * Controls the GPIO pins on the RPi, including PWM functionality.
      */
     namespace gpio {
         /** The GPIO pin of the switch for auto mode (wiringPi numbering) **/
@@ -19,7 +19,6 @@ namespace picopter {
         void init();
         bool isAutoMode();
         void setBuzzer(bool value);
-        void setPWM(int aileron, int elevator, int rudder, int gimbal);
     }
 }
 

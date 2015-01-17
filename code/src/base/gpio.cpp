@@ -1,7 +1,7 @@
 /**
  * @file gpio.cpp
  * @brief GPIO handling code.
- * Uses wiringPi to control the GPIO pins on the rPi.
+ * Uses wiringPi to control the GPIO pins on the RPi.
  */
 
 #include "picopter.h"

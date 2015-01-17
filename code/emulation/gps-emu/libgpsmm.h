@@ -2,6 +2,7 @@
  * @file libgpsmm.h
  * @brief A *very thin* emulation of libgpsmm.
  * Will always return that there is data, but with all values zeroed.
+ * Data will randomly be marked as set or unset.
  */
 
 #ifndef _LIBGPSMM_STUB_H
