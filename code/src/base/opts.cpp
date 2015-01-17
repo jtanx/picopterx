@@ -4,7 +4,7 @@
  */
 
 #include "picopter.h"
-#include "rapidjson/document.h"
+#include <rapidjson/document.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/filewritestream.h>
 #include <rapidjson/prettywriter.h>
@@ -289,8 +289,10 @@ void Options::Save() {
         throw std::invalid_argument("No input file specified.");
     } else {
         FILE *fp = fopen(m_file.c_str(), "wb");
-        Save(fp);
-        fclose(fp);
+        if (fp) {
+            Save(fp);
+            fclose(fp);
+        }
     }
 }
 

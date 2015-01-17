@@ -3,6 +3,7 @@
 #Set the included files
 set (SOURCE
 	 test_buzzer.cpp
+	 test_opts.cpp
 )
 set (HEADERS
 	 
@@ -18,4 +19,6 @@ target_link_libraries(run-tests LINK_PRIVATE gtest gtest_main)
 target_link_libraries (run-tests LINK_PUBLIC picopter_base)
 
 #For `make test`
-add_test(NAME picopter-testing COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests)
+add_test(NAME picopter-testing 
+		 COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests
+		 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

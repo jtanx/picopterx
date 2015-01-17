@@ -1,0 +1,20 @@
+{
+	"picopter" : {
+		"a" : [1,2,3,4],
+		"b" : "string_test\u00eeaaa\u0000200gg",
+		"c" : 1.2433,
+		"d" : 20,
+		"e" : true
+	},
+	"GPS" : {
+		"sane" : false
+	},
+	"IMU" : {
+		"yaw" : 204.44,
+		"pitch" : -17.78,
+		"elevation" : 1093.33
+	},
+	"" : {
+		"empty" : true
+	}
+}

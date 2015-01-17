@@ -20,4 +20,4 @@ script:
   - ./configure -Dtest=ON
   - make
   - bin/picopter
-  - bin/run-tests
+  - make test ARGS="-V"
