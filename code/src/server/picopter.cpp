@@ -19,7 +19,6 @@ int main(int argc, char *argv[]) {
     o.Set("TEST2", 1.233);
     o.Set("TEST3", true);
     o.Set("TEST3", 20);
-    o.Save();
     o.SetFamily("GPS");
     std::cout << o.GetInt("NO") << std::endl;
     o.Set("NO", 20);
@@ -30,7 +29,7 @@ int main(int argc, char *argv[]) {
     std::cout << o.Remove("NO") << std::endl;
     std::cout << o.Remove("NO") << std::endl;
     
-    o.Save();
+    o.Save(stdout);
     /*
     
     b.play(1000, 200, 80);

@@ -9,6 +9,7 @@
 namespace picopter {
     /**
      * Provides methods to persistently store and retrieve options.
+     * This class is not thread safe.
      */
     class Options {
         public:
@@ -20,7 +21,7 @@ namespace picopter {
             
             int GetInt(const char *key, int otherwise = 0);
             bool GetBool(const char *key, bool otherwise = false);
-            std::string GetString(const char *key, const char *otherwise = "");
+            const char* GetString(const char *key, const char *otherwise = "");
             double GetReal(const char *key, double otherwise = 0.0f);
             
             void Set(const char *key, int val);
@@ -32,17 +33,25 @@ namespace picopter {
             
             void Save();
             void Save(const char *file);
+            void Save(FILE *fp);
         private:
+            /** The default family to save settings under. **/
             static const char* FAMILY_DEFAULT;
+            /** The path to the save file (if any) **/
             std::string m_file;
+            /** The current family to save settings under. **/
             std::string m_family;
             
+            /** The rapidjson Document. **/
             void *m_doc; //Because screw forward-declaring rapidjson
+            /** A pointer to the current family instance **/
             void *m_family_inst;
             
+            /** Copy constructor (disabled) **/
             Options(const Options &other);
+            
             template<typename T>
-            void SetImpl(const char *key, T val);
+            void SetImpl(const char *key, const T& val);
     };
 }
 

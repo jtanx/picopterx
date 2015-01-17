@@ -10,18 +10,16 @@
 #include <rapidjson/prettywriter.h>
 
 using picopter::Options;
-using rapidjson::Document;
-using rapidjson::UTF8;
-using rapidjson::FileReadStream;
-using rapidjson::FileWriteStream;
-using rapidjson::PrettyWriter;
-using rapidjson::Value;
-using rapidjson::Type;
-using rapidjson::StringRef;
-using StringRefT = rapidjson::GenericValue<UTF8<>>::StringRefType;
+using namespace rapidjson;
 
 const char* Options::FAMILY_DEFAULT = "picopter";
 
+/**
+ * Finds the object based on the given key.
+ * @param d The rapidjson document to search within.
+ * @param key The key of the given entry.
+ * @return A pointer to the given value, or nullptr if it doesn't exist.
+ */
 static inline Value* GetValue(Value *d, const char *key) {
     auto ret = d->FindMember(key);
     if (ret != d->MemberEnd()) {
@@ -30,6 +28,11 @@ static inline Value* GetValue(Value *d, const char *key) {
     return nullptr;
 }
 
+/**
+ * Constructor.
+ * Initialised empty, optionally loading from a file.
+ * @param file The location of a file containing options, or NULL if not present.
+ */
 Options::Options(const char *file) {
     Document *d = new Document();
     
@@ -47,15 +50,17 @@ Options::Options(const char *file) {
     
     if (!d->IsObject()) {
         d->SetObject();
+        m_family_inst = nullptr;
+    } else {
+        Value *fi = GetValue(d, FAMILY_DEFAULT);
+        if (fi && !fi->IsObject()) {
+            fi->SetObject();
+        }
+        m_family_inst = fi;
     }
-    m_doc = d;
     
-    Value *fi = GetValue(d, FAMILY_DEFAULT);
-    if (fi && !fi->IsObject()) {
-        fi->SetObject();
-    }
+    m_doc = d;
     m_family = FAMILY_DEFAULT;
-    m_family_inst = fi;
 }
 
 /**
@@ -64,10 +69,18 @@ Options::Options(const char *file) {
  */
 Options::Options() : Options(NULL) {}
 
+/**
+ * Destructor. Deletes the rapidjson instance.
+ */
 Options::~Options() {
     delete static_cast<Document*>(m_doc);
 }
 
+/**
+ * Sets the family under which to store and retrieve settings from.
+ * @param family The name of the family. If NULL, it will default to 
+ *               Options::FAMILY_DEFAULT.
+ */
 void Options::SetFamily(const char *family) {
     m_family = family ? family : FAMILY_DEFAULT;
     Value *fi = GetValue(static_cast<Document*>(m_doc), family);
@@ -77,6 +90,12 @@ void Options::SetFamily(const char *family) {
     m_family_inst = fi;
 }
 
+/**
+ * Retrieves the integer value associated with a key.
+ * @param key The key to the value.
+ * @param otherwise The value to return if it does not exist.
+ * @return The retrieved value, or `otherwise` if it does not exist.
+ */
 int Options::GetInt(const char *key, int otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
@@ -88,6 +107,12 @@ int Options::GetInt(const char *key, int otherwise) {
     return otherwise;
 }
 
+/**
+ * Retrieves the Boolean value associated with a key.
+ * @param key The key to the value.
+ * @param otherwise The value to return if it does not exist.
+ * @return The retrieved value, or `otherwise` if it does not exist.
+ */
 bool Options::GetBool(const char *key, bool otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
@@ -99,17 +124,32 @@ bool Options::GetBool(const char *key, bool otherwise) {
     return otherwise;
 }
 
-std::string Options::GetString(const char *key, const char *otherwise) {
+/**
+ * Retrieves the string value associated with a key.
+ * @param key The key to the value.
+ * @param otherwise The value to return if it does not exist.
+ * @return The retrieved value, or `otherwise` if it does not exist. This value
+ *         must not be modified. It will only be valid until this parameter is
+ *         modified (via Set or Remove), or in the case of `otherwise` being 
+ *         returned, until that value is either freed or goes out of scope. 
+ */
+const char* Options::GetString(const char *key, const char *otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsString()) {
-            return std::string(vpt->GetString());
+            return vpt->GetString();
         }
     }
-    return std::string(otherwise);
+    return otherwise;
 }
 
+/**
+ * Retrieves the Real (double precision) value associated with a key.
+ * @param key The key to the value.
+ * @param otherwise The value to return if it does not exist.
+ * @return The retrieved value, or `otherwise` if it does not exist.
+ */
 double Options::GetReal(const char *key, double otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
@@ -121,8 +161,15 @@ double Options::GetReal(const char *key, double otherwise) {
     return otherwise;
 }
 
+/**
+ * Helper method to store a new value.
+ * If the currently selected family does not exist, it is first created before
+ * adding the new value to it.
+ * @param key The key to the value.
+ * @param val The value to be stored.
+ */
 template<typename T>
-void Options::SetImpl(const char *key, T val) {
+void Options::SetImpl(const char *key, const T& val) {
     Document *d = static_cast<Document*>(m_doc);
     Value *fi = static_cast<Value*>(m_family_inst);
 
@@ -147,18 +194,14 @@ void Options::SetImpl(const char *key, T val) {
     }
 }
 
-void Options::Set(const char *key, int val) {
-    SetImpl(key, val);
-}
-
-void Options::Set(const char *key, bool val) {
-    SetImpl(key, val);
-}
-
-void Options::Set(const char *key, double val) {
-    SetImpl(key, val);
-}
-
+/**
+ * Specialisation of Options::SetImpl to store strings.
+ * This specialisation is necessary because the value must be copied.
+ * rapidjson requires that (a.) it explicitly be copied, or that (b.) it will
+ * retain a reference that is guaranteed to be valid for longer than itself.
+ * @param key The key to the value.
+ * @param val The value to be stored.
+ */
 void Options::Set(const char *key, const char *val) {
     Document *d = static_cast<Document*>(m_doc);
     Value *fi = static_cast<Value*>(m_family_inst);
@@ -184,6 +227,38 @@ void Options::Set(const char *key, const char *val) {
     }
 }
 
+/**
+ * Stores an integer value.
+ * @param key The key to the value.
+ * @param val The value to be stored.
+ */
+void Options::Set(const char *key, int val) {
+    SetImpl(key, val);
+}
+
+/**
+ * Stores an Boolean value.
+ * @param key The key to the value.
+ * @param val The value to be stored.
+ */
+void Options::Set(const char *key, bool val) {
+    SetImpl(key, val);
+}
+
+/**
+ * Stores an Real value.
+ * @param key The key to the value.
+ * @param val The value to be stored.
+ */
+void Options::Set(const char *key, double val) {
+    SetImpl(key, val);
+}
+
+/**
+ * Removes a value.
+ * @param key The key to the value.
+ * @param val The value to be stored.
+ */
 bool Options::Remove(const char *key) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
@@ -192,11 +267,42 @@ bool Options::Remove(const char *key) {
     return false;
 }
 
-void Options::Save() {
+/**
+ * Saves the current settings to the specified stream.
+ */
+void Options::Save(FILE *fp) {
     char buf[BUFSIZ];
-    FileWriteStream fp(stdout, buf, sizeof(buf));
-    PrettyWriter<FileWriteStream> pw(fp);
+    FileWriteStream fws(fp, buf, sizeof(buf));
+    PrettyWriter<FileWriteStream> pw(fws);
     Document *d = static_cast<Document*>(m_doc);
     
     d->Accept(pw);
+}
+
+/**
+ * Saves the current settings to a file.
+ * Will save to the file that was specified on construction.
+ * @throws std::invalid_argument If no file has been set previously.
+ */
+void Options::Save() {
+    if (m_file.empty()) {
+        throw std::invalid_argument("No input file specified.");
+    } else {
+        FILE *fp = fopen(m_file.c_str(), "wb");
+        Save(fp);
+        fclose(fp);
+    }
+}
+
+/**
+ * Saves the current settings to the specified file.
+ * Will keep a copy of the specified path for use with Save().
+ */
+void Options::Save(const char *file) {
+    FILE *fp = fopen(file, "wb");
+    if (fp) {
+        Save(fp);
+        fclose(fp);
+        m_file = file;
+    }
 }
