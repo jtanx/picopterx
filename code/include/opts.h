@@ -49,6 +49,8 @@ namespace picopter {
             
             /** Copy constructor (disabled) **/
             Options(const Options &other);
+            /** Assignment operator (disabled) **/
+            Options& operator= (const Options &other);
             
             template<typename T>
             void SetImpl(const char *key, const T& val);

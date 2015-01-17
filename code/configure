@@ -8,7 +8,7 @@ function log_note() {
 
 args="$@"
 
-if [ "$1" = "--clean" ] && [ -f CMakeCache.txt ]; then
+if [ "$1" = "--clean" ]; then
 	log_note "Removing CMake cache files..."
 	rm -rf CMakeCache.txt CMakeFiles
 	args="${@:2}"

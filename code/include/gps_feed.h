@@ -57,7 +57,10 @@ namespace picopter {
             std::thread m_worker;
             gpsmm *m_gps_rec;
             
-            GPS(const GPS& other);
+            /** Copy constructor (disabled) **/
+            GPS(const GPS &other);
+            /** Assignment operator (disabled) **/
+            GPS& operator= (const GPS &other);
             void gpsLoop();
     };
 }

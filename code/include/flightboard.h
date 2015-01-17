@@ -46,6 +46,11 @@ namespace picopter {
             /** Determines if we should be actuating or not **/
             std::atomic<bool> m_activated;
             
+            /** Copy constructor (disabled) **/
+            FlightBoard(const FlightBoard &other);
+            /** Assignment operator (disabled) **/
+            FlightBoard& operator= (const FlightBoard &other);
+            
             void actuate();
             void setChannel(int channel, int value);
     };
