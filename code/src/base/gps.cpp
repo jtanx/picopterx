@@ -15,9 +15,10 @@ using steady_clock = std::chrono::steady_clock;
 /**
  * Constructor. Establishes a connection to gpsd, assuming it is running
  * on the default gpsd port. Starts the worker thread to receive GPS data.
+ * @param opts A pointer to options, if any (NULL for defaults)
  * @throws std::invalid_argument if a connection to gpsd cannot be established.
  */
-GPS::GPS()
+GPS::GPS(Options *opts)
 : m_data{}
 , m_last_fix(999)
 , m_quit(false)
@@ -31,6 +32,11 @@ GPS::GPS()
     Log(LOG_INFO, "IS GPSData LOCK FREE? %d", m_data.is_lock_free());
     Log(LOG_INFO, "IS m_last_fix LOCK FREE? %d", m_last_fix.is_lock_free());
 }
+
+/**
+ * Constructor. Constructs a new GPS with default settings.
+ */
+GPS::GPS() : GPS(NULL) {}
 
 /**
  * Destructor. Stops the worker thread and waits for it to exit.

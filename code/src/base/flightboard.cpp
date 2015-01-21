@@ -15,9 +15,10 @@ using picopter::FlightData;
 /**
  * Constructor; initiates a connection to ServoBlaster.
  * Assumes that ServoBlaster has already been started and initialised.
+ * @param opts A pointer to options, if any (NULL for defaults)
  * @throws std::invalid_argument if it can't connect to ServoBlaster.
  */
-FlightBoard::FlightBoard()
+FlightBoard::FlightBoard(Options *opts)
 : m_currentData{}
 , m_activated(false)
 {
@@ -29,6 +30,11 @@ FlightBoard::FlightBoard()
     actuate();
     m_activated = false;
 }
+
+/** 
+ * Constructor. Constructs a new flight board with default settings.
+ */
+FlightBoard::FlightBoard() : FlightBoard(NULL) {}
 
 /**
  * Destructor. Closes the connection to ServoBlaster.

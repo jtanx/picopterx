@@ -7,6 +7,9 @@
 #define _PICOPTERX_FLIGHTBOARD_H
 
 namespace picopter {
+    /* Forward declaration of the options class */
+    class Options;
+    
     /**
      * Contains information about the actuation of the hexacopter
      */
@@ -28,6 +31,7 @@ namespace picopter {
     class FlightBoard {
         public:
             FlightBoard();
+            FlightBoard(Options *opts);
             virtual ~FlightBoard();
             void start();
             void stop();

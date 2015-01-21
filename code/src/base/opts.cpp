@@ -20,7 +20,7 @@ const char* Options::FAMILY_DEFAULT = "picopter";
  * @param key The key of the given entry.
  * @return A pointer to the given value, or nullptr if it doesn't exist.
  */
-static inline Value* GetValue(Value *d, const char *key) {
+static Value* GetValue(Value *d, const char *key) {
     auto ret = d->FindMember(key);
     if (ret != d->MemberEnd()) {
         return &ret->value;

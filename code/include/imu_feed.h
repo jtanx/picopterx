@@ -10,6 +10,9 @@
 namespace xsens {class Cmt3;}
 
 namespace picopter {
+    /* Forward declaration of the options class */
+    class Options;
+    
     /**
      * Contains a unit of information from the IMU.
      */
@@ -28,6 +31,7 @@ namespace picopter {
     class IMU {
         public:
             IMU();
+            IMU(Options *opts);
             virtual ~IMU();
             void getLatest(IMUData *d);
             

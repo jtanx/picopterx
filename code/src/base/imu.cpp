@@ -15,9 +15,10 @@ const char *IMU::IMU_DEVICE = "/dev/ttyUSB0";
 /**
  * Constructor. Uses the XSens library to establish a connection to the IMU.
  * Once established, starts the worker thread to receive data from the IMU.
+ * @param opts A pointer to options, if any (NULL for defaults)
  * @throws std::invalid_argument if IMU intialisation fails (e.g. disconnected)
  */
-IMU::IMU()
+IMU::IMU(Options *opts)
 : m_data{}
 , m_quit(false)
 {
@@ -40,6 +41,11 @@ IMU::IMU()
     
     m_worker = std::thread(&IMU::imuLoop, this);
 }
+
+/**
+ * Constructor. Constructs IMU with default options.
+ */
+IMU::IMU() : IMU(NULL) {}
 
 /**
  * Destructor. Stops the worker thread and closes the connection to the IMU.

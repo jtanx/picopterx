@@ -11,6 +11,9 @@
 class gpsmm;
 
 namespace picopter {
+    /* Forward declaration of the options class */
+    class Options;
+
     /**
      * Generic structure to hold geographic coordinates.
      * @todo Figure out what is actually needed (moreover what is actually
@@ -45,6 +48,7 @@ namespace picopter {
     class GPS {
         public:
             GPS();
+            GPS(Options *opts);
             virtual ~GPS();
             void getLatest(GPSData *d);
             int timeSinceLastFix();
