@@ -19,15 +19,18 @@ using steady_clock = std::chrono::steady_clock;
  * @throws std::invalid_argument if a connection to gpsd cannot be established.
  */
 GPS::GPS(Options *opts)
-: m_data{}
+: m_cycle_timeout(CYCLE_TIMEOUT_DEFAULT)
+, m_data{}
 , m_last_fix(999)
 , m_quit(false)
 {
     m_gps_rec = new gpsmm("localhost", DEFAULT_GPSD_PORT);
-    if (m_gps_rec->stream(WATCH_ENABLE|WATCH_JSON) == NULL) {
-        throw std::invalid_argument("gpsd is not running");
-    }
     m_worker = std::thread(&GPS::gpsLoop, this);
+    
+    if (opts) {
+        opts->SetFamily("GPS");
+        m_cycle_timeout = opts->GetInt("CYCLE_TIMEOUT", CYCLE_TIMEOUT_DEFAULT);
+    }
     
     Log(LOG_INFO, "IS GPSData LOCK FREE? %d", m_data.is_lock_free());
     Log(LOG_INFO, "IS m_last_fix LOCK FREE? %d", m_last_fix.is_lock_free());
@@ -54,13 +57,22 @@ void GPS::gpsLoop() {
     auto tp = steady_clock::now() - std::chrono::seconds(999);
     Log(LOG_INFO, "GPS Started!");
     
+    bool gpsd_likely_not_running = false;
+    while (!m_quit && ((m_gps_rec->stream(WATCH_ENABLE|WATCH_JSON) == NULL))) {
+        if (!gpsd_likely_not_running) {
+            Log(LOG_WARNING, "Could not stream from gpsd. Check that it's running.");
+            gpsd_likely_not_running = true;
+        }
+        std::this_thread::sleep_for(seconds(1));
+    }
+    
     while (!m_quit) {
         m_last_fix = duration_cast<seconds>(steady_clock::now() - tp).count();
         if (m_last_fix > 0) {
             Log(LOG_INFO, "LAST FIX: %d", m_last_fix.load());
         }
                 
-        if (m_gps_rec->waiting(CYCLE_TIMEOUT) && !m_quit) {
+        if (m_gps_rec->waiting(m_cycle_timeout) && !m_quit) {
             struct gps_data_t* data;
             if ((data = m_gps_rec->read()) == NULL) {
                 Log(LOG_WARNING, "Failed to read GPS data");

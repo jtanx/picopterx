@@ -26,9 +26,7 @@ FlightBoard::FlightBoard(Options *opts)
     if (m_fp == NULL) {
         throw std::invalid_argument("Could not connect to servoblaster");
     }
-    m_activated = true;
-    actuate();
-    m_activated = false;
+    actuate(true);
 }
 
 /** 
@@ -89,7 +87,7 @@ void FlightBoard::setData(FlightData *d) {
  */
 void FlightBoard::setAileron(int speed) {
     m_currentData.aileron = picopter::clamp(speed, -100, 100);
-    setChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
+    setChannelChecked(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
 }
 
 /**
@@ -99,7 +97,7 @@ void FlightBoard::setAileron(int speed) {
 void FlightBoard::setElevator(int speed) {
     //Elevator speed is inverted.
     m_currentData.elevator = picopter::clamp(-speed, -100, 100);
-    setChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(m_currentData.elevator));
+    setChannelChecked(ELEVATOR_CHANNEL, ELEVATOR_SCALE(m_currentData.elevator));
 }
 
 /**
@@ -108,7 +106,7 @@ void FlightBoard::setElevator(int speed) {
  */
 void FlightBoard::setRudder(int speed) {
     m_currentData.rudder = picopter::clamp(speed, -100, 100);
-    setChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
+    setChannelChecked(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
 }
 
 /**
@@ -117,7 +115,19 @@ void FlightBoard::setRudder(int speed) {
  */
 void FlightBoard::setGimbal(int pos) {
     m_currentData.gimbal = picopter::clamp(pos, 0, 90);
-    setChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
+    setChannelChecked(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
+}
+
+/**
+ * Tells ServoBlaster to set the pulse width for a given channel.
+ * Will only perform the actuation if the we're currently activated.
+ * @param channel The ServoBlaster channel to alter
+ * @param value The pulse width, in steps
+ */
+void FlightBoard::setChannelChecked(int channel, int value) {
+    if (m_activated) {
+        fprintf(m_fp, "%d=%d", channel, value);
+    }
 }
 
 /**
@@ -126,17 +136,17 @@ void FlightBoard::setGimbal(int pos) {
  * @param value The pulse width, in steps
  */
 void FlightBoard::setChannel(int channel, int value) {
-    if (m_activated) {
-        fprintf(m_fp, "%d=%d", channel, value);
-    }
+    fprintf(m_fp, "%d=%d", channel, value);
 }
 
 /**
  * Actuates all channels using current flight data.
  */
-void FlightBoard::actuate() {
-    setChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
-    setChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(-m_currentData.elevator));
-    setChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
-    setChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));    
+void FlightBoard::actuate(bool force) {
+    if (m_activated || force) {
+        setChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
+        setChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(-m_currentData.elevator));
+        setChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
+        setChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));    
+    }
 }

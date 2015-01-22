@@ -55,7 +55,8 @@ namespace picopter {
             /** Assignment operator (disabled) **/
             FlightBoard& operator= (const FlightBoard &other);
             
-            void actuate();
+            void actuate(bool force=false);
+            void setChannelChecked(int channel, int value);
             void setChannel(int channel, int value);
     };
 }

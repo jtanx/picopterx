@@ -53,7 +53,9 @@ namespace picopter {
             void getLatest(GPSData *d);
             int timeSinceLastFix();
         private:
-            static const int CYCLE_TIMEOUT = 500000;
+            /** The GPS read wait timeout (in us) **/
+            static const int CYCLE_TIMEOUT_DEFAULT = 500000;
+            int m_cycle_timeout;
            
             std::atomic<GPSData> m_data;
             std::atomic<int> m_last_fix;
