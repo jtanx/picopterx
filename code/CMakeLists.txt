@@ -84,7 +84,7 @@ CHECK_C_SOURCE_COMPILES ("
 	int main(){return 0;}
 " IS_ON_PI)
 
-if (NOT IS_ON_PI)
+if (NOT IS_ON_PI OR FORCE_EMULATION)
 	include_directories (${PI_EMULATE})
 	message (WARNING "${Yellow}Using the emulation files - ${ColourBold}remember to check on the RPi!${ColourReset}")
 elseif (NOT LIBGPS_FOUND)
