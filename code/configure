@@ -19,5 +19,5 @@ if [ "$(uname -o)" = "Msys" ]; then
 	cmake -G"MSYS Makefiles" -DCMAKE_SYSTEM_PREFIX_PATH:PATH=/mingw32/i686-w64-mingw32 . "$args"
 else
 	log_note "Generating makefiles..."
-	cmake . "$args"
+	cmake . $args
 fi;
