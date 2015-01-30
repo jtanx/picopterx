@@ -6,6 +6,7 @@
 
 #include "picopter.h"
 #include "libgpsmm.h"
+#include <cmath>
 
 using namespace picopter;
 using std::chrono::duration_cast;
@@ -20,7 +21,7 @@ using steady_clock = std::chrono::steady_clock;
  */
 GPS::GPS(Options *opts)
 : m_cycle_timeout(CYCLE_TIMEOUT_DEFAULT)
-, m_data{}
+, m_data{{{NAN,NAN},{NAN,NAN}, NAN}}
 , m_last_fix(999)
 , m_quit(false)
 {
@@ -31,6 +32,10 @@ GPS::GPS(Options *opts)
         opts->SetFamily("GPS");
         m_cycle_timeout = opts->GetInt("CYCLE_TIMEOUT", CYCLE_TIMEOUT_DEFAULT);
     }
+    
+    GPSData d = m_data.load();
+    Log(LOG_INFO, "GPSData: Fix {%f, %f}, Unc {%f, %f}, time %f",
+        d.fix.lat, d.fix.lon, d.err.lat, d.err.lon, d.timestamp);
     
     Log(LOG_INFO, "IS GPSData LOCK FREE? %d", m_data.is_lock_free());
     Log(LOG_INFO, "IS m_last_fix LOCK FREE? %d", m_last_fix.is_lock_free());

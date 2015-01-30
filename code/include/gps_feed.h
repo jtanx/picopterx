@@ -6,7 +6,7 @@
 #ifndef _PICOPTERX_GPS_H
 #define _PICOPTERX_GPS_H
 
-#include <cmath>
+#include "navigation.h"
 
 class gpsmm;
 
@@ -14,32 +14,20 @@ namespace picopter {
     /* Forward declaration of the options class */
     class Options;
 
-    /**
-     * Generic structure to hold geographic coordinates.
-     * @todo Figure out what is actually needed (moreover what is actually
-     *       given from the GPS) and update as necessary. e.g. altitude/climb.
-     */
-    typedef struct Coordinates {
-        /** Latitude, in degrees. For uncertainty: metres **/
-        double lat = NAN;
-        /** Longitude, in degrees. For uncertainty: metres **/
-        double lon = NAN;
-    } Coordinates;
-    
     /** Holds uncertainty information for a GPS fix. 95% confidence levels. **/
-    typedef Coordinates Uncertainty;
+    typedef Coord2D Uncertainty;
     
     /**
      * Stores information about the current GPS fix.
-     * @todo Do we need the uncertainty in the timestamp too?
+     * @todo Do we need the uncertainty in the timestamp too? 2D info enough?
      */
     typedef struct GPSData {
         /** The coordinates of the current GPS fix **/
-        Coordinates fix;
+        Coord2D fix;
         /** The uncertainty in the current fix **/
         Uncertainty err;
         /** The timestamp of the fix (Unix epoch in seconds w/ fractional) **/
-        double timestamp = NAN;
+        double timestamp;
     } GPSData;
     
     /**

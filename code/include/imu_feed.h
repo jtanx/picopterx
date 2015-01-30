@@ -6,6 +6,8 @@
 #ifndef _PICOPTERX_IMU_H
 #define _PICOPTERX_IMU_H
 
+#include "navigation.h"
+
 //Forward declaration of Cmt3 from XSens
 namespace xsens {class Cmt3;}
 
@@ -16,14 +18,7 @@ namespace picopter {
     /**
      * Contains a unit of information from the IMU.
      */
-    typedef struct IMUData {
-        /** Roll of the IMU, -pi to pi **/
-        double roll = NAN;
-        /** Pitch of the IMU, -pi to pi **/
-        double pitch = NAN;
-        /** Yaw of the IMU, -pi to pi **/
-        double yaw = NAN;
-    } IMUData;
+    typedef EulerAngle IMUData;
 
     /**
      * Reads data from the IMU

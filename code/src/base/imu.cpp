@@ -5,6 +5,7 @@
 
 #include "picopter.h"
 #include "cmt3.h"
+#include <cmath>
 
 using namespace xsens;
 using picopter::IMU;
@@ -19,7 +20,7 @@ const char *IMU::IMU_DEVICE = "/dev/ttyUSB0";
  * @throws std::invalid_argument if IMU intialisation fails (e.g. disconnected)
  */
 IMU::IMU(Options *opts)
-: m_data{}
+: m_data{NAN,NAN,NAN}
 , m_quit(false)
 {
     m_device = new Cmt3();

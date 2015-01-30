@@ -19,6 +19,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/buzzer.h
 	 ${PI_INCLUDE}/picopter.h
 	 ${PI_INCLUDE}/flightboard.h
+	 ${PI_INCLUDE}/navigation.h
 	 ${PI_INCLUDE}/gps_feed.h
 	 ${PI_INCLUDE}/imu_feed.h
 )
