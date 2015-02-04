@@ -15,6 +15,7 @@ written in C++, conforming to the C++11 standard.
 * Doxygen (for generating source code documentation)
 * LaTeX (for generating source code documentation)
 * `python-gps` (for `gpsfake`), `gpsd-clients` (for `cgps`)
+* 'thrift-compiler' to regenerate thrift (php) client and (cpp) server files
 
 ## Installation
 Ensure you have git installed:
@@ -31,11 +32,11 @@ sudo apt-get install make cmake gcc g++
 If you are building on the hexacopter (RPi),
 
     sudo apt-get install gpsd libgps-dev python-gps gpsd-clients
-	
+
 If you want to build the documentation (not recommended for the RPi; installation requires ~1GB of space).
 
     sudo apt-get install doxygen
-	
+
 ## Building
 
 ~~~~~
@@ -43,7 +44,7 @@ git clone --recursive https://github.com/jtanx/picopterx
 cd picopterx/code
 ./configure
 make
-~~~~~ 
+~~~~~
 
 If you want to make the test suite too, then do this instead:
 
