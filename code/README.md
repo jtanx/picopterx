@@ -10,12 +10,12 @@ written in C++, conforming to the C++11 standard.
 * gcc/g++ >= 4.7 (4.8 or later is recommended)
 * gpsd, libgps-dev (hexacopter only, or otherwise *nix with a GPS/`gpsfake`)
 * wiringPi (TBA)
+* thrift
 
 ### Optionals
 * Doxygen (for generating source code documentation)
 * LaTeX (for generating source code documentation)
 * `python-gps` (for `gpsfake`), `gpsd-clients` (for `cgps`)
-* `thrift-compiler` (for regenerating thrift client and server files)
 
 ## Installation
 Ensure you have git installed:
@@ -36,6 +36,21 @@ If you are building on the hexacopter (RPi),
 If you want to build the documentation (not recommended for the RPi; installation requires ~1GB of space).
 
     sudo apt-get install doxygen
+
+Thrift needs to be built and installed from source. First get the requirements:
+
+    sudo apt-get install libboost-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libevent-dev automake libtool flex bison pkg-config g++ libssl-dev
+    
+Download and extract [Thrift](https://thrift.apache.org/download) (version used: 0.9.2) then:
+
+    ./configure
+    make
+    sudo make install
+
+You may need to add /usr/local/lib to path:
+
+    export LD_LIBRARY_PATH=/usr/local/lib
+
 
 ## Building
 
