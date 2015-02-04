@@ -15,7 +15,7 @@ written in C++, conforming to the C++11 standard.
 * Doxygen (for generating source code documentation)
 * LaTeX (for generating source code documentation)
 * `python-gps` (for `gpsfake`), `gpsd-clients` (for `cgps`)
-* 'thrift-compiler' to regenerate thrift (php) client and (cpp) server files
+* `thrift-compiler` (for regenerating thrift client and server files)
 
 ## Installation
 Ensure you have git installed:
