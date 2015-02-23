@@ -15,16 +15,16 @@ namespace picopter {
     class Options;
 
     /** Holds uncertainty information for a GPS fix. 95% confidence levels. **/
-    typedef Coord2D Uncertainty;
+    typedef navigation::Coord2D Uncertainty;
     
     /**
      * Stores information about the current GPS fix.
      * @todo Do we need the uncertainty in the timestamp too? 2D info enough?
      */
     typedef struct GPSData {
-        /** The coordinates of the current GPS fix **/
-        Coord2D fix;
-        /** The uncertainty in the current fix **/
+        /** The coordinates of the current GPS fix (in radians) **/
+        navigation::Coord2D fix;
+        /** The uncertainty in the current fix (in metres) **/
         Uncertainty err;
         /** The timestamp of the fix (Unix epoch in seconds w/ fractional) **/
         double timestamp;

@@ -18,7 +18,7 @@ namespace picopter {
     /**
      * Contains a unit of information from the IMU.
      */
-    typedef EulerAngle IMUData;
+    typedef navigation::EulerAngle IMUData;
 
     /**
      * Reads data from the IMU
