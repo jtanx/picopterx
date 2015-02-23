@@ -65,6 +65,9 @@ IMU::~IMU() {
 void IMU::getLatest(IMUData *d) {
     std::lock_guard<std::mutex> lock(m_mutex);
     *d = m_data;
+    d->roll = DEG2RAD(d->roll);
+    d->pitch = DEG2RAD(d->pitch);
+    d->yaw = DEG2RAD(d->yaw);
 }
 
 /**

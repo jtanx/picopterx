@@ -84,9 +84,9 @@ void GPS::gpsLoop() {
             } else if (data->set & LATLON_SET) {
                 GPSData d;
                 Log(LOG_INFO, "Got GPS data!");
-                d.fix.lat = data->fix.latitude;
+                d.fix.lat = DEG2RAD(data->fix.latitude);
                 d.err.lat = data->fix.epy;
-                d.fix.lon = data->fix.longitude;
+                d.fix.lon = DEG2RAD(data->fix.longitude);
                 d.err.lon = data->fix.epx;
                 d.timestamp = data->fix.time;
                 m_data = d;
