@@ -38,17 +38,21 @@ Buzzer::~Buzzer() {
     m_quiet = true;
     m_stop = true;
     
+    Log(LOG_INFO, "DESTROYING");
     m_signaller.notify_one();
+    Log(LOG_INFO, "NOTIFIED");
     m_worker.join();
+    Log(LOG_INFO, "DESTROYED");
 }
 
 /**
  * The function that does the software PWM and actuates the GPIO sound pin.
+ * @param blocking true iff this function is used with the playWait method.
  */
-void Buzzer::soundOutput() {
+void Buzzer::soundOutput(bool blocking) {
     Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
     auto start = hrc::now();
-    for (int n = 0; m_running && !m_stop && !m_quiet && n < m_count; n++) {
+    for (int n = 0; (blocking || m_running) && !m_stop && !m_quiet && n < m_count; n++) {
         setBuzzer(HIGH);
         delayMicroseconds(m_dutyCycle);
         setBuzzer(LOW);
@@ -68,7 +72,7 @@ void Buzzer::soundLoop() {
     while (!m_stop) {
         m_signaller.wait(lock, [this]{return m_running || m_stop;});
         if (!m_stop) {
-            Buzzer::soundOutput();
+            Buzzer::soundOutput(false);
         }
         m_running = false;
     }
@@ -113,9 +117,7 @@ void Buzzer::playWait(int duration, int frequency, int volume) {
     m_count = (1000 * std::max(duration, 0)) / m_period;
     
     m_quiet = false;
-    m_running = true;
-    Buzzer::soundOutput();
-    m_running = false;
+    Buzzer::soundOutput(true);
 }
 
 /**

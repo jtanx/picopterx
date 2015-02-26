@@ -38,7 +38,7 @@ namespace picopter {
             Buzzer(const Buzzer &other);
             /** Assignment operator (disabled) **/
             Buzzer& operator= (const Buzzer &other);
-            void soundOutput();
+            void soundOutput(bool blocking);
             void soundLoop();
     };
 }
