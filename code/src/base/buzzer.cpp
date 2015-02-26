@@ -43,6 +43,22 @@ Buzzer::~Buzzer() {
 }
 
 /**
+ * The function that does the software PWM and actuates the GPIO sound pin.
+ */
+void Buzzer::soundOutput() {
+    Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
+    auto start = hrc::now();
+    for (int n = 0; m_running && !m_stop && !m_quiet && n < m_count; n++) {
+        setBuzzer(HIGH);
+        delayMicroseconds(m_dutyCycle);
+        setBuzzer(LOW);
+        delayMicroseconds(m_period - m_dutyCycle);
+    }
+    std::chrono::duration<double> elapsed = hrc::now() - start;
+    Log(LOG_INFO, "Play time: %lf", elapsed.count());
+}
+
+/**
  * Worker thread that controls the buzzer pin.
  * Blocks until it is signalled to either exit or play a sound.
  */
@@ -52,18 +68,7 @@ void Buzzer::soundLoop() {
     while (!m_stop) {
         m_signaller.wait(lock, [this]{return m_running || m_stop;});
         if (!m_stop) {
-            Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
-            
-            auto start = hrc::now();
-            for (int n = 0; m_running && !m_stop && !m_quiet && n < m_count; n++) {
-                setBuzzer(HIGH);
-                delayMicroseconds(m_dutyCycle);
-                setBuzzer(LOW);
-                delayMicroseconds(m_period - m_dutyCycle);
-            }
-            
-            std::chrono::duration<double> elapsed = hrc::now() - start;
-            Log(LOG_INFO, "Play time: %lf", elapsed.count());
+            Buzzer::soundOutput();
         }
         m_running = false;
     }
@@ -79,8 +84,8 @@ void Buzzer::soundLoop() {
  */
 void Buzzer::play(int duration, int frequency, int volume) {
     m_quiet = true;
-    
     std::unique_lock<std::mutex> lock(g_buzzer_mutex);
+    
     m_period = 1000000 / picopter::clamp(frequency, 10, 5000);
     m_dutyCycle = (m_period * picopter::clamp(volume, 0, 100)) / 200;
     m_count = (1000 * std::max(duration, 0)) / m_period;
@@ -89,6 +94,28 @@ void Buzzer::play(int duration, int frequency, int volume) {
     m_running = true;
     lock.unlock();
     m_signaller.notify_one();
+}
+
+/**
+ * Plays a tone, blocking until it is complete.
+ * If a tone is already being played, then that is stopped and the new tone
+ * is played instead.
+ * @param duration The length of time to play the sound, in ms
+ * @param frequency The frequency of the sound, in Hz (10-5000Hz).
+ * @param volume The loudness of the sound, as a percentage (0 - 100%)
+ */
+void Buzzer::playWait(int duration, int frequency, int volume) {
+    m_quiet = true;
+    std::lock_guard<std::mutex> lock(g_buzzer_mutex);
+    
+    m_period = 1000000 / picopter::clamp(frequency, 10, 5000);
+    m_dutyCycle = (m_period * picopter::clamp(volume, 0, 100)) / 200;
+    m_count = (1000 * std::max(duration, 0)) / m_period;
+    
+    m_quiet = false;
+    m_running = true;
+    Buzzer::soundOutput();
+    m_running = false;
 }
 
 /**

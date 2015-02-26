@@ -52,3 +52,7 @@ TEST_F(BuzzerTest, TestHighFrequency) {
     b.play(500, 1200, 100);
     sleep_for(milliseconds(100));
 }
+
+TEST_F(BuzzerTest, TestBlocking) {
+    b.playWait(500, 100, 100);
+}

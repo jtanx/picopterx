@@ -6,6 +6,7 @@
 #ifndef _PICOPTERX_NAVIGATION_H
 #define _PICOPTERX_NAVIGATION_H
 
+#define _USE_MATH_DEFINES //For Windows compatibility
 #include <cmath>
 
 /** @todo Confirm correct radius (see http://www.ga.gov.au/scientific-topics/positioning-navigation/geodesy/geodetic-techniques/distance-calculation-algorithms) **/
@@ -89,7 +90,7 @@ namespace picopter {
          * @param a The coordinate, in degrees
          */
         template <typename Coord>
-        void ToRadians(Coord &a) {
+        void CoordInRadians(Coord &a) {
             a.lat = DEG2RAD(a.lat);
             a.lon = DEG2RAD(a.lon);
         }
@@ -98,8 +99,8 @@ namespace picopter {
          * Converts the coordinate position from radians to degrees.
          * @param a The coordinate, in radians
          */
-         template <typename Coord>
-        void ToDegrees(Coord &a) {
+        template <typename Coord>
+        void CoordInDegrees(Coord &a) {
             a.lat = RAD2DEG(a.lat);
             a.lon = RAD2DEG(a.lon);
         }
@@ -128,7 +129,7 @@ namespace picopter {
          double CoordBearing(Coord from, Coord to) {
              double y = sin(to.lon - from.lon) * cos(to.lat);
              double x = cos(from.lat) * sin(to.lat) -
-                          sin(from.lat) * cos(to.lon) * cos(to.lat - from.lat);
+                        sin(from.lat) * cos(to.lon) * cos(to.lat - from.lat);
             return atan2(y, x);
          }
         
