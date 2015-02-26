@@ -74,15 +74,16 @@ namespace picopter {
         
         /**
          * Determines if the given coordinate is within the bounded rectangle.
+         * The bounds are inclusive.
          * @param here The current location (must have lat/lon members)
          * @param bl The bottom left coordinate (must have lat/lon members)
          * @param tr The top right coordinate (must have lat/lon members)
          * @return true iff the current location is within bounds.
          */
-        template <typename Coord>
-        bool InBounds(Coord here, Coord bl, Coord tr) {
+        template <typename Coord1, typename Coord2, typename Coord3>
+        bool CoordInBounds(Coord1 here, Coord2 bl, Coord3 tr) {
             return (here.lat >= bl.lat && here.lat <= tr.lat) &&
-                   (here.lon >= bl.lon && here.lat <= tr.lon);
+                   (here.lon >= bl.lon && here.lon <= tr.lon);
         }
         
         /**
@@ -111,8 +112,8 @@ namespace picopter {
          * @param to The second coordinate,in radians.
          * @return The distance between the coordinates, in metres.
          */
-        template <typename Coord>
-        double CoordDistance(Coord from, Coord to) {
+        template <typename Coord1, typename Coord2>
+        double CoordDistance(Coord1 from, Coord2 to) {
             double haversine = pow(sin((to.lat-from.lat)/2), 2) + 
                                cos(from.lat) * cos(to.lat) * 
                                pow(sin((to.lon - from.lon)/2), 2);
@@ -125,16 +126,16 @@ namespace picopter {
          * @param to The second coordinate, in radians.
          * @param The bearing, in radians.
          */
-         template <typename Coord>
-         double CoordBearing(Coord from, Coord to) {
+         template <typename Coord1, typename Coord2>
+         double CoordBearing(Coord1 from, Coord2 to) {
              double y = sin(to.lon - from.lon) * cos(to.lat);
              double x = cos(from.lat) * sin(to.lat) -
-                        sin(from.lat) * cos(to.lon) * cos(to.lat - from.lat);
-            return atan2(y, x);
+                        sin(from.lat) * cos(to.lat) * cos(to.lon - from.lon);
+            return fmod((atan2(y, x) + (2.0 * M_PI)), 2.0 * M_PI);
          }
         
-        const Point2D PERTH_BL = {-33, 115};
-        const Point2D PERTH_TR = {-31, 117};
+        const Coord2D PERTH_BL = {-33, 115};
+        const Coord2D PERTH_TR = {-31, 117};
     }
 }
 

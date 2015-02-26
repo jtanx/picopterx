@@ -4,6 +4,7 @@
 set (SOURCE
 	 test_buzzer.cpp
 	 test_opts.cpp
+	 test_navigation.cpp
 )
 set (HEADERS
 	 
