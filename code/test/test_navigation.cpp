@@ -65,9 +65,7 @@ TEST_F(NavigationTest, TestInBoundsA) {
     ASSERT_TRUE(CoordInBounds(g, PERTH_BL, PERTH_TR));
 }
 
-//TODO confirm which radius to use
-//Current implementation is cross of Great Circle/Harversine w/ Australian tuned Earth radius
-//http://www.ga.gov.au/scientific-topics/positioning-navigation/geodesy/geodetic-techniques/distance-calculation-algorithms
+//Test values cross-referenced from Python implementation
 TEST_F(NavigationTest, TestCoordDistance) {
     Coord2D a = {-30, 150}, b = {-31, 150}, g = {-35, 151};
 
@@ -75,15 +73,22 @@ TEST_F(NavigationTest, TestCoordDistance) {
     CoordInRadians(b);
     CoordInRadians(g);
 
-    ASSERT_DOUBLE_EQ(0.0, CoordDistance(a,a));
-    ASSERT_NEAR(111.089, CoordDistance(a,b)/1000.0, 0.001);
-    //ASSERT_NEAR(563.294, CoordDistance(a,g)/1000.0, 0.001); //FAIL
-    
+    ASSERT_DOUBLE_EQ(0.0, CoordDistance(a, a));
+    ASSERT_DOUBLE_EQ(111089.56111761599, CoordDistance(a, b));
+    ASSERT_DOUBLE_EQ(563283.2589389302, CoordDistance(a, g));
 }
 
 TEST_F(NavigationTest, TestCoordBearing) {
     Coord2D a = {-30, 150}, b = {-31, 150}, g = {-35, 151};
     
+    //=.=
+    CoordInRadians(a);
+    CoordInRadians(b);
+    CoordInRadians(g);
+    
+    ASSERT_DOUBLE_EQ(0.0, CoordBearing(a, a));
     ASSERT_DOUBLE_EQ(M_PI, CoordBearing(a, b));
-    ASSERT_DOUBLE_EQ(170.691389, RAD2DEG(CoordBearing(a, g)));
+    ASSERT_DOUBLE_EQ(0.0, CoordBearing(b, a));
+    ASSERT_DOUBLE_EQ(170.6912616092665, RAD2DEG(CoordBearing(a, g)));
+    ASSERT_DOUBLE_EQ(-9.846559580054718, RAD2DEG(CoordBearing(g, a)));
 }

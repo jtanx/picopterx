@@ -9,10 +9,13 @@
 #define _USE_MATH_DEFINES //For Windows compatibility
 #include <cmath>
 
-/** @todo Confirm correct radius (see http://www.ga.gov.au/scientific-topics/positioning-navigation/geodesy/geodetic-techniques/distance-calculation-algorithms) **/
-#define RADIUS_OF_EARTH		6364.963
-#define RAD2DEG(x) 			((x) * (180.0 / M_PI))
-#define DEG2RAD(x)			((x) * (M_PI / 180.0))
+/** Radius of the earth (Australian tuned; in km) **/
+#define RADIUS_OF_EARTH 6364.963
+#define RAD2DEG(x)      ((x) * (180.0 / M_PI))
+#define DEG2RAD(x)      ((x) * (M_PI / 180.0))
+#define TRUEBEARING(x)  (fmod((x)+(2.0*M_PI), 2.0*M_PI))
+
+#define sin2(x) (sin(x) * (sin(x)))
 
 namespace picopter {
     namespace navigation {
@@ -107,32 +110,38 @@ namespace picopter {
         }
         
         /**
-         * Uses the Haversine method to calculate the distance.
+         * Calculates the distance between two coordinates.
+         * Uses the Haversine method (great-circle distance) with an 
+         * Earth radius of 6364.963km. 
+         * @see http://www.ga.gov.au/scientific-topics/positioning-navigation/geodesy/geodetic-techniques/distance-calculation-algorithms
          * @param from The first coordinate, in radians.
          * @param to The second coordinate,in radians.
          * @return The distance between the coordinates, in metres.
          */
         template <typename Coord1, typename Coord2>
         double CoordDistance(Coord1 from, Coord2 to) {
-            double haversine = pow(sin((to.lat-from.lat)/2), 2) + 
+            double haversine = sin2((to.lat-from.lat)/2) + 
                                cos(from.lat) * cos(to.lat) * 
-                               pow(sin((to.lon - from.lon)/2), 2);
+                               sin2((to.lon - from.lon)/2);
             return 2 * RADIUS_OF_EARTH * 1000 * asin(sqrt(haversine));
         }
+
         
         /**
          * Calculates the initial bearing (forward azimuth).
+         * To get the true bearing, pass the return value through the
+         * TRUEBEARING macro, e.g. TRUEBEARING(CoordBearing(from,to)).
          * @param from The first coordinate, in radians.
          * @param to The second coordinate, in radians.
-         * @param The bearing, in radians.
+         * @param The bearing, in radians (-pi < x < pi; CW positive from N)
          */
-         template <typename Coord1, typename Coord2>
-         double CoordBearing(Coord1 from, Coord2 to) {
-             double y = sin(to.lon - from.lon) * cos(to.lat);
-             double x = cos(from.lat) * sin(to.lat) -
-                        sin(from.lat) * cos(to.lat) * cos(to.lon - from.lon);
-            return fmod((atan2(y, x) + (2.0 * M_PI)), 2.0 * M_PI);
-         }
+        template <typename Coord1, typename Coord2>
+        double CoordBearing(Coord1 from, Coord2 to) {
+            double x = cos(from.lat) * sin(to.lat) -
+                       sin(from.lat) * cos(to.lat) * cos(to.lon - from.lon);
+            double y = sin(to.lon - from.lon) * cos(to.lat);
+            return atan2(y, x);
+        }
         
         const Coord2D PERTH_BL = {-33, 115};
         const Coord2D PERTH_TR = {-31, 117};

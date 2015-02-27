@@ -96,6 +96,9 @@ if (NOT LIBGPS_FOUND)
 	include_directories(${PI_EMULATE}/gps-emu)
 endif()
 
+#Australian tuning parameters
+#set (IS_AUSTRALIAN_TUNED ON CACHE BOOL "Enable Australia-specific tuning (default: on)")
+
 #Generate the config file
 if (UNIX AND NOT CYGWIN)
 	set (USE_SYSLOG 1)
