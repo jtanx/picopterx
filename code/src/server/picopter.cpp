@@ -39,11 +39,13 @@ int main(int argc, char *argv[]) {
     try {
         fc.reset(new picopter::FlightController());
     } catch (const std::invalid_argument &e) {
-        Fatal("Failed to initialise %s which is required, exiting.", e.what());
+        //Fatal("Failed to initialise %s which is required, exiting.", e.what());
+        Log(LOG_ERR, "Failed to initialise %s which is required, exiting (not really).", e.what());
     }
     
-    fc->buzzer->play(10,200,30);
-    
+    if (fc) {
+        fc->buzzer->play(10,200,30);
+    }
     /*
     
     b.play(1000, 200, 80);
