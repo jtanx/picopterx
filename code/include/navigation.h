@@ -39,6 +39,8 @@ namespace picopter {
             double lon;
             /** Altitude **/
             double alt;
+            /** Implicit conversion to 2D coordinate **/
+            operator Coord2D() { Coord2D ret = {lat,lon}; return ret; };
         } Coord3D;
         
         /**
@@ -61,6 +63,8 @@ namespace picopter {
             double y;
             /** z-coordinate **/
             double z;
+            /** Implicit conversion to 2D coordinate **/
+            operator Point2D() { Point2D ret = {x, y}; return ret; }
         } Point3D;
         
         /**

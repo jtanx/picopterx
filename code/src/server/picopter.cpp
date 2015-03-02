@@ -46,6 +46,12 @@ int main(int argc, char *argv[]) {
     if (fc) {
         fc->buzzer->play(10,200,30);
     }
+    
+    picopter::navigation::Coord3D p = {2,3,4};
+    picopter::navigation::Coord2D e = p;
+    
+    Log(LOG_INFO, "3D: (%.1f,%.1f,%.1f), 2D: (%.1f, %.1f)", p.lat, p.lon, p.alt, e.lat, e.lon);
+    
     /*
     
     b.play(1000, 200, 80);

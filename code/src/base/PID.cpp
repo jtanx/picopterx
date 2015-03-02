@@ -218,7 +218,7 @@ void PID::setProcessValue(float pv) {
 void PID::setBias(float bias){
 
     bias_ = bias;
-    usingFeedForward = 1;
+    usingFeedForward = true;
 
 }
 
