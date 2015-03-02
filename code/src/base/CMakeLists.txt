@@ -10,6 +10,7 @@ set (SOURCE
 	 gps.cpp
 	 imu.cpp
 	 flightcontroller.cpp
+	 PID.cpp
 )
 set (HEADERS
 	 flightboard-private.h
@@ -24,6 +25,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/gps_feed.h
 	 ${PI_INCLUDE}/imu_feed.h
 	 ${PI_INCLUDE}/flightcontroller.h
+	 ${PI_INCLUDE}/PID.h
 )
 
 #Compile as a static library
