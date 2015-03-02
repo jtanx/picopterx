@@ -21,5 +21,5 @@ target_link_libraries (run-tests LINK_PUBLIC picopter_base)
 
 #For `make test`
 add_test(NAME picopter-testing 
-		 COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests
+		 COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests --gtest_color=yes
 		 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
