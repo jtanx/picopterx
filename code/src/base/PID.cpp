@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  *
  * @section DESCRIPTION
- * 
+ *
  * A PID controller is a widely used feedback controller commonly found in
  * industry.
  *
@@ -49,6 +49,8 @@
  */
 #include "PID.h"
 
+using picopter::PID;
+
 PID::PID(float Kc, float tauI, float tauD, float interval) {
 
     usingFeedForward = false;
@@ -72,7 +74,7 @@ PID::PID(float Kc, float tauI, float tauD, float interval) {
 
     accError_ = 0.0;
     bias_     = 0.0;
-    
+
     realOutput_ = 0.0;
 
 }
