@@ -90,5 +90,7 @@ void IMU::imuLoop() {
             Log(LOG_INFO, "Got IMU data: <%.2f, %.2f, %.2f>",
                 m_data.pitch, m_data.roll, m_data.yaw);
         }
+        //Apparently needed...
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 }

@@ -26,6 +26,10 @@ GPS::GPS(Options *opts)
 , m_quit(false)
 {
     m_gps_rec = new gpsmm("localhost", DEFAULT_GPSD_PORT);
+    if (m_gps_rec->stream(WATCH_ENABLE|WATCH_JSON) == NULL) {
+        delete m_gps_rec;
+        throw std::invalid_argument("gpsd is not running");
+    }
     m_worker = std::thread(&GPS::gpsLoop, this);
     
     if (opts) {
@@ -33,12 +37,12 @@ GPS::GPS(Options *opts)
         m_cycle_timeout = opts->GetInt("CYCLE_TIMEOUT", CYCLE_TIMEOUT_DEFAULT);
     }
     
-    GPSData d = m_data.load();
-    Log(LOG_INFO, "GPSData: Fix {%f, %f}, Unc {%f, %f}, time %f",
-        d.fix.lat, d.fix.lon, d.err.lat, d.err.lon, d.timestamp);
+    //GPSData d = m_data.load();
+    //Log(LOG_INFO, "GPSData: Fix {%f, %f}, Unc {%f, %f}, time %f",
+    //    d.fix.lat, d.fix.lon, d.err.lat, d.err.lon, d.timestamp);
     
-    Log(LOG_INFO, "IS GPSData LOCK FREE? %d", m_data.is_lock_free());
-    Log(LOG_INFO, "IS m_last_fix LOCK FREE? %d", m_last_fix.is_lock_free());
+    //Log(LOG_INFO, "IS GPSData LOCK FREE? %d", m_data.is_lock_free());
+    //Log(LOG_INFO, "IS m_last_fix LOCK FREE? %d", m_last_fix.is_lock_free());
 }
 
 /**
@@ -62,20 +66,11 @@ void GPS::gpsLoop() {
     auto tp = steady_clock::now() - std::chrono::seconds(999);
     Log(LOG_INFO, "GPS Started!");
     
-    bool gpsd_likely_not_running = false;
-    while (!m_quit && ((m_gps_rec->stream(WATCH_ENABLE|WATCH_JSON) == NULL))) {
-        if (!gpsd_likely_not_running) {
-            Log(LOG_WARNING, "Could not stream from gpsd. Check that it's running.");
-            gpsd_likely_not_running = true;
-        }
-        std::this_thread::sleep_for(seconds(1));
-    }
-    
     while (!m_quit) {
         m_last_fix = duration_cast<seconds>(steady_clock::now() - tp).count();
-        if (m_last_fix > 0) {
-            Log(LOG_INFO, "LAST FIX: %d", m_last_fix.load());
-        }
+        //if (m_last_fix > 0) {
+        //    Log(LOG_INFO, "LAST FIX: %d", m_last_fix.load());
+        //}
                 
         if (m_gps_rec->waiting(m_cycle_timeout) && !m_quit) {
             struct gps_data_t* data;
@@ -83,7 +78,7 @@ void GPS::gpsLoop() {
                 Log(LOG_WARNING, "Failed to read GPS data");
             } else if (data->set & LATLON_SET) {
                 GPSData d;
-                Log(LOG_INFO, "Got GPS data!");
+                //Log(LOG_INFO, "Got GPS data!");
                 d.fix.lat = DEG2RAD(data->fix.latitude);
                 d.err.lat = data->fix.epy;
                 d.fix.lon = DEG2RAD(data->fix.longitude);
@@ -92,9 +87,9 @@ void GPS::gpsLoop() {
                 m_data = d;
                 
                 
-                time_t t = (time_t) d.timestamp;
-                Log(LOG_INFO, "Current fix: (%.6f +/- %.1fm, %.6f +/- %.1fm) at %s",
-                    d.fix.lat, d.err.lat, d.fix.lon, d.err.lon, ctime(&t));
+                //time_t t = (time_t) d.timestamp;
+                //Log(LOG_INFO, "Current fix: (%.6f +/- %.1fm, %.6f +/- %.1fm) at %s",
+                //    d.fix.lat, d.err.lat, d.fix.lon, d.err.lon, ctime(&t));
                 
                 tp = steady_clock::now();
             }

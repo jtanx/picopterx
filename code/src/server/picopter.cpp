@@ -7,9 +7,9 @@
  
 int main(int argc, char *argv[]) {
     LogInit();
-    Log(LOG_NOTICE, "BUZZER TEST STARTED");
+    /*Log(LOG_NOTICE, "BUZZER TEST STARTED");
     picopter::Buzzer b;
-    picopter::GPS gps;
+    //picopter::GPS gps;
     picopter::Options o;
     const char *t = "AAA";
     
@@ -30,6 +30,20 @@ int main(int argc, char *argv[]) {
     std::cout << o.Remove("NO") << std::endl;
     
     o.Save(stdout);
+    b.play(800,200,80);
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    b.playWait(1000,200,80);
+    b.play(1000,200,80);
+    */
+    std::unique_ptr<picopter::FlightController> fc;
+    try {
+        fc.reset(new picopter::FlightController());
+    } catch (const std::invalid_argument &e) {
+        Fatal("Failed to initialise %s which is required, exiting.", e.what());
+    }
+    
+    fc->buzzer->play(10,200,30);
+    
     /*
     
     b.play(1000, 200, 80);

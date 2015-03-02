@@ -125,7 +125,6 @@ namespace picopter {
                                sin2((to.lon - from.lon)/2);
             return 2 * RADIUS_OF_EARTH * 1000 * asin(sqrt(haversine));
         }
-
         
         /**
          * Calculates the initial bearing (forward azimuth).

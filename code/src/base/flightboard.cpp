@@ -38,6 +38,7 @@ FlightBoard::FlightBoard() : FlightBoard(NULL) {}
  * Destructor. Closes the connection to ServoBlaster.
  */
 FlightBoard::~FlightBoard() {
+    stop();
     fclose(m_fp);
 }
 

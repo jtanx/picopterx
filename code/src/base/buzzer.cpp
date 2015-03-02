@@ -38,11 +38,11 @@ Buzzer::~Buzzer() {
     m_quiet = true;
     m_stop = true;
     
-    Log(LOG_INFO, "DESTROYING");
+    //Log(LOG_INFO, "DESTROYING");
     m_signaller.notify_one();
-    Log(LOG_INFO, "NOTIFIED");
+    //Log(LOG_INFO, "NOTIFIED");
     m_worker.join();
-    Log(LOG_INFO, "DESTROYED");
+    //Log(LOG_INFO, "DESTROYED");
 }
 
 /**
@@ -50,7 +50,7 @@ Buzzer::~Buzzer() {
  * @param blocking true iff this function is used with the playWait method.
  */
 void Buzzer::soundOutput(bool blocking) {
-    Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
+    //Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
     auto start = hrc::now();
     for (int n = 0; (blocking || m_running) && !m_stop && !m_quiet && n < m_count; n++) {
         setBuzzer(HIGH);
@@ -59,7 +59,7 @@ void Buzzer::soundOutput(bool blocking) {
         delayMicroseconds(m_period - m_dutyCycle);
     }
     std::chrono::duration<double> elapsed = hrc::now() - start;
-    Log(LOG_INFO, "Play time: %lf", elapsed.count());
+   // Log(LOG_INFO, "Play time: %lf", elapsed.count());
 }
 
 /**
