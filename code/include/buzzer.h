@@ -11,9 +11,9 @@ namespace picopter {
         public:
             Buzzer();
             virtual ~Buzzer();
-            void play(int duration, int frequency, int volume);
-            void playWait(int duration, int frequency, int volume);
-            void stop();
+            void Play(int duration, int frequency, int volume);
+            void PlayWait(int duration, int frequency, int volume);
+            void Stop();
         private:
             /** Internal mutex to interact with the worker thread **/
             static std::mutex g_buzzer_mutex;
@@ -38,8 +38,8 @@ namespace picopter {
             Buzzer(const Buzzer &other);
             /** Assignment operator (disabled) **/
             Buzzer& operator= (const Buzzer &other);
-            void soundOutput(bool blocking);
-            void soundLoop();
+            void SoundOutput(bool blocking);
+            void SoundLoop();
     };
 }
 

@@ -33,14 +33,14 @@ namespace picopter {
             FlightBoard();
             FlightBoard(Options *opts);
             virtual ~FlightBoard();
-            void start();
-            void stop();
-            void getData(FlightData *d);
-            void setData(FlightData *d);
-            void setAileron(int speed);
-            void setElevator(int speed);
-            void setRudder(int speed);
-            void setGimbal(int pos);
+            void Start();
+            void Stop();
+            void GetData(FlightData *d);
+            void SetData(FlightData *d);
+            void SetAileron(int speed);
+            void SetElevator(int speed);
+            void SetRudder(int speed);
+            void SetGimbal(int pos);
             
         private:
             /** Holds current flight data **/
@@ -55,9 +55,9 @@ namespace picopter {
             /** Assignment operator (disabled) **/
             FlightBoard& operator= (const FlightBoard &other);
             
-            void actuate(bool force=false);
-            void setChannelChecked(int channel, int value);
-            void setChannel(int channel, int value);
+            void Actuate(bool force=false);
+            void SetChannelChecked(int channel, int value);
+            void SetChannel(int channel, int value);
     };
 }
 

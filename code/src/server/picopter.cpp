@@ -30,10 +30,10 @@ int main(int argc, char *argv[]) {
     std::cout << o.Remove("NO") << std::endl;
     
     o.Save(stdout);
-    b.play(800,200,80);
+    b.Play(800,200,80);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    b.playWait(1000,200,80);
-    b.play(1000,200,80);
+    b.PlayWait(1000,200,80);
+    b.Play(1000,200,80);
     */
     std::unique_ptr<picopter::FlightController> fc;
     try {
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     }
     
     if (fc) {
-        fc->buzzer->play(10,200,30);
+        fc->buzzer->Play(10,200,30);
     }
     
     picopter::navigation::Coord3D p = {2,3,4};
@@ -54,11 +54,11 @@ int main(int argc, char *argv[]) {
     
     /*
     
-    b.play(1000, 200, 80);
+    b.Play(1000, 200, 80);
     std::this_thread::sleep_for(std::chrono::milliseconds(400));
-    b.play(1000, 100, 80);
+    b.Play(1000, 100, 80);
     std::this_thread::sleep_for(std::chrono::milliseconds(800));
-    b.play(1000, 1200, 100);
+    b.Play(1000, 1200, 100);
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
     
     if (argc > 1 && !strcmp(argv[1], "--loop")) {
@@ -67,6 +67,6 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    std::cout << gps.timeSinceLastFix();*/
+    std::cout << gps.TimeSinceLastFix();*/
     return 0;
 }

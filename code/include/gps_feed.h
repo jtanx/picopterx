@@ -38,8 +38,9 @@ namespace picopter {
             GPS();
             GPS(Options *opts);
             virtual ~GPS();
-            void getLatest(GPSData *d);
-            int timeSinceLastFix();
+            void GetLatest(GPSData *d);
+            
+            int TimeSinceLastFix();
         private:
             /** The GPS read wait timeout (in us) **/
             static const int CYCLE_TIMEOUT_DEFAULT = 500000;
@@ -55,7 +56,7 @@ namespace picopter {
             GPS(const GPS &other);
             /** Assignment operator (disabled) **/
             GPS& operator= (const GPS &other);
-            void gpsLoop();
+            void GPSLoop();
     };
 }
 

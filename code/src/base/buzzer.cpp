@@ -8,7 +8,7 @@
 #include <wiringPi.h>
  
 using picopter::Buzzer;
-using picopter::gpio::setBuzzer;
+using picopter::gpio::SetBuzzer;
 using hrc = std::chrono::high_resolution_clock;
 
 /* 
@@ -27,8 +27,8 @@ Buzzer::Buzzer()
 , m_stop(false)
 , m_quiet(false)
 {
-    picopter::gpio::init();
-    m_worker = std::thread(&Buzzer::soundLoop, this);
+    picopter::gpio::Init();
+    m_worker = std::thread(&Buzzer::SoundLoop, this);
 }
 
 /**
@@ -49,13 +49,13 @@ Buzzer::~Buzzer() {
  * The function that does the software PWM and actuates the GPIO sound pin.
  * @param blocking true iff this function is used with the playWait method.
  */
-void Buzzer::soundOutput(bool blocking) {
+void Buzzer::SoundOutput(bool blocking) {
     //Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
     auto start = hrc::now();
     for (int n = 0; (blocking || m_running) && !m_stop && !m_quiet && n < m_count; n++) {
-        setBuzzer(HIGH);
+        SetBuzzer(HIGH);
         delayMicroseconds(m_dutyCycle);
-        setBuzzer(LOW);
+        SetBuzzer(LOW);
         delayMicroseconds(m_period - m_dutyCycle);
     }
     std::chrono::duration<double> elapsed = hrc::now() - start;
@@ -66,13 +66,13 @@ void Buzzer::soundOutput(bool blocking) {
  * Worker thread that controls the buzzer pin.
  * Blocks until it is signalled to either exit or play a sound.
  */
-void Buzzer::soundLoop() {
+void Buzzer::SoundLoop() {
     std::unique_lock<std::mutex> lock(g_buzzer_mutex);
     
     while (!m_stop) {
         m_signaller.wait(lock, [this]{return m_running || m_stop;});
         if (!m_stop) {
-            Buzzer::soundOutput(false);
+            Buzzer::SoundOutput(false);
         }
         m_running = false;
     }
@@ -86,7 +86,7 @@ void Buzzer::soundLoop() {
  * @param frequency The frequency of the sound, in Hz (10-5000Hz).
  * @param volume The loudness of the sound, as a percentage (0 - 100%)
  */
-void Buzzer::play(int duration, int frequency, int volume) {
+void Buzzer::Play(int duration, int frequency, int volume) {
     m_quiet = true;
     std::unique_lock<std::mutex> lock(g_buzzer_mutex);
     
@@ -108,7 +108,7 @@ void Buzzer::play(int duration, int frequency, int volume) {
  * @param frequency The frequency of the sound, in Hz (10-5000Hz).
  * @param volume The loudness of the sound, as a percentage (0 - 100%)
  */
-void Buzzer::playWait(int duration, int frequency, int volume) {
+void Buzzer::PlayWait(int duration, int frequency, int volume) {
     m_quiet = true;
     std::lock_guard<std::mutex> lock(g_buzzer_mutex);
     
@@ -117,13 +117,13 @@ void Buzzer::playWait(int duration, int frequency, int volume) {
     m_count = (1000 * std::max(duration, 0)) / m_period;
     
     m_quiet = false;
-    Buzzer::soundOutput(true);
+    Buzzer::SoundOutput(true);
 }
 
 /**
  * Signals the buzzer to stop if it is running
  */
-void Buzzer::stop() {
+void Buzzer::Stop() {
     m_quiet = true;
 }
 

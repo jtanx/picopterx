@@ -40,7 +40,7 @@ IMU::IMU(Options *opts)
         throw std::invalid_argument("Could not begin IMU measurement");
     }
     
-    m_worker = std::thread(&IMU::imuLoop, this);
+    m_worker = std::thread(&IMU::IMULoop, this);
 }
 
 /**
@@ -62,7 +62,7 @@ IMU::~IMU() {
  * Get the latest IMU data, if available.
  * Unavailable values are indicated with NaN.
  */
-void IMU::getLatest(IMUData *d) {
+void IMU::GetLatest(IMUData *d) {
     std::lock_guard<std::mutex> lock(m_mutex);
     *d = m_data;
     d->roll = DEG2RAD(d->roll);
@@ -74,7 +74,7 @@ void IMU::getLatest(IMUData *d) {
  * Worker thread.
  * Receives data from the IMU and updates the latest information as necessary.
  */
-void IMU::imuLoop() {
+void IMU::IMULoop() {
     Packet msg(1, 0); // 1 sensor, and not the XBus master (whatever that is).
     
     while (!m_quit) {

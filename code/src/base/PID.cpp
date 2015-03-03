@@ -59,12 +59,12 @@ PID::PID(float Kc, float tauI, float tauD, float interval) {
     //Default the limits to the full range of I/O: 3.3V
     //Make sure to set these to more appropriate limits for
     //your application.
-    setInputLimits(0.0, 3.3);
-    setOutputLimits(0.0, 3.3);
+    SetInputLimits(0.0, 3.3);
+    SetOutputLimits(0.0, 3.3);
 
     tSample_ = interval;
 
-    setTunings(Kc, tauI, tauD);
+    SetTunings(Kc, tauI, tauD);
 
     setPoint_             = 0.0;
     processVariable_      = 0.0;
@@ -79,7 +79,7 @@ PID::PID(float Kc, float tauI, float tauD, float interval) {
 
 }
 
-void PID::setInputLimits(float inMin, float inMax) {
+void PID::SetInputLimits(float inMin, float inMax) {
 
     //Make sure we haven't been given impossible values.
     if (inMin >= inMax) {
@@ -103,7 +103,7 @@ void PID::setInputLimits(float inMin, float inMax) {
 
 }
 
-void PID::setOutputLimits(float outMin, float outMax) {
+void PID::SetOutputLimits(float outMin, float outMax) {
 
     //Make sure we haven't been given impossible values.
     if (outMin >= outMax) {
@@ -126,7 +126,7 @@ void PID::setOutputLimits(float outMin, float outMax) {
 
 }
 
-void PID::setTunings(float Kc, float tauI, float tauD) {
+void PID::SetTunings(float Kc, float tauI, float tauD) {
 
     //Verify that the tunings make sense.
     if (Kc == 0.0 || tauI < 0.0 || tauD < 0.0) {
@@ -161,7 +161,7 @@ void PID::setTunings(float Kc, float tauI, float tauD) {
 
 }
 
-void PID::reset(void) {
+void PID::Reset(void) {
 
     float scaledBias = 0.0;
 
@@ -179,19 +179,19 @@ void PID::reset(void) {
 
 }
 
-void PID::setMode(int mode) {
+void PID::SetMode(int mode) {
 
     //We were in manual, and we just got set to auto.
     //Reset the controller internals.
     if (mode != 0 && !inAuto) {
-        reset();
+        Reset();
     }
 
     inAuto = (mode != 0);
 
 }
 
-void PID::setInterval(float interval) {
+void PID::SetInterval(float interval) {
 
     if (interval > 0) {
         //Convert the time-based tunings to reflect this change.
@@ -203,26 +203,26 @@ void PID::setInterval(float interval) {
 
 }
 
-void PID::setSetPoint(float sp) {
+void PID::SetSetPoint(float sp) {
 
     setPoint_ = sp;
 
 }
 
-void PID::setProcessValue(float pv) {
+void PID::SetProcessValue(float pv) {
 
     processVariable_ = pv;
 
 }
 
-void PID::setBias(float bias){
+void PID::SetBias(float bias){
 
     bias_ = bias;
     usingFeedForward = true;
 
 }
 
-float PID::compute() {
+float PID::Compute() {
 
     //Pull in the input and setpoint, and scale them into percent span.
     float scaledPV = (processVariable_ - inMin_) / inSpan_;
@@ -277,49 +277,49 @@ float PID::compute() {
 
 }
 
-float PID::getInMin() {
+float PID::GetInMin() {
 
     return inMin_;
 
 }
 
-float PID::getInMax() {
+float PID::GetInMax() {
 
     return inMax_;
 
 }
 
-float PID::getOutMin() {
+float PID::GetOutMin() {
 
     return outMin_;
 
 }
 
-float PID::getOutMax() {
+float PID::GetOutMax() {
 
     return outMax_;
 
 }
 
-float PID::getInterval() {
+float PID::GetInterval() {
 
     return tSample_;
 
 }
 
-float PID::getPParam() {
+float PID::GetPParam() {
 
     return pParam_;
 
 }
 
-float PID::getIParam() {
+float PID::GetIParam() {
 
     return iParam_;
 
 }
 
-float PID::getDParam() {
+float PID::GetDParam() {
 
     return dParam_;
 

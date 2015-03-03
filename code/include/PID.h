@@ -80,7 +80,7 @@ namespace picopter {
          * @param InMin The real world value corresponding to 0%.
          * @param InMax The real world value corresponding to 100%.
          */
-        void setInputLimits(float inMin , float inMax);
+        void SetInputLimits(float inMin , float inMax);
 
         /**
          * Scale from outputs to 0-100%.
@@ -88,7 +88,7 @@ namespace picopter {
          * @param outMin The real world value corresponding to 0%.
          * @param outMax The real world value corresponding to 100%.
          */
-        void setOutputLimits(float outMin, float outMax);
+        void SetOutputLimits(float outMin, float outMax);
 
         /**
          * Calculate PID constants.
@@ -99,13 +99,13 @@ namespace picopter {
          * @param tauI - Tuning parameter
          * @param tauD - Tuning parameter
          */
-        void setTunings(float Kc, float tauI, float tauD);
+        void SetTunings(float Kc, float tauI, float tauD);
 
         /**
          * Reinitializes controller internals. Automatically
          * called on a manual to auto transition.
          */
-        void reset(void);
+        void Reset(void);
 
         /**
          * Set PID to manual or auto mode.
@@ -113,52 +113,52 @@ namespace picopter {
          * @param mode        0 -> Manual
          *             Non-zero -> Auto
          */
-        void setMode(int mode);
+        void SetMode(int mode);
 
         /**
          * Set how fast the PID loop is run.
          *
          * @param interval PID calculation peformed every interval seconds.
          */
-        void setInterval(float interval);
+        void SetInterval(float interval);
 
         /**
          * Set the set point.
          *
          * @param sp The set point as a real world value.
          */
-        void setSetPoint(float sp);
+        void SetSetPoint(float sp);
 
         /**
          * Set the process value.
          *
          * @param pv The process value as a real world value.
          */
-        void setProcessValue(float pv);
+        void SetProcessValue(float pv);
 
         /**
          * Set the bias.
          *
          * @param bias The bias for the controller output.
          */
-        void setBias(float bias);
+        void SetBias(float bias);
 
         /**
          * PID calculation.
          *
          * @return The controller output as a float between outMin and outMax.
          */
-        float compute(void);
+        float Compute(void);
 
         //Getters.
-        float getInMin();
-        float getInMax();
-        float getOutMin();
-        float getOutMax();
-        float getInterval();
-        float getPParam();
-        float getIParam();
-        float getDParam();
+        float GetInMin();
+        float GetInMax();
+        float GetOutMin();
+        float GetOutMax();
+        float GetInterval();
+        float GetPParam();
+        float GetIParam();
+        float GetDParam();
 
     private:
 

@@ -28,7 +28,7 @@ namespace picopter {
             IMU();
             IMU(Options *opts);
             virtual ~IMU();
-            void getLatest(IMUData *d);
+            void GetLatest(IMUData *d);
             
         private:
             /** Path to the IMU device; e.g. /dev/ttyUSB0 **/
@@ -47,7 +47,7 @@ namespace picopter {
             IMU(const IMU &other);
             /** Assignment operator (disabled) **/
             IMU& operator= (const IMU &other);
-            void imuLoop();
+            void IMULoop();
     };
 }
 

@@ -16,9 +16,9 @@ namespace picopter {
         /** The GPIO pin of the buzzer (wiringPi numbering) **/
         const int BUZZER_PIN = 2;
 
-        void init();
-        bool isAutoMode();
-        void setBuzzer(bool value);
+        void Init();
+        bool IsAutoMode();
+        void SetBuzzer(bool value);
     }
 }
 

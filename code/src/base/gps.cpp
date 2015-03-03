@@ -30,7 +30,7 @@ GPS::GPS(Options *opts)
         delete m_gps_rec;
         throw std::invalid_argument("gpsd is not running");
     }
-    m_worker = std::thread(&GPS::gpsLoop, this);
+    m_worker = std::thread(&GPS::GPSLoop, this);
     
     if (opts) {
         opts->SetFamily("GPS");
@@ -62,7 +62,7 @@ GPS::~GPS() {
 /**
  * Main worker thread. Polls gpsd for new GPS data and updates as necessary.
  */
-void GPS::gpsLoop() {
+void GPS::GPSLoop() {
     auto tp = steady_clock::now() - std::chrono::seconds(999);
     Log(LOG_INFO, "GPS Started!");
     
@@ -101,7 +101,7 @@ void GPS::gpsLoop() {
  * Returns the amount of time since the last GPS fix was acquired.
  * @return The time (in seconds) since the last GPS fix
  */
-int GPS::timeSinceLastFix() {
+int GPS::TimeSinceLastFix() {
     return m_last_fix;
 }
 
@@ -110,6 +110,6 @@ int GPS::timeSinceLastFix() {
  * @param d A pointer to the output location. If no value is present for that
  *          parameter, then that value is filled with NaN.
  */
-void GPS::getLatest(GPSData *d) {
+void GPS::GetLatest(GPSData *d) {
     *d = m_data;
 }
