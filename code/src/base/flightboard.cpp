@@ -20,13 +20,12 @@ using picopter::FlightData;
  */
 FlightBoard::FlightBoard(Options *opts)
 : m_currentData{}
-, m_activated(false)
 {
     m_fp = fopen("/dev/servoblaster", "wb");
     if (m_fp == NULL) {
         throw std::invalid_argument("Could not connect to servoblaster");
     }
-    Actuate(true);
+    Actuate();
 }
 
 /** 
@@ -43,14 +42,7 @@ FlightBoard::~FlightBoard() {
 }
 
 /**
- * Initialises actuation of the hexacopter
- */
-void FlightBoard::Start() {
-    m_activated = true;
-}
-
-/**
- * Stops the hexacopter and deactivates control.
+ * Stops the hexacopter.
  * Note: Stopping refers to making it hold its current position.
  * Sets all speeds and the gimbal angle to 0.
  */
@@ -58,8 +50,6 @@ void FlightBoard::Stop() {
     FlightData fd_zero = {0};
     m_currentData = fd_zero;
     Actuate();
-    
-    m_activated = false;
 }
 
 /**
@@ -89,7 +79,7 @@ void FlightBoard::SetData(FlightData *d) {
  */
 void FlightBoard::SetAileron(int speed) {
     m_currentData.aileron = picopter::clamp(speed, -100, 100);
-    SetChannelChecked(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
+    SetChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
 }
 
 /**
@@ -99,7 +89,7 @@ void FlightBoard::SetAileron(int speed) {
 void FlightBoard::SetElevator(int speed) {
     //Elevator speed is inverted.
     m_currentData.elevator = picopter::clamp(-speed, -100, 100);
-    SetChannelChecked(ELEVATOR_CHANNEL, ELEVATOR_SCALE(m_currentData.elevator));
+    SetChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(m_currentData.elevator));
 }
 
 /**
@@ -108,7 +98,7 @@ void FlightBoard::SetElevator(int speed) {
  */
 void FlightBoard::SetRudder(int speed) {
     m_currentData.rudder = picopter::clamp(speed, -100, 100);
-    SetChannelChecked(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
+    SetChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
 }
 
 /**
@@ -117,19 +107,7 @@ void FlightBoard::SetRudder(int speed) {
  */
 void FlightBoard::SetGimbal(int pos) {
     m_currentData.gimbal = picopter::clamp(pos, 0, 90);
-    SetChannelChecked(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
-}
-
-/**
- * Tells ServoBlaster to set the pulse width for a given channel.
- * Will only perform the actuation if the we're currently activated.
- * @param channel The ServoBlaster channel to alter
- * @param value The pulse width, in steps
- */
-void FlightBoard::SetChannelChecked(int channel, int value) {
-    if (m_activated) {
-        fprintf(m_fp, "%d=%d", channel, value);
-    }
+    SetChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
 }
 
 /**
@@ -144,11 +122,9 @@ void FlightBoard::SetChannel(int channel, int value) {
 /**
  * Actuates all channels using current flight data.
  */
-void FlightBoard::Actuate(bool force) {
-    if (m_activated || force) {
-        SetChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
-        SetChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(-m_currentData.elevator));
-        SetChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
-        SetChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
-    }
+void FlightBoard::Actuate() {
+    SetChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
+    SetChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(-m_currentData.elevator));
+    SetChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
+    SetChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
 }

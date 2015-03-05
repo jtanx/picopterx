@@ -33,7 +33,6 @@ namespace picopter {
             FlightBoard();
             FlightBoard(Options *opts);
             virtual ~FlightBoard();
-            void Start();
             void Stop();
             void GetData(FlightData *d);
             void SetData(FlightData *d);
@@ -47,16 +46,13 @@ namespace picopter {
             FlightData m_currentData;
             /** File handle to ServoBlaster **/
             FILE *m_fp;
-            /** Determines if we should be actuating or not **/
-            std::atomic<bool> m_activated;
             
             /** Copy constructor (disabled) **/
             FlightBoard(const FlightBoard &other);
             /** Assignment operator (disabled) **/
             FlightBoard& operator= (const FlightBoard &other);
             
-            void Actuate(bool force=false);
-            void SetChannelChecked(int channel, int value);
+            void Actuate();
             void SetChannel(int channel, int value);
     };
 }
