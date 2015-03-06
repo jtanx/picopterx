@@ -37,3 +37,8 @@ target_link_libraries(picopter_base LINK_PUBLIC atomic)
 target_link_libraries(picopter_base LINK_PRIVATE ${LIBGPS_LIBRARIES})
 #Link to XSens
 target_link_libraries(picopter_base LINK_PRIVATE cmt)
+
+#Link to wiringPi, if present
+if (WIRINGPI_FOUND)
+	target_link_libraries(picopter_base LINK_PRIVATE wiringPi)
+endif (WIRINGPI_FOUND)

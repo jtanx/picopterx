@@ -51,14 +51,14 @@ Buzzer::~Buzzer() {
  */
 void Buzzer::SoundOutput(bool blocking) {
     //Log(LOG_INFO, "Playing the sound! Count: %d, DS: %d, P: %d", m_count, m_dutyCycle, m_period);
-    auto start = hrc::now();
+    //auto start = hrc::now();
     for (int n = 0; (blocking || m_running) && !m_stop && !m_quiet && n < m_count; n++) {
         SetBuzzer(HIGH);
         delayMicroseconds(m_dutyCycle);
         SetBuzzer(LOW);
         delayMicroseconds(m_period - m_dutyCycle);
     }
-    std::chrono::duration<double> elapsed = hrc::now() - start;
+    //std::chrono::duration<double> elapsed = hrc::now() - start;
    // Log(LOG_INFO, "Play time: %lf", elapsed.count());
 }
 
