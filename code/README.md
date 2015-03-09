@@ -9,7 +9,7 @@ written in C++, conforming to the C++11 standard.
 * make
 * gcc/g++ >= 4.7 (4.8 or later is recommended)
 * gpsd, libgps-dev (hexacopter only, or otherwise *nix with a GPS/`gpsfake`)
-* wiringPi (TBA)
+* wiringPi
 
 ### Optionals
 * Doxygen (for generating source code documentation)
