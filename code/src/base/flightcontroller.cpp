@@ -26,7 +26,7 @@ void InitialiseItem(const char *what, Item* &pt, Options *opts, Buzzer *b, bool 
             pt = new Item(opts);
         } catch (const std::invalid_argument &e) {
             Log(LOG_WARNING, "Failed to initialise %s (%s); retrying in 1 second...", what, e.what());
-            b->play(500, 20, 100);
+            b->Play(500, 20, 100);
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
@@ -57,7 +57,7 @@ FlightController::FlightController(Options *opts)
     InitialiseItem("IMU", m_imu, opts, m_buzzer, false, 1);
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
     
-    m_buzzer->playWait(200, 200, 100);
+    m_buzzer->PlayWait(200, 200, 100);
 }
 
 /**
