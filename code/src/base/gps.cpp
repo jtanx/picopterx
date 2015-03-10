@@ -11,7 +11,9 @@
 using namespace picopter;
 using std::chrono::duration_cast;
 using std::chrono::seconds;
+using std::chrono::milliseconds;
 using steady_clock = std::chrono::steady_clock;
+using std::this_thread::sleep_for;
 
 /**
  * Constructor. Establishes a connection to gpsd, assuming it is running
@@ -21,6 +23,8 @@ using steady_clock = std::chrono::steady_clock;
  */
 GPS::GPS(Options *opts)
 : m_cycle_timeout(CYCLE_TIMEOUT_DEFAULT)
+, m_fix_timeout(FIX_TIMEOUT_DEFAULT)
+, m_had_fix(false)
 , m_data{{{NAN,NAN},{NAN,NAN}, NAN}}
 , m_last_fix(999)
 , m_quit(false)
@@ -35,6 +39,7 @@ GPS::GPS(Options *opts)
     if (opts) {
         opts->SetFamily("GPS");
         m_cycle_timeout = opts->GetInt("CYCLE_TIMEOUT", CYCLE_TIMEOUT_DEFAULT);
+        m_fix_timeout = opts->GetInt("FIX_TIMEOUT", FIX_TIMEOUT_DEFAULT);
     }
     
     //GPSData d = m_data.load();
@@ -63,22 +68,23 @@ GPS::~GPS() {
  * Main worker thread. Polls gpsd for new GPS data and updates as necessary.
  */
 void GPS::GPSLoop() {
-    auto tp = steady_clock::now() - std::chrono::seconds(999);
-    Log(LOG_INFO, "GPS Started!");
+    auto last_fix = steady_clock::now() - seconds(m_fix_timeout);
     
+    Log(LOG_INFO, "GPS Started!");
     while (!m_quit) {
-        m_last_fix = duration_cast<seconds>(steady_clock::now() - tp).count();
-        //if (m_last_fix > 0) {
-        //    Log(LOG_INFO, "LAST FIX: %d", m_last_fix.load());
-        //}
-                
+        m_last_fix = duration_cast<seconds>(steady_clock::now() - last_fix).count();
+        if (m_had_fix && !HasFix()) {
+            Log(LOG_WARNING, "Lost the GPS fix. Last fix: %d seconds ago.",
+                m_last_fix.load());
+            m_had_fix = false;
+        }
+
         if (m_gps_rec->waiting(m_cycle_timeout) && !m_quit) {
             struct gps_data_t* data;
             if ((data = m_gps_rec->read()) == NULL) {
                 Log(LOG_WARNING, "Failed to read GPS data");
             } else if (data->set & LATLON_SET) {
                 GPSData d;
-                //Log(LOG_INFO, "Got GPS data!");
                 d.fix.lat = DEG2RAD(data->fix.latitude);
                 d.err.lat = data->fix.epy;
                 d.fix.lon = DEG2RAD(data->fix.longitude);
@@ -86,12 +92,12 @@ void GPS::GPSLoop() {
                 d.timestamp = data->fix.time;
                 m_data = d;
                 
-                
                 //time_t t = (time_t) d.timestamp;
                 //Log(LOG_INFO, "Current fix: (%.6f +/- %.1fm, %.6f +/- %.1fm) at %s",
                 //    d.fix.lat, d.err.lat, d.fix.lon, d.err.lon, ctime(&t));
                 
-                tp = steady_clock::now();
+                last_fix = steady_clock::now();
+                m_had_fix = true;
             }
         }
     }
@@ -103,6 +109,34 @@ void GPS::GPSLoop() {
  */
 int GPS::TimeSinceLastFix() {
     return m_last_fix;
+}
+
+/**
+ * Determines if there is a current GPS fix or not
+ * @return true iff there is a GPS fix.
+ */
+bool GPS::HasFix() {
+    return m_last_fix < m_fix_timeout;
+}
+
+/**
+ * Waits for a GPS fix.
+ * @param timeout The timeout (in ms) before this method returns.
+ *                Default is no timeout (-1).
+ * @return true iff a GPS fix was acquired.
+ */
+bool GPS::WaitForFix(int timeout) {
+    milliseconds len(timeout);
+    milliseconds wait(WAIT_PERIOD);
+    auto start = steady_clock::now();
+    auto now = start;
+    bool hasFix = false;
+    
+    while (!(hasFix = HasFix()) && (timeout < 0 || (now - start) > len)) {
+        sleep_for(wait);
+        now = steady_clock::now();
+    }
+    return hasFix;
 }
 
 /**
