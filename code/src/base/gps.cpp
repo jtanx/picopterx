@@ -25,7 +25,7 @@ GPS::GPS(Options *opts)
 : m_cycle_timeout(CYCLE_TIMEOUT_DEFAULT)
 , m_fix_timeout(FIX_TIMEOUT_DEFAULT)
 , m_had_fix(false)
-, m_data{{{NAN,NAN},{NAN,NAN}, NAN}}
+, m_data{{{NAN,NAN,NAN,NAN},{NAN,NAN,NAN,NAN}, NAN}}
 , m_last_fix(999)
 , m_quit(false)
 {
@@ -83,18 +83,37 @@ void GPS::GPSLoop() {
             struct gps_data_t* data;
             if ((data = m_gps_rec->read()) == NULL) {
                 Log(LOG_WARNING, "Failed to read GPS data");
-            } else if (data->set & LATLON_SET) {
-                GPSData d;
+            } else if ((data->set & LATLON_SET) && (data->set & SPEED_SET)) {
+                GPSData d = m_data;
+                //GPSData d2 = d;
                 d.fix.lat = DEG2RAD(data->fix.latitude);
-                d.err.lat = data->fix.epy;
                 d.fix.lon = DEG2RAD(data->fix.longitude);
-                d.err.lon = data->fix.epx;
-                d.timestamp = data->fix.time;
+                d.fix.speed = data->fix.speed;
+                
+                if (data->set & TRACK_SET) {
+                    d.fix.heading = DEG2RAD(data->fix.track);
+                    //std::cout << "CALC " << RAD2DEG(TRUEBEARING(navigation::CoordBearing(d2.fix, d.fix))) << std::endl;
+                    if (data->set & TRACKERR_SET) {
+                        d.err.heading = DEG2RAD(data->fix.epd);
+                    }
+                }
+                if (data->set & SPEEDERR_SET) {
+                    d.err.speed = data->fix.eps;
+                }
+                if (data->set & HERR_SET) {
+                    d.err.lat = data->fix.epy;
+                    d.err.lon = data->fix.epx;
+                }
+                if (data->set & TIME_SET) {
+                    d.timestamp = data->fix.time;
+                }
                 m_data = d;
                 
-                //time_t t = (time_t) d.timestamp;
-                //Log(LOG_INFO, "Current fix: (%.6f +/- %.1fm, %.6f +/- %.1fm) at %s",
-                //    d.fix.lat, d.err.lat, d.fix.lon, d.err.lon, ctime(&t));
+                time_t t = (time_t) d.timestamp;
+                Log(LOG_INFO, "Current fix: (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f] at %s",
+                    RAD2DEG(d.fix.lat), d.err.lat, RAD2DEG(d.fix.lon), d.err.lon,
+                    d.fix.speed, d.err.speed, RAD2DEG(d.fix.heading), 
+                    RAD2DEG(d.err.heading), ctime(&t));
                 
                 last_fix = steady_clock::now();
                 m_had_fix = true;
