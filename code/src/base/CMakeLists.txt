@@ -35,9 +35,11 @@ add_library (picopter_base STATIC ${HEADERS} ${SOURCE})
 target_link_libraries(picopter_base LINK_PUBLIC atomic)
 #Link to gpsd, if present
 target_link_libraries(picopter_base LINK_PRIVATE ${LIBGPS_LIBRARIES})
-#Link to XSens
-target_link_libraries(picopter_base LINK_PRIVATE cmt)
 
+#Link to XSens, if present
+if (NOT DISABLE_NONFREE)
+	target_link_libraries(picopter_base LINK_PRIVATE cmt)
+endif (NOT DISABLE_NONFREE)
 #Link to wiringPi, if present
 if (WIRINGPI_FOUND)
 	target_link_libraries(picopter_base LINK_PRIVATE wiringPi)

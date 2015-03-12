@@ -17,7 +17,7 @@ script:
   - $CXX --version
   - $CC --version
   - cd code/
-  - ./configure -Dtest=ON
+  - ./configure -DDISABLE_NONFREE=YES -Dtest=ON
   - make
   - bin/picopter
   - make test ARGS="-V"

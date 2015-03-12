@@ -13,3 +13,5 @@ cmake_install.cmake
 install_manifest.txt
 
 tags
+
+third_party/Xsens

@@ -48,8 +48,21 @@ link_directories (${LIBGPS_LIBRARY_DIRS})
 set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
 
 #Set XSens stuff
-add_subdirectory (${PI_THIRD_PARTY}/XSens)
-include_directories (${XSens_SOURCE_DIR})
+if (NOT DISABLE_NONFREE)
+	ExternalProject_Add (
+		XSens
+		PREFIX "${CMAKE_BINARY_DIR}/third_party/Xsens"
+		GIT_REPOSITORY "https://github.com/jtanx/Xsens"
+		GIT_TAG "master"
+		UPDATE_COMMAND ""
+		INSTALL_COMMAND ""
+		CONFIGURE_COMMAND ""
+		BUILD_COMMAND ""
+	)
+	ExternalProject_Get_Property(XSens source_dir)
+	add_subdirectory (${source_dir})
+	include_directories (${source_dir})
+endif (NOT DISABLE_NONFREE)
 
 #Include rapidjson
 include_directories (${PI_THIRD_PARTY}/rapidjson)

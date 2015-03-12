@@ -4,14 +4,20 @@
  */
 
 #include "picopter.h"
-#include "cmt3.h"
 #include <cmath>
+
+#ifndef DISABLE_NONFREE
+#include "cmt3.h"
+#endif
 
 using namespace xsens;
 using picopter::IMU;
 using picopter::IMUData;
 
 const char *IMU::IMU_DEVICE = "/dev/ttyUSB0";
+
+// Do we have access to the XSens library?
+#ifndef DISABLE_NONFREE
 
 /**
  * Constructor. Uses the XSens library to establish a connection to the IMU.
@@ -94,3 +100,15 @@ void IMU::IMULoop() {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 }
+
+#else //DISABLE_NONFREE
+
+IMU::IMU(Options *opts) {
+    throw std::invalid_argument("IMU is disabled (non-free component)");
+}
+
+IMU::IMU() : IMU(NULL) {}
+IMU::~IMU() {}
+void IMU::GetLatest(IMUData *d) {}
+
+#endif //DISABLE_NONFREE

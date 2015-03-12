@@ -2,6 +2,3 @@
 	path = code/third_party/googletest
 	url = http://git.chromium.org/external/googletest.git
 	ignore = dirty
-[submodule "code/third_party/XSens"]
-	path = code/third_party/XSens
-	url = https://github.com/jtanx/XSens
