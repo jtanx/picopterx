@@ -49,19 +49,18 @@ set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
 
 #Set XSens stuff
 if (NOT DISABLE_NONFREE)
-	ExternalProject_Add (
-		XSens
-		PREFIX "${CMAKE_BINARY_DIR}/third_party/Xsens"
-		GIT_REPOSITORY "https://github.com/jtanx/Xsens"
-		GIT_TAG "master"
-		UPDATE_COMMAND ""
-		INSTALL_COMMAND ""
-		CONFIGURE_COMMAND ""
-		BUILD_COMMAND ""
-	)
-	ExternalProject_Get_Property(XSens source_dir)
-	add_subdirectory (${source_dir})
-	include_directories (${source_dir})
+	set (XSENS_FOLDER "${CMAKE_BINARY_DIR}/third_party/Xsens")
+	set (XSENS_REPO "https://github.com/jtanx/Xsens")
+	
+	if (NOT EXISTS "${XSENS_FOLDER}")
+		execute_process (COMMAND git clone ${XSENS_REPO} "${XSENS_FOLDER}"
+						 RESULT_VARIABLE retval)
+		if (NOT "${retval}" STREQUAL "0")
+			message (FATAL_ERROR "${Red}Could not clone the Xsens repository.${ColourReset}")
+		endif ()
+	endif ()
+	add_subdirectory (${XSENS_FOLDER})
+	include_directories (${XSENS_FOLDER})
 endif (NOT DISABLE_NONFREE)
 
 #Include rapidjson
