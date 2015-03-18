@@ -108,6 +108,12 @@ else ()
 	if (NOT WIRINGPI_FOUND)
 		message (FATAL_ERROR "${Red}Building on the RPi without wiringPi${ColourReset}")
 	endif (NOT WIRINGPI_FOUND)
+	
+	execute_process (COMMAND /usr/local/sbin/servod --help
+					 RESULT_VARIABLE SERVOBLASTER_ERROR)
+	if (SERVOBLASTER_ERROR)
+		message (FATAL_ERROR "${Red}ServoBlaster check failed! Ensure it is installed.${ColourReset}")
+	endif (SERVOBLASTER_ERROR)
 endif ()
 
 if (NOT LIBGPS_FOUND)
