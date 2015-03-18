@@ -109,10 +109,14 @@ else ()
 		message (FATAL_ERROR "${Red}Building on the RPi without wiringPi${ColourReset}")
 	endif (NOT WIRINGPI_FOUND)
 	
+	message (STATUS "Checking for ServoBlaster...")
 	execute_process (COMMAND /usr/local/sbin/servod --help
+					 OUTPUT_QUIET
 					 RESULT_VARIABLE SERVOBLASTER_ERROR)
 	if (SERVOBLASTER_ERROR)
 		message (FATAL_ERROR "${Red}ServoBlaster check failed! Ensure it is installed.${ColourReset}")
+	else (SERVOBLASTER_ERROR)
+		message (STATUS "ServoBlaster found!")
 	endif (SERVOBLASTER_ERROR)
 endif ()
 
