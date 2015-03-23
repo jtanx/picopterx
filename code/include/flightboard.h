@@ -53,6 +53,7 @@ namespace picopter {
             FlightBoard& operator= (const FlightBoard &other);
             
             void Actuate();
+            void FlushData();
             void SetChannel(int channel, int value);
     };
 }

@@ -74,12 +74,31 @@ void FlightBoard::SetData(FlightData *d) {
 }
 
 /**
+ * Tells ServoBlaster to set the pulse width for a given channel.
+ * Will not be performed until the data is flushed (call FlushData).
+ * @param channel The ServoBlaster channel to alter
+ * @param value The pulse width, in steps
+ */
+void FlightBoard::SetChannel(int channel, int value) {
+    fprintf(m_fp, "%d=%d\n", channel, value);
+}
+
+/**
+ * Flushes the output to the ServoBlaster device file and forces any
+ * pending commands to run.
+ */
+void FlightBoard::FlushData() {
+    fflush(m_fp);
+}
+
+/**
  * Sets the aileron speed.
  * @param speed The aileron speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetAileron(int speed) {
     m_currentData.aileron = picopter::clamp(speed, -100, 100);
     SetChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
+    FlushData();
 }
 
 /**
@@ -90,6 +109,7 @@ void FlightBoard::SetElevator(int speed) {
     //Elevator speed is inverted.
     m_currentData.elevator = picopter::clamp(-speed, -100, 100);
     SetChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(m_currentData.elevator));
+    FlushData();
 }
 
 /**
@@ -99,6 +119,7 @@ void FlightBoard::SetElevator(int speed) {
 void FlightBoard::SetRudder(int speed) {
     m_currentData.rudder = picopter::clamp(speed, -100, 100);
     SetChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
+    FlushData();
 }
 
 /**
@@ -108,15 +129,7 @@ void FlightBoard::SetRudder(int speed) {
 void FlightBoard::SetGimbal(int pos) {
     m_currentData.gimbal = picopter::clamp(pos, 0, 90);
     SetChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
-}
-
-/**
- * Tells ServoBlaster to set the pulse width for a given channel.
- * @param channel The ServoBlaster channel to alter
- * @param value The pulse width, in steps
- */
-void FlightBoard::SetChannel(int channel, int value) {
-    fprintf(m_fp, "%d=%d", channel, value);
+    FlushData();
 }
 
 /**
@@ -127,4 +140,5 @@ void FlightBoard::Actuate() {
     SetChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(-m_currentData.elevator));
     SetChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
     SetChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
+    FlushData();
 }
