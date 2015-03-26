@@ -46,7 +46,9 @@ while [ $fails -lt 1 ]; do
 	fi;
 
 	log_status "(Re)starting ServoBlaster..."
-	service servoblaster restart || log_error "Failed to restart ServoBlaster"
+	service servoblaster stop || log_error "Failed to stop ServoBlaster"
+	service servoblaster start || log_error "Failed to start ServoBlaster"
+	#service servoblaster restart || log_error "Failed to restart ServoBlaster"
 
 	log_status "(Re)starting gpsd..."
 	service gpsd restart || log_error "Failed to restart gpsd"
