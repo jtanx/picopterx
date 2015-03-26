@@ -1,0 +1,31 @@
+auto lo
+iface lo inet loopback
+iface eth0 inet dhcp
+#######################
+
+auto eth0:1
+iface eth0:1 inet static
+address 10.0.0.10
+netmask 255.255.255.0
+gateway 10.0.0.2
+dns-nameservers 10.0.0.2 8.8.8.8 8.8.4.4
+
+
+#######################
+
+#allow-hotplug eth1
+#iface eth1 inet dhcp
+
+#######################
+
+#allow-hotplug wlan0
+iface wlan0 inet static
+	address 10.1.1.1
+#	address 192.168.1.12
+#	gateway 192.168.1.1
+	netmask 255.255.255.0
+#	wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
+
+#######################
+
+#iface default inet dhcp
