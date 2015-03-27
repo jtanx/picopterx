@@ -7,6 +7,11 @@
 #include "picopter.h"
 
 using namespace picopter;
+using std::chrono::milliseconds;
+using steady_clock = std::chrono::steady_clock;
+using std::this_thread::sleep_for;
+
+const int FlightController::SLEEP_PERIOD;
 
 /**
  * Helper method to initialise a base module.
@@ -26,8 +31,8 @@ void InitialiseItem(const char *what, Item* &pt, Options *opts, Buzzer *b, bool 
             pt = new Item(opts);
         } catch (const std::invalid_argument &e) {
             Log(LOG_WARNING, "Failed to initialise %s (%s); retrying in 1 second...", what, e.what());
-            b->Play(500, 20, 100);
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            b->Play(200, 40, 100);
+            sleep_for(milliseconds(1000));
         }
     }
     
@@ -50,13 +55,23 @@ FlightController::FlightController(Options *opts)
 , imu(m_imu)
 , gps(m_gps)
 , buzzer(m_buzzer)
+, m_stop{false}
+, m_state{STATE_STOPPED}
+, m_task_id{TASK_NONE}
 {
     m_buzzer = new Buzzer();
     
+    InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
     InitialiseItem("GPS", m_gps, opts, m_buzzer, true, 3);
     InitialiseItem("IMU", m_imu, opts, m_buzzer, false, 1);
-    InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
     
+    Log(LOG_INFO, "Initialised components!");
+    Log(LOG_INFO, "Waiting for a GPS fix...");
+    while (!m_gps->WaitForFix(5000)) {
+        m_buzzer->Play(100, 50, 100);
+    }
+    
+    Log(LOG_INFO, "GPS fix obtained!");    
     m_buzzer->PlayWait(200, 200, 100);
 }
 
@@ -73,4 +88,113 @@ FlightController::~FlightController() {
     delete m_imu;
     delete m_gps;
     delete m_buzzer;
+}
+
+/**
+ * Send an indication that the flight controller should stop the running task.
+ */
+void FlightController::Stop() {
+    m_stop = true;
+}
+
+/**
+ * Check whether or not a stop should occur or not.
+ */
+bool FlightController::CheckForStop() {
+    if (gpio::IsAutoMode()) {
+        m_stop = true;
+    }
+    return m_stop;
+}
+
+/**
+ * Perform a checked sleep which can be interrupted by the stop signal.
+ * @param ms The sleep time, in milliseconds.
+ * @return true iff the sleep completed normally (i.e. not interrupted).
+ */
+bool FlightController::Sleep(int ms) {
+    auto start = steady_clock::now();
+    auto end = start;
+    const milliseconds period(std::min(ms, SLEEP_PERIOD)); 
+    const milliseconds total(ms);
+    bool stop;
+    
+    while (!(stop = CheckForStop()) && (end - start) < total) {
+        sleep_for(period);
+        end = steady_clock::now();
+    }
+    
+    return !stop;
+}
+
+/**
+ * Infer the current bearing by moving forwards and using the GPS heading.
+ * @param ret The return location (bearing in radians).
+ * @param move_time The time spent moving forwards in ms (default is 5000ms).
+ * @return true iff the bearing could be inferred.
+ */
+bool FlightController::InferBearing(double *ret, int move_time) {
+    GPSData start, end;
+    ControllerState prev = m_state.exchange(STATE_INFER_BEARING);
+    double dist_moved;
+    
+    Log(LOG_INFO, "Inferring the current bearing...");
+    if (!m_gps->WaitForFix(1000)) {
+        Log(LOG_INFO, "Bearing inferral failed - no GPS fix.");
+        m_state = prev;
+        return false;
+    }
+    
+    m_gps->GetLatest(&start);
+    m_fb->SetElevator(40);
+    Sleep(move_time);
+    m_fb->Stop();
+    m_gps->GetLatest(&end);
+    
+    if ((dist_moved = navigation::CoordDistance(start.fix, end.fix)) < 1.0) {
+        Log(LOG_INFO, "Bearing inferral failed - did not move far enough (%.1f m)", dist_moved);
+        m_state = prev;
+        return false;
+    }
+    
+    Log(LOG_INFO, "The inferred bearing is: %.2f deg (%.2f deg, %.2f m)", 
+        RAD2DEG(end.fix.heading),
+        RAD2DEG(navigation::CoordBearing(start.fix, end.fix)), 
+        dist_moved);
+    *ret = end.fix.heading;
+    m_state = prev;
+    return true;
+}
+
+/**
+ * Runs a given task, if no task is currently being run.
+ * @param tid The task identifier of the task to be run.
+ * @param task The task instance to be run.
+ * @param opts The task-specific options to be passed to its handler.
+ * @return true iff the task was started.
+ */
+bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts) {
+    std::lock_guard<std::mutex> lock(m_task_mutex);
+    
+    if (m_task_id != TASK_NONE) {
+        Log(LOG_WARNING, "Task id %d is already running; not running task id %d.", m_task_id.load(), tid);
+        return false;
+    } else if (m_task_thread.valid()) {
+        Log(LOG_WARNING, "Waiting for previous task to exit...");
+        if (m_task_thread.wait_for(milliseconds(200)) == std::future_status::ready) {
+            Log(LOG_WARNING, "Wait timed out - giving up.");
+            return false;
+        }
+        m_task_id = TASK_NONE;
+    }
+    
+    Log(LOG_INFO, "Running new task with id %d.", tid);
+    m_stop = false;
+    m_task_id = tid;
+    
+    m_task_thread = std::async(std::launch::async, [this, task, opts] {
+        task->Run(this, opts);
+    });
+    
+    return true;
 }

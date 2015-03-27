@@ -14,6 +14,7 @@
 
 //C++11 threading stuff
 #include <thread>
+#include <future>
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
