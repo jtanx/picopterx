@@ -21,10 +21,12 @@ using picopter::FlightData;
 FlightBoard::FlightBoard(Options *opts)
 : m_currentData{}
 {
+#ifdef IS_ON_PI
     m_fp = fopen("/dev/servoblaster", "wb");
     if (m_fp == NULL) {
         throw std::invalid_argument("Could not connect to servoblaster");
     }
+#endif
     Actuate();
 }
 
@@ -80,7 +82,36 @@ void FlightBoard::SetData(FlightData *d) {
  * @param value The pulse width, in steps
  */
 void FlightBoard::SetChannel(int channel, int value) {
+#ifdef IS_ON_PI
     fprintf(m_fp, "%d=%d\n", channel, value);
+#else
+    const char *d;
+    int pct;
+    
+    switch(channel) {
+        case AILERON_CHANNEL:
+            d = "Aileron";
+            pct = INV_AILERON_SCALE(value);
+        break;
+        case ELEVATOR_CHANNEL:
+            d = "Elevator";
+            pct = -INV_ELEVATOR_SCALE(value);
+        break;
+        case RUDDER_CHANNEL:
+            d = "Rudder";
+            pct = INV_RUDDER_SCALE(value);
+        break;
+        case GIMBAL_CHANNEL:
+            d = "Gimbal";
+            pct = INV_GIMBAL_SCALE(value);
+        break;
+        default:
+            Log(LOG_WARNING, "Unknown channel number");
+            return;
+    }
+   
+    Log(LOG_INFO, "FlightBoard: %s at %d%%", d, pct);
+#endif
 }
 
 /**
@@ -88,7 +119,9 @@ void FlightBoard::SetChannel(int channel, int value) {
  * pending commands to run.
  */
 void FlightBoard::FlushData() {
+#ifdef IS_ON_PI
     fflush(m_fp);
+#endif
 }
 
 /**
