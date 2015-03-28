@@ -4,7 +4,9 @@
  * @todo Add in camera things.
  */
 
-#include "picopter.h"
+#include "common.h"
+#include "flightcontroller.h"
+#include "gpio.h"
 
 using namespace picopter;
 using std::chrono::duration;

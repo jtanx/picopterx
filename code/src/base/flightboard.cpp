@@ -6,7 +6,8 @@
  * Uses wiringPi and a GPIO pin for driving the buzzer with software based PWM.
  */
 
-#include "picopter.h"
+#include "common.h"
+#include "flightboard.h"
 #include "flightboard-private.h"
 
 using picopter::FlightBoard;

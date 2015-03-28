@@ -3,7 +3,8 @@
  * @brief Options and persistent configurations handler
  */
 
-#include "picopter.h"
+#include "common.h"
+#include "opts.h"
 #include <rapidjson/document.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/filewritestream.h>

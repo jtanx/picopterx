@@ -4,7 +4,8 @@
  * Uses wiringPi to control the GPIO pins on the RPi.
  */
 
-#include "picopter.h"
+#include "common.h"
+#include "gpio.h"
 
 #include <wiringPi.h>
 

@@ -3,7 +3,8 @@
  * @brief IMU interaction code.
  */
 
-#include "picopter.h"
+#include "common.h"
+#include "imu_feed.h"
 #include <cmath>
 
 #ifndef DISABLE_NONFREE

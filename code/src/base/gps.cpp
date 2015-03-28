@@ -4,7 +4,8 @@
  * Uses gpsd to interact with the GPS
  */
 
-#include "picopter.h"
+#include "common.h"
+#include "gps_feed.h"
 #include "libgpsmm.h"
 #include <cmath>
 
