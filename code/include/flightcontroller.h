@@ -70,6 +70,8 @@ namespace picopter {
             FlightController(Options *opts);
             virtual ~FlightController();
             
+            ControllerState GetCurrentState();
+            TaskIdentifier GetCurrentTaskId();
             void Stop();
             bool CheckForStop();
             bool Sleep(int ms);

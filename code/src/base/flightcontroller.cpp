@@ -7,6 +7,8 @@
 #include "picopter.h"
 
 using namespace picopter;
+using std::chrono::duration;
+using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using steady_clock = std::chrono::steady_clock;
 using std::this_thread::sleep_for;
@@ -94,17 +96,32 @@ FlightController::~FlightController() {
  * Send an indication that the flight controller should stop the running task.
  */
 void FlightController::Stop() {
-    m_stop = true;
+    m_stop.store(true, std::memory_order_relaxed);
 }
 
 /**
- * Check whether or not a stop should occur or not.
+ * Check whether a stop should occur or not.
  */
 bool FlightController::CheckForStop() {
-    if (gpio::IsAutoMode()) {
-        m_stop = true;
-    }
-    return m_stop;
+    bool ret = m_stop.load(std::memory_order_relaxed) || !gpio::IsAutoMode();
+    m_stop.store(ret, std::memory_order_relaxed);
+    return ret;
+}
+
+/**
+ * Retrieves the current state of the flight controller.
+ * @return The current state.
+ */
+ControllerState FlightController::GetCurrentState() {
+    return m_state.load(std::memory_order_relaxed);
+}
+
+/**
+ * Retrieves the current ID oft the task being run.
+ * @return The current task ID.
+ */
+TaskIdentifier FlightController::GetCurrentTaskId() {
+    return m_task_id.load(std::memory_order_relaxed);
 }
 
 /**
@@ -113,15 +130,16 @@ bool FlightController::CheckForStop() {
  * @return true iff the sleep completed normally (i.e. not interrupted).
  */
 bool FlightController::Sleep(int ms) {
-    auto start = steady_clock::now();
-    auto end = start;
-    const milliseconds period(std::min(ms, SLEEP_PERIOD)); 
-    const milliseconds total(ms);
+    static const milliseconds sleep_default(SLEEP_PERIOD);
+    milliseconds remaining(ms);
+    auto now = steady_clock::now();
+    auto end = now + remaining;
     bool stop;
     
-    while (!(stop = CheckForStop()) && (end - start) < total) {
-        sleep_for(period);
-        end = steady_clock::now();
+    while (!(stop = CheckForStop()) && now < end) {
+        sleep_for(std::min(sleep_default, remaining));
+        now = steady_clock::now();
+        remaining = duration_cast<milliseconds>(end - now);
     }
     
     return !stop;
@@ -135,13 +153,13 @@ bool FlightController::Sleep(int ms) {
  */
 bool FlightController::InferBearing(double *ret, int move_time) {
     GPSData start, end;
-    ControllerState prev = m_state.exchange(STATE_INFER_BEARING);
+    ControllerState prev = m_state.exchange(STATE_INFER_BEARING, std::memory_order_relaxed);
     double dist_moved;
     
     Log(LOG_INFO, "Inferring the current bearing...");
     if (!m_gps->WaitForFix(1000)) {
         Log(LOG_INFO, "Bearing inferral failed - no GPS fix.");
-        m_state = prev;
+        m_state.store(prev, std::memory_order_relaxed);
         return false;
     }
     
@@ -153,7 +171,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
     
     if ((dist_moved = navigation::CoordDistance(start.fix, end.fix)) < 1.0) {
         Log(LOG_INFO, "Bearing inferral failed - did not move far enough (%.1f m)", dist_moved);
-        m_state = prev;
+        m_state.store(prev, std::memory_order_relaxed);
         return false;
     }
     
@@ -162,7 +180,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
         RAD2DEG(navigation::CoordBearing(start.fix, end.fix)), 
         dist_moved);
     *ret = end.fix.heading;
-    m_state = prev;
+    m_state.store(prev, std::memory_order_relaxed);
     return true;
 }
 
@@ -189,7 +207,7 @@ bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts)
     }
     
     Log(LOG_INFO, "Running new task with id %d.", tid);
-    m_stop = false;
+    m_stop.store(false, std::memory_order_relaxed);
     m_task_id = tid;
     
     m_task_thread = std::async(std::launch::async, [this, task, opts] {
