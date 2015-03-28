@@ -62,6 +62,7 @@ FlightController::FlightController(Options *opts)
 , m_stop{false}
 , m_state{STATE_STOPPED}
 , m_task_id{TASK_NONE}
+, m_task{nullptr}
 {
     m_buzzer = new Buzzer();
     
@@ -88,6 +89,12 @@ FlightController::FlightController() : FlightController(NULL) {}
  * Destructor. Stops/cleans up the base components (depends on RAII)
  */
 FlightController::~FlightController() {
+    if (m_task_thread.valid()) {
+        Log(LOG_INFO, "Waiting for task to end...");
+        Stop();
+        m_task_thread.wait();
+    }
+    delete m_task;
     delete m_fb;
     delete m_imu;
     delete m_gps;
@@ -210,13 +217,17 @@ bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts)
     }
     
     Log(LOG_INFO, "Running new task with id %d.", tid);
-    m_fb->Stop();
-    m_state.store(STATE_STOPPED, std::memory_order_relaxed);
-    m_stop.store(false, std::memory_order_relaxed);
     m_task_id.store(tid, std::memory_order_relaxed);
-    
+    m_task = task;
     m_task_thread = std::async(std::launch::async, [this, task, opts] {
         task->Run(this, opts);
+        delete m_task;
+        m_task = nullptr;
+        
+        m_fb->Stop();
+        m_state.store(STATE_STOPPED, std::memory_order_relaxed);
+        m_stop.store(false, std::memory_order_relaxed);
+        m_task_id.store(TASK_NONE, std::memory_order_relaxed);
     });
     
     return true;

@@ -161,5 +161,8 @@ endif()
 #Add the base module
 add_subdirectory (${PI_SRC}/base)
 
+#Add the modules folder
+add_subdirectory (${PI_SRC}/modules)
+
 #Add in the server executable
 add_subdirectory (${PI_SRC}/server)

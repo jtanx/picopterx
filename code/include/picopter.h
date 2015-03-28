@@ -18,5 +18,7 @@
 #include "flightboard.h"
 #include "flightcontroller.h"
 
+#include "waypoints.h"
+
 
 #endif // _PICOPTERX_PICOPTER_H

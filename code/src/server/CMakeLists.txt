@@ -13,3 +13,5 @@ add_executable (picopter ${HEADERS} ${SOURCE})
 
 #Link it with the base module
 target_link_libraries (picopter LINK_PUBLIC picopter_base)
+#Link it with the control modules
+target_link_libraries (picopter LINK_PUBLIC picopter_modules)

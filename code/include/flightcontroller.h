@@ -52,6 +52,10 @@ namespace picopter {
     class FlightTask {
         public:
             /**
+             * The destructor. Will be called immediately after Run() exits.
+             */
+            virtual ~FlightTask() {};
+            /**
              * The method that will be called by the flight controller to
              * perform the task.
              * @param fc The pointer to the calling flight controller
@@ -108,6 +112,8 @@ namespace picopter {
             std::future<void> m_task_thread;
             /** The mutex used to control the currently run task. **/
             std::mutex m_task_mutex;
+            /** The current task **/
+            FlightTask *m_task;
             
             /** Copy constructor (disabled) **/
             FlightController(const FlightController &other);
