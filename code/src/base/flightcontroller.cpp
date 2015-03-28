@@ -193,22 +193,25 @@ bool FlightController::InferBearing(double *ret, int move_time) {
  */
 bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts) {
     std::lock_guard<std::mutex> lock(m_task_mutex);
+    TaskIdentifier old_tid = m_task_id.load(std::memory_order_relaxed);
     
-    if (m_task_id != TASK_NONE) {
-        Log(LOG_WARNING, "Task id %d is already running; not running task id %d.", m_task_id.load(), tid);
+    if (old_tid != TASK_NONE) {
+        Log(LOG_WARNING, "Task id %d is already running; not running task id %d.",
+            old_tid, tid);
         return false;
     } else if (m_task_thread.valid()) {
         Log(LOG_WARNING, "Waiting for previous task to exit...");
-        if (m_task_thread.wait_for(milliseconds(200)) == std::future_status::ready) {
+        if (m_task_thread.wait_for(milliseconds(200)) != std::future_status::ready) {
             Log(LOG_WARNING, "Wait timed out - giving up.");
             return false;
         }
-        m_task_id = TASK_NONE;
     }
     
     Log(LOG_INFO, "Running new task with id %d.", tid);
+    m_fb->Stop();
+    m_state.store(STATE_STOPPED, std::memory_order_relaxed);
     m_stop.store(false, std::memory_order_relaxed);
-    m_task_id = tid;
+    m_task_id.store(tid, std::memory_order_relaxed);
     
     m_task_thread = std::async(std::launch::async, [this, task, opts] {
         task->Run(this, opts);
