@@ -6,8 +6,10 @@
 
 #include "common.h"
 #include "flightcontroller.h"
+#include "gpio.h"
 
 using namespace picopter;
+using namespace picopter::navigation;
 using std::chrono::duration;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
@@ -111,7 +113,22 @@ void FlightController::Stop() {
  * Check whether a stop should occur or not.
  */
 bool FlightController::CheckForStop() {
-    return m_stop.load(std::memory_order_relaxed);
+    return m_stop.load(std::memory_order_relaxed) || !gpio::IsAutoMode();
+}
+
+/**
+ * Wait for the user to give authorisation for autonomous mode.
+ * @return true iff authorisation was given. Will return false when the
+ *         'all stop' signal is returned.
+ */
+bool FlightController::WaitForAuth() {
+    static const milliseconds wait(SLEEP_PERIOD);
+    bool stop;
+    
+    while (!(stop = m_stop.load(std::memory_order_relaxed)) && !gpio::IsAutoMode()){
+        sleep_for(wait);
+    }
+    return !stop;
 }
 
 /**
@@ -169,17 +186,19 @@ bool FlightController::Sleep(int ms) {
  */
 bool FlightController::InferBearing(double *ret, int move_time) {
     GPSData start, end;
-    ControllerState prev = SetCurrentState(STATE_INFER_BEARING);
     double dist_moved;
     
     Log(LOG_INFO, "Inferring the current bearing...");
+    SetCurrentState(STATE_INFER_BEARING);
+    
+    m_fb->Stop();
     if (!m_gps->WaitForFix(1000)) {
         Log(LOG_INFO, "Bearing inferral failed - no GPS fix.");
-        SetCurrentState(prev);
+        SetCurrentState(STATE_STOPPED);
         return false;
     }
     
-    m_gps->GetLatest(&start);
+    m_gps->GetLatest(&start);   
     m_fb->SetElevator(40);
     Sleep(move_time);
     m_fb->Stop();
@@ -187,7 +206,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
     
     if ((dist_moved = navigation::CoordDistance(start.fix, end.fix)) < 1.0) {
         Log(LOG_INFO, "Bearing inferral failed - did not move far enough (%.1f m)", dist_moved);
-        SetCurrentState(prev);
+        SetCurrentState(STATE_STOPPED);
         return false;
     }
     
@@ -196,7 +215,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
         RAD2DEG(navigation::CoordBearing(start.fix, end.fix)), 
         dist_moved);
     *ret = end.fix.heading;
-    SetCurrentState(prev);
+    SetCurrentState(STATE_STOPPED);
     return true;
 }
 
