@@ -6,7 +6,6 @@
 
 #include "common.h"
 #include "flightcontroller.h"
-#include "gpio.h"
 
 using namespace picopter;
 using std::chrono::duration;
@@ -112,9 +111,7 @@ void FlightController::Stop() {
  * Check whether a stop should occur or not.
  */
 bool FlightController::CheckForStop() {
-    bool ret = m_stop.load(std::memory_order_relaxed) || !gpio::IsAutoMode();
-    m_stop.store(ret, std::memory_order_relaxed);
-    return ret;
+    return m_stop.load(std::memory_order_relaxed);
 }
 
 /**
@@ -123,6 +120,16 @@ bool FlightController::CheckForStop() {
  */
 ControllerState FlightController::GetCurrentState() {
     return m_state.load(std::memory_order_relaxed);
+}
+
+/**
+ * Sets the current controller state.
+ * Only the flight controller itself and the currently run task should
+ * have access to this method.
+ * @return The previous state.
+ */
+ControllerState FlightController::SetCurrentState(ControllerState state) {
+    return m_state.exchange(state, std::memory_order_relaxed);
 }
 
 /**
@@ -162,13 +169,13 @@ bool FlightController::Sleep(int ms) {
  */
 bool FlightController::InferBearing(double *ret, int move_time) {
     GPSData start, end;
-    ControllerState prev = m_state.exchange(STATE_INFER_BEARING, std::memory_order_relaxed);
+    ControllerState prev = SetCurrentState(STATE_INFER_BEARING);
     double dist_moved;
     
     Log(LOG_INFO, "Inferring the current bearing...");
     if (!m_gps->WaitForFix(1000)) {
         Log(LOG_INFO, "Bearing inferral failed - no GPS fix.");
-        m_state.store(prev, std::memory_order_relaxed);
+        SetCurrentState(prev);
         return false;
     }
     
@@ -180,7 +187,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
     
     if ((dist_moved = navigation::CoordDistance(start.fix, end.fix)) < 1.0) {
         Log(LOG_INFO, "Bearing inferral failed - did not move far enough (%.1f m)", dist_moved);
-        m_state.store(prev, std::memory_order_relaxed);
+        SetCurrentState(prev);
         return false;
     }
     
@@ -189,7 +196,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
         RAD2DEG(navigation::CoordBearing(start.fix, end.fix)), 
         dist_moved);
     *ret = end.fix.heading;
-    m_state.store(prev, std::memory_order_relaxed);
+    SetCurrentState(prev);
     return true;
 }
 

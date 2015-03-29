@@ -48,6 +48,8 @@ int main(int argc, char *argv[]) {
         Log(LOG_INFO, "Flight controller started.");
         char buf[BUFSIZ];
         picopter::FlightData fd = {0};
+        //picopter::Waypoints wp;
+        
         while (fgets(buf, BUFSIZ, stdin) && strcmp(buf, "exit")) {
             int n = sscanf(buf, "%i,%i,%i,%i", &fd.elevator,&fd.aileron, &fd.rudder, &fd.gimbal);
             printf("UD:%d, LR: %d, RT: %d, GB: %d\n", fd.elevator, fd.aileron, fd.rudder, fd.gimbal);

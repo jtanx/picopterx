@@ -107,7 +107,7 @@ void FlightBoard::SetChannel(int channel, int value) {
             pct = INV_GIMBAL_SCALE(value);
         break;
         default:
-            Log(LOG_WARNING, "Unknown channel number");
+            Fatal("Unknown channel number");
             return;
     }
    

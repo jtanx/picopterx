@@ -146,15 +146,12 @@ bool GPS::HasFix() {
  * @return true iff a GPS fix was acquired.
  */
 bool GPS::WaitForFix(int timeout) {
-    milliseconds len(timeout);
-    milliseconds wait(WAIT_PERIOD);
-    auto start = steady_clock::now();
-    auto now = start;
+    static const milliseconds wait(WAIT_PERIOD);
+    auto end = steady_clock::now() + milliseconds(timeout);
     bool hasFix = false;
     
-    while (!(hasFix = HasFix()) && (timeout < 0 || (now - start) > len)) {
+    while (!(hasFix = HasFix()) && (timeout < 0 || steady_clock::now() > end)) {
         sleep_for(wait);
-        now = steady_clock::now();
     }
     return hasFix;
 }

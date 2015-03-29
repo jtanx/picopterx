@@ -14,8 +14,8 @@
 namespace picopter {
     /* Forward declaration of the options class */
     class Options;
-    /* Forward declaration of the flight controller class */
-    class FlightController;
+    /* Forward declaration of the flight task class */
+    class FlightTask;
     
     /**
      * An enumeration describing the possible states of the flight controller.
@@ -46,29 +46,12 @@ namespace picopter {
     } TaskIdentifier;
     
     /**
-     * The base class for all flight tasks.
-     * All flight tasks must inherit from this class and implement its methods.
-     */
-    class FlightTask {
-        public:
-            /**
-             * The destructor. Will be called immediately after Run() exits.
-             */
-            virtual ~FlightTask() {};
-            /**
-             * The method that will be called by the flight controller to
-             * perform the task.
-             * @param fc The pointer to the calling flight controller
-             * @param opts Task-specific options.
-             */
-            virtual void Run(const FlightController *fc, void *opts) = 0;
-    };
-    
-    /**
      * The base controller for the hexacopter.
      * It ties in all the actuators and sensors for access from a central point.
      */
     class FlightController {
+        /* Allow access to set the controller state */
+        friend FlightTask;
         public:
             FlightController();
             FlightController(Options *opts);
@@ -115,10 +98,39 @@ namespace picopter {
             /** The current task **/
             FlightTask *m_task;
             
+            /** Update the current state **/
+            ControllerState SetCurrentState(ControllerState state);
             /** Copy constructor (disabled) **/
             FlightController(const FlightController &other);
             /** Assignment operator (disabled) **/
             FlightController& operator= (const FlightController &other);
+    };
+    
+    /**
+     * The base class for all flight tasks.
+     * All flight tasks must inherit from this class and implement its methods.
+     */
+    class FlightTask {
+        public:
+            /**
+             * The destructor. Will be called immediately after Run() exits.
+             */
+            virtual ~FlightTask() {};
+            /**
+             * The method that will be called by the flight controller to
+             * perform the task.
+             * @param fc The pointer to the calling flight controller
+             * @param opts Task-specific options.
+             */
+            virtual void Run(FlightController *fc, void *opts) = 0;
+        protected:
+            /**
+             * Sets the current state of the parent flight controller.
+             * @return The previous controller state.
+             */
+            static ControllerState SetCurrentState(FlightController *fc, ControllerState state) {
+                return fc->SetCurrentState(state);
+            };
     };
 }
 
