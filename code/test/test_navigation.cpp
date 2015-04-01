@@ -90,5 +90,5 @@ TEST_F(NavigationTest, TestCoordBearing) {
     ASSERT_DOUBLE_EQ(M_PI, CoordBearing(a, b));
     ASSERT_DOUBLE_EQ(0.0, CoordBearing(b, a));
     ASSERT_DOUBLE_EQ(170.6912616092665, RAD2DEG(CoordBearing(a, g)));
-    ASSERT_DOUBLE_EQ(-9.846559580054718, RAD2DEG(CoordBearing(g, a)));
+    ASSERT_DOUBLE_EQ(350.1534404199453, RAD2DEG(CoordBearing(g, a)));
 }
