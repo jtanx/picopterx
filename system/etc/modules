@@ -1,0 +1,19 @@
+# /etc/modules: kernel modules to load at boot time.
+#
+# This file contains the names of kernel modules that should be loaded
+# at boot time, one per line. Lines beginning with "#" are ignored.
+# Parameters can be specified after the module name.
+
+w1-gpio
+w1-therm
+
+bcm2708_wdog
+
+spi-bcm2708
+snd-bcm2835
+
+i2c-bcm2078
+i2c-dev
+
+#V4L2 video driver for the pi camera
+bcm2835-v4l2
