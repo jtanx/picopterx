@@ -15,4 +15,4 @@ install_manifest.txt
 tags
 
 third_party/Xsens
-third_party/thrift/gen-*
+src/server/gen-*

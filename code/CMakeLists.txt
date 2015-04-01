@@ -152,10 +152,7 @@ if (NOT MSYS AND NOT CYGWIN)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(abspath $<))\"'")
 else ()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(shell cygpath -m $(abspath $<)))\"'")
-endif()
-
-#Add Thrift for the webserver
-add_subdirectory(${PI_THIRD_PARTY}/thrift)
+endif() 
 
 #Setup the testing framework (gtest)
 if (test)
