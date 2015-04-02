@@ -116,9 +116,16 @@ uint8_t NazaDecoderLib::decode(int input)
         else if (msgId == NAZA_MESSAGE_COMPASS)
         {
             uint8_t mask = payload[4];
-            mask = (((mask ^ (mask >> 4)) & 0x0F) | ((mask << 3) & 0xF0)) ^ (((mask & 0x01) << 3) | ((mask & 0x01) << 7)); 
+            mask = (((mask ^ (mask >> 4)) & 0x0F) | ((mask << 3) & 0xF0)) ^ (((mask & 0x01) << 3) | ((mask & 0x01) << 7));
+            //make x,y,z available to getter functions (after centering as in headingNc)
             int16_t x = decodeShort(0, mask);
             int16_t y = decodeShort(2, mask);
+
+            //three axis compass according to http://www.rcgroups.com/forums/showpost.php?p=26248426&postcount=62
+            int16_t z = (payload[4] << 8) | (payload[5] ^ mask);  //can't use decodeShort() because byte 9 is not XORed
+
+            //this makes sense, but it's pretty crude. The copter will need to do a full rotation before it finds the centres of its magnetometers
+            //if we want to be really clever, we should probably store these values somwhere.
             if(x > magXMax) magXMax = x;
             if(x < magXMin) magXMin = x;
             if(y > magYMax) magYMax = y;
