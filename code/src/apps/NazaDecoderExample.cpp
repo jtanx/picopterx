@@ -8,33 +8,36 @@
 
 #include "common.h"
 #include "NazaDecoderLib.h"
+/*
 #include <wiringPi.h>
 #include <wiringSerial.h>
-
-#ifndef ATTITUDE_SENSING_DISABLED
-uint32_t currTime, attiTime;
-#endif
+*/
 
 int main(int argc, char *argv[]) {
-    int fd;
-    NazaDecoder decoder;
-    wiringPiSetup();
+    //int fd;
+    NazaDecoderLib decoder;
+    //wiringPiSetup();
     
-    fd = serialOpen("/dev/ttyAMA0", 115200);
-    while (serialDataAvail(fd) >= 0) {
-        uint8_t decodedMessage = NazaDecoder.decode(serialGetChar(fd));
+    if (argc < 2) {
+        printf("WRONG!\n");
+    }
+    
+    //fd = serialOpen("/dev/ttyAMA0", 115200);
+    FILE *fp = fopen(argv[1], "rb");
+    uint8_t buf;
+    while (fread(&buf, 1, 1, fp) > 0) {
+        uint8_t decodedMessage = decoder.decode(buf);
         switch (decodedMessage)
         {
           case NAZA_MESSAGE_GPS:
-            Serial.print("Lat: "); Serial.print(NazaDecoder.getLat(), 7);
-            Serial.print(", Lon: "); Serial.print(NazaDecoder.getLon(), 7);
-            Serial.print(", Alt: "); Serial.print(NazaDecoder.getGpsAlt(), 7);
-            Serial.print(", Fix: "); Serial.print(NazaDecoder.getFixType());
-            Serial.print(", Sat: "); Serial.println(NazaDecoder.getNumSat());
+            printf("Lat: %.3f, Lon: %.3f, Alt: %.3f, Fix: %d, Sat: %d\n",
+                   decoder.getLat(), decoder.getLon(), decoder.getGpsAlt(),
+                   decoder.getFixType(), decoder.getNumSat());
             break;
           case NAZA_MESSAGE_COMPASS:
-            Serial.print("Heading: "); Serial.println(NazaDecoder.getHeadingNc(), 2);
+            printf("Heading: %.3f\n", decoder.getHeadingNc());
             break;
         }
     }
+    fclose(fp);
 }
