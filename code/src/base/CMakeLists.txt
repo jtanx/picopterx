@@ -11,6 +11,7 @@ set (SOURCE
 	 imu.cpp
 	 flightcontroller.cpp
 	 PID.cpp
+	 NazaDecoderLib.cpp
 )
 set (HEADERS
 	 flightboard-private.h
@@ -26,6 +27,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/imu_feed.h
 	 ${PI_INCLUDE}/flightcontroller.h
 	 ${PI_INCLUDE}/PID.h
+	 ${PI_INCLUDE}/NazaDecoderLib.h
 )
 
 #Compile as a static library
