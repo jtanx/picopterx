@@ -45,7 +45,10 @@ class NazaDecoderLib
         uint8_t getHour(); // Note that for time between 16:00 and 23:59 the hour returned from GPS module is actually 00:00 - 7:59.
         uint8_t getMinute();
         uint8_t getSecond();
-    
+        int16_t getMagXval();
+        int16_t getMagYval();
+        int16_t getMagZval();
+
     private:
         int payload[58];
         int seq;
@@ -58,6 +61,13 @@ class NazaDecoderLib
         int16_t magXMax;
         int16_t magYMin;
         int16_t magYMax;
+        int16_t magZMin;
+        int16_t magZMax;
+
+        int16_t magXVal;    //raw magnetometer data
+        int16_t magYVal;
+        int16_t magZVal;
+
 
         double lon;     // longitude in degree decimal
         double lat;     // latitude in degree decimal

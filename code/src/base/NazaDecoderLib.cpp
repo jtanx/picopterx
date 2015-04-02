@@ -61,6 +61,9 @@ uint8_t NazaDecoderLib::getDay() { return day; }
 uint8_t NazaDecoderLib::getHour() { return hour; }
 uint8_t NazaDecoderLib::getMinute() { return minute; }
 uint8_t NazaDecoderLib::getSecond() { return second; }
+int16_t NazaDecoderLib::getMagXval() { return magXVal; }
+int16_t NazaDecoderLib::getMagYval() { return magYVal; }
+int16_t NazaDecoderLib::getMagZval() { return magZVal; }
 
 uint8_t NazaDecoderLib::decode(int input)
 { 
@@ -117,7 +120,7 @@ uint8_t NazaDecoderLib::decode(int input)
         {
             uint8_t mask = payload[4];
             mask = (((mask ^ (mask >> 4)) & 0x0F) | ((mask << 3) & 0xF0)) ^ (((mask & 0x01) << 3) | ((mask & 0x01) << 7));
-            //make x,y,z available to getter functions (after centering as in headingNc)
+
             int16_t x = decodeShort(0, mask);
             int16_t y = decodeShort(2, mask);
 
@@ -130,7 +133,19 @@ uint8_t NazaDecoderLib::decode(int input)
             if(x < magXMin) magXMin = x;
             if(y > magYMax) magYMax = y;
             if(y < magYMin) magYMin = y;
-            headingNc = -atan2(y - ((magYMax + magYMin) / 2), x - ((magXMax + magXMin) / 2)) * 180.0 / M_PI;
+            if(y > magYMax) magYMax = z;
+            if(y < magYMin) magYMin = z;
+
+            int16_t magXMid = (magXMax + magXMin)/2;
+            int16_t magYMid = (magYMax + magYMin)/2;
+            int16_t magZMid = (magZMax + magZMin)/2;
+
+            magXVal = x - magXMid;
+            magYVal = y - magYMid;
+            magZVal = z - magZMid;
+
+            headingNc = -atan2(magYVal, magXVal) * 180.0 / M_PI;
+
             if(headingNc < 0) headingNc += 360.0; 
         }
         return msgId;
