@@ -8,10 +8,12 @@
 
 #include "common.h"
 #include "NazaDecoderLib.h"
+#include <cmath>
 /*
 #include <wiringPi.h>
 #include <wiringSerial.h>
 */
+
 
 int main(int argc, char *argv[]) {
     //int fd;
@@ -38,7 +40,11 @@ int main(int argc, char *argv[]) {
                    decoder.getHour(), decoder.getMinute(), decoder.getSecond());
             break;
           case NAZA_MESSAGE_COMPASS:
-            printf("Heading: %.3f\n", decoder.getHeadingNc());
+
+            float inclination = atan2(sqrt( (float)decoder.getMagXval()*(float)decoder.getMagXval()
+                                          + (float)decoder.getMagYval()*(float)decoder.getMagYval() ), decoder.getMagZval());
+            printf("Heading: %.3f, Magnetic Inclination: %.3f\n", decoder.getHeadingNc(), inclination);
+
             break;
         }
     }

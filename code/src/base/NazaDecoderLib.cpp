@@ -84,6 +84,14 @@ uint8_t NazaDecoderLib::decode(int input)
         if(msgId == NAZA_MESSAGE_GPS)
         {
             uint8_t mask = payload[55];
+
+            /*
+            //http://www.rcgroups.com/forums/showpost.php?p=26210591&postcount=15
+            uint8_t mask = (payload[48]^(payload[56]>>4)) & 0x0F;
+            mask = (mask^(payload[48]<<3)) & 0x7F;
+            mask = mask^(mask<<7);
+            */
+            
             uint32_t time = decodeLong(0, mask);
             second = time & 0x3F; time >>= 6;
             minute = time & 0x3F; time >>= 6;
