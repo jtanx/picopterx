@@ -33,6 +33,9 @@ int main(int argc, char *argv[]) {
             printf("Lat: %.3f, Lon: %.3f, Alt: %.3f, Fix: %d, Sat: %d\n",
                    decoder.getLat(), decoder.getLon(), decoder.getGpsAlt(),
                    decoder.getFixType(), decoder.getNumSat());
+            printf("time: %d/%d/%d %d:%d:%d\n" ,
+                   decoder.getDay(), decoder.getMonth(), decoder.getYear(),
+                   decoder.getHour(), decoder.getMinute(), decoder.getSecond());
             break;
           case NAZA_MESSAGE_COMPASS:
             printf("Heading: %.3f\n", decoder.getHeadingNc());
