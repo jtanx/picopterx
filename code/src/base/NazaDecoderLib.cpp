@@ -29,13 +29,13 @@ NazaDecoderLib::NazaDecoderLib()
 
 int32_t NazaDecoderLib::decodeLong(uint8_t idx, uint8_t mask)
 {
-    return ((payload[idx] ^ mask) << 24) | ((payload[idx+1] ^ mask) << 16) |
-           ((payload[idx+2] ^ mask) << 8) | (payload[idx+3] ^ mask);
+    return ((payload[idx+3] ^ mask) << 24) | ((payload[idx+2] ^ mask) << 16) |
+           ((payload[idx+1] ^ mask) << 8) | (payload[idx] ^ mask);
 }
 
 int16_t NazaDecoderLib::decodeShort(uint8_t idx, uint8_t mask)
 {
-    return ((payload[idx] ^ mask) << 8) | (payload[idx+1] ^ mask);
+    return ((payload[idx+1] ^ mask) << 8) | (payload[idx] ^ mask);
 }
 
 void NazaDecoderLib::updateCS(int input)
@@ -84,7 +84,7 @@ uint8_t NazaDecoderLib::decode(int input)
         if(msgId == NAZA_MESSAGE_GPS)
         {
             uint8_t mask = payload[55];
-
+            
             /*
             //http://www.rcgroups.com/forums/showpost.php?p=26210591&postcount=15
             uint8_t mask = (payload[48]^(payload[56]>>4)) & 0x0F;
@@ -133,7 +133,7 @@ uint8_t NazaDecoderLib::decode(int input)
             int16_t y = decodeShort(2, mask);
 
             //three axis compass according to http://www.rcgroups.com/forums/showpost.php?p=26248426&postcount=62
-            int16_t z = (payload[4] << 8) | (payload[5] ^ mask);  //can't use decodeShort() because byte 9 is not XORed
+            int16_t z = (payload[5] << 8) | (payload[4] ^ mask);  //can't use decodeShort() because byte 9 is not XORed
 
             //this makes sense, but it's pretty crude. The copter will need to do a full rotation before it finds the centres of its magnetometers
             //if we want to be really clever, we should probably store these values somwhere.
