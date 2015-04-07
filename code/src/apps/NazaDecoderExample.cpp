@@ -27,24 +27,37 @@ int main(int argc, char *argv[]) {
     //fd = serialOpen("/dev/ttyAMA0", 115200);
     FILE *fp = fopen(argv[1], "rb");
     uint8_t buf;
+    double last_heading = -1;
+    
     while (fread(&buf, 1, 1, fp) > 0) {
         uint8_t decodedMessage = decoder.decode(buf);
         switch (decodedMessage)
         {
-          case NAZA_MESSAGE_GPS:
-            printf("Lat: %.3f, Lon: %.3f, Alt: %.3f, Fix: %d, Sat: %d\n",
-                   decoder.getLat(), decoder.getLon(), decoder.getGpsAlt(),
-                   decoder.getFixType(), decoder.getNumSat());
-            printf("time: %d/%d/%d %d:%d:%d\n" ,
-                   decoder.getDay(), decoder.getMonth(), decoder.getYear(),
-                   decoder.getHour(), decoder.getMinute(), decoder.getSecond());
+            case NAZA_MESSAGE_GPS:
+                if (decoder.getFixType() == NazaDecoderLib::NO_FIX) {
+                    fprintf(stderr, "%02d/%02d/%02d %02d:%02d:%02d: No fix\n" ,
+                       decoder.getDay(), decoder.getMonth(), decoder.getYear(),
+                       decoder.getHour(), decoder.getMinute(), decoder.getSecond());
+                } else {
+                    char buf[BUFSIZ];
+                    
+                    sprintf(buf,
+                        "%02d/%02d/%02d %02d:%02d:%02d,%.07f,%.07f,%.07f,%.07f,%.07f,%.02f,%.02f,%d,%d",
+                        decoder.getDay(), decoder.getMonth(), decoder.getYear(),
+                        decoder.getHour(), decoder.getMinute(), decoder.getSecond(),
+                        decoder.getLat(), decoder.getLon(), decoder.getGpsAlt(),
+                        decoder.getSpeed(), last_heading, decoder.getHdop(),
+                        decoder.getVdop(), decoder.getFixType(),
+                        decoder.getNumSat());
+                    fprintf(stderr, "%s\n", buf);
+                    printf("%s\n", buf);
+                }
             break;
           case NAZA_MESSAGE_COMPASS:
-
             float inclination = atan2(sqrt( (float)decoder.getMagXval()*(float)decoder.getMagXval()
                                           + (float)decoder.getMagYval()*(float)decoder.getMagYval() ), decoder.getMagZval());
-            printf("Heading: %.3f, Magnetic Inclination: %.3f\n", decoder.getHeadingNc(), inclination);
-
+            fprintf(stderr, "Heading: %.3f, Magnetic Inclination: %.3f\n", decoder.getHeadingNc(), inclination);
+            last_heading = decoder.getHeadingNc();
             break;
         }
     }
