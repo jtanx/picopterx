@@ -16,9 +16,8 @@ install:
   - export CC="gcc-4.9"
   - wget http://www.us.apache.org/dist/thrift/0.9.2/thrift-0.9.2.tar.gz
   - tar axvf thrift-0.9.2.tar.gz
-  - pushd thrift-0.9.2 && ./configure && make -j8 && sudo make install && popd
+  - pushd thrift-0.9.2 && ./configure --without-qt4 --without-qt5 --without-c_glib --without-java --without-erlang --without-nodejs --without-lua --without-python --without-perl --without-ruby --without-haskell --without-go --without-haxe --without-d && make -j8 && sudo make install && popd
   #- pushd thrift-0.9.2 && cd compiler/cpp && cmake . && make -j8 && sudo make install && popd
-
 script:
   - $CXX --version
   - $CC --version
