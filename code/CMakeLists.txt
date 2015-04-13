@@ -66,10 +66,6 @@ endif (NOT DISABLE_NONFREE)
 #Include rapidjson
 include_directories (${PI_THIRD_PARTY}/rapidjson)
 
-#Boost (for thrift/web server only)
-#find_package (Boost 1.53.0 REQUIRED)
-#include_directories (${Boost_INCLUDE_DIRS})
-
 #Documentation (if Doxygen is installed)
 set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${PI_DOC})
 find_package (Doxygen QUIET)
@@ -172,4 +168,6 @@ add_subdirectory (${PI_SRC}/modules)
 add_subdirectory (${PI_SRC}/apps)
 
 #Add in the server executable
-#add_subdirectory (${PI_SRC}/server)
+if (NOT DISABLE_SERVER)
+	add_subdirectory (${PI_SRC}/server)
+endif (NOT DISABLE_SERVER)

@@ -16,8 +16,8 @@ install:
   - export CC="gcc-4.9"
   - wget http://www.us.apache.org/dist/thrift/0.9.2/thrift-0.9.2.tar.gz
   - tar axvf thrift-0.9.2.tar.gz
-#Autotools: thrift-0.9.2 && ./configure && cd compiler/cpp && make -j8 && sudo make install
-  - pushd thrift-0.9.2 && cd compiler/cpp && cmake . && make -j8 && sudo make install && popd
+  - pushd thrift-0.9.2 && ./configure && make -j8 && sudo make install && popd
+  #- pushd thrift-0.9.2 && cd compiler/cpp && cmake . && make -j8 && sudo make install && popd
 
 script:
   - $CXX --version

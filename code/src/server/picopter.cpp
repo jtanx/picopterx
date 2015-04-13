@@ -2,32 +2,124 @@
  * @file picopter.cpp
  * @brief The main entry point to the server.
  */
- 
+
 #include "picopter.h"
- 
-int main(int argc, char *argv[]) {
-    LogInit();
-    
-    std::unique_ptr<picopter::FlightController> fc;
-    try {
-        fc.reset(new picopter::FlightController());
-    } catch (const std::invalid_argument &e) {
-        //Fatal("Failed to initialise %s which is required, exiting.", e.what());
-        Log(LOG_ERR, "Failed to initialise %s which is required, exiting (not really).", e.what());
+#include "webInterface.h"
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/server/TSimpleServer.h>
+#include <thrift/transport/TServerSocket.h>
+#include <thrift/transport/TBufferTransports.h>
+
+using namespace ::apache::thrift;
+using namespace ::apache::thrift::protocol;
+using namespace ::apache::thrift::transport;
+using namespace ::apache::thrift::server;
+
+using boost::shared_ptr;
+
+using namespace  ::picopter;
+
+class webInterfaceHandler : virtual public webInterfaceIf
+{
+public:
+    webInterfaceHandler()
+    {
+        // Your initialization goes here
     }
-    
-    if (fc) {
-        fc->buzzer->Play(10,400,100);
-        Log(LOG_INFO, "Flight controller started.");
-        char buf[BUFSIZ];
-        picopter::FlightData fd = {0};
-        //picopter::Waypoints wp;
-        
-        while (fgets(buf, BUFSIZ, stdin) && strcmp(buf, "exit")) {
-            int n = sscanf(buf, "%i,%i,%i,%i", &fd.elevator,&fd.aileron, &fd.rudder, &fd.gimbal);
-            printf("UD:%d, LR: %d, RT: %d, GB: %d\n", fd.elevator, fd.aileron, fd.rudder, fd.gimbal);
-            fc->fb->SetData(&fd);
-        }
+
+    bool beginWaypointsThread()
+    {
+        // Your implementation goes here
+        printf("beginWaypointsThread\n");
+        return false;
+    }
+
+    bool beginLawnmowerThread()
+    {
+        // Your implementation goes here
+        printf("beginLawnmowerThread\n");
+        return false;
+    }
+
+    bool beginUserTrackingThread()
+    {
+        // Your implementation goes here
+        printf("beginUserTrackingThread\n");
+        return false;
+    }
+
+    bool allStop()
+    {
+        // Your implementation goes here
+        printf("allStop\n");
+        return false;
+    }
+
+    void requestStatus(std::string& _return)
+    {
+        // Your implementation goes here
+        printf("requestStatus\n");
+    }
+
+    void requestCoords(coordDeg& _return)
+    {
+        // Your implementation goes here
+        printf("requestCoords\n");
+    }
+
+    double requestBearing()
+    {
+        // Your implementation goes here
+        printf("requestBearing\n");
+        return false;
+    }
+
+    void requestNextWaypoint(coordDeg& _return)
+    {
+        // Your implementation goes here
+        printf("requestNextWaypoint\n");
+    }
+
+    bool updateUserPosition(const coordDeg& wpt)
+    {
+        // Your implementation goes here
+        printf("updateUserPosition\n");
+        return false;
+    }
+
+    bool updateWaypoints(const std::vector<coordDeg> & wpts)
+    {
+        // Your implementation goes here
+        printf("updateWaypoints\n");
+        return false;
+    }
+
+    bool resetWaypoints()
+    {
+        // Your implementation goes here
+        printf("resetWaypoints\n");
+        return false;
+    }
+
+};
+
+int main(int argc, char **argv)
+{
+    int port = 9090;
+
+    shared_ptr<webInterfaceHandler> handler(new webInterfaceHandler());
+    shared_ptr<TProcessor> processor(new webInterfaceProcessor(handler));
+    shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+    shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+    shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+
+    LogInit();
+    TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
+    try {
+        server.serve();
+    } catch (const TTransportException &e) {
+        Fatal("Cannot start server: Thrift port 9090 is already in use.");
     }
     return 0;
 }
+

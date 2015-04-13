@@ -1,10 +1,18 @@
 # The actual server executable
 
+#Boost (for thrift/web server only)
+find_package (Boost 1.53.0 REQUIRED)
+include_directories (${Boost_INCLUDE_DIRS})
+
 # Find out where Thrift is
 find_program (THRIFT_COMPILER thrift DOC "Thrift compiler executable")
 if (NOT THRIFT_COMPILER)
 	message (FATAL_ERROR "${Red}Thrift was not found. Please install it.${ColourReset}")
 endif()
+
+pkg_check_modules (LIBTHRIFT thrift REQUIRED)
+include_directories (${LIBTHRIFT_INCLUDE_DIRS})
+link_directories (${LIBTHRIFT_LIBRARY_DIRS})
 
 # Set the list of Thrift generated files
 set (GENSOURCE
@@ -34,9 +42,9 @@ include_directories (${CMAKE_CURRENT_BINARY_DIR}/gen-cpp)
 
 # Set the included files
 set (SOURCE
-	 #gen-cpp/picopter_constants.cpp
-	 #gen-cpp/picopter_types.cpp
-	 #gen-cpp/webInterface.cpp
+	 gen-cpp/picopter_constants.cpp
+	 gen-cpp/picopter_types.cpp
+	 gen-cpp/webInterface.cpp
 	 picopter.cpp
 )
 set (HEADERS
@@ -53,3 +61,5 @@ add_dependencies (picopter thriftgen)
 target_link_libraries (picopter LINK_PUBLIC picopter_base)
 # Link it with the control modules
 target_link_libraries (picopter LINK_PUBLIC picopter_modules)
+# Link it with thrift
+target_link_libraries (picopter LINK_PUBLIC ${LIBTHRIFT_LIBRARIES})
