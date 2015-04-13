@@ -23,6 +23,8 @@ namespace picopter {
     typedef enum ControllerState{
         /** All stopped and not running anything. **/
         STATE_STOPPED,
+        /** Waiting for a GPS fix. **/
+        STATE_GPS_WAIT_FOR_FIX,
         /** Awaiting user authorisation (the auto mode switch). **/
         STATE_AWAITING_AUTH,
         /** Inferring the bearing of the hexacopter using the GPS. **/
@@ -67,6 +69,8 @@ namespace picopter {
             bool WaitForAuth();
             bool RunTask(TaskIdentifier tid, FlightTask *task, void *opts);
             bool InferBearing(double *ret, int move_time=5000);
+            
+            friend std::ostream& operator<<(std::ostream &stream, FlightController &fc);
             
             /** A pointer to the flight board controller instance. **/
             FlightBoard* const &fb;

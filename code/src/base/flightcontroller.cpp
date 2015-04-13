@@ -26,18 +26,20 @@ const int FlightController::SLEEP_PERIOD;
  * @param opts A pointer to the options instance, or NULL.
  * @param b The buzzer.
  * @param required Indicated if this module is required.
- * @param retries The number of retries to make if initialisation fails.
+ * @param tries The number of tries to make.
  */
 template <typename Item>
-void InitialiseItem(const char *what, Item* &pt, Options *opts, Buzzer *b, bool required, int retries = -1) {
+void InitialiseItem(const char *what, Item* &pt, Options *opts, Buzzer *b, bool required, int tries = -1) {
     pt = nullptr;
-    for (int i = 0; !pt && (retries < 0 || i <= retries); i++) {
+    for (int i = 0; !pt && (tries < 0 || i < tries); i++) {
         try {
             pt = new Item(opts);
         } catch (const std::invalid_argument &e) {
-            Log(LOG_WARNING, "Failed to initialise %s (%s); retrying in 1 second...", what, e.what());
-            b->Play(200, 40, 100);
-            sleep_for(milliseconds(1000));
+            if (i+1 < tries) {
+                Log(LOG_WARNING, "Failed to initialise %s (%s); retrying in 1 second...", what, e.what());
+                b->Play(200, 40, 100);
+                sleep_for(milliseconds(1000));
+            }
         }
     }
     
@@ -71,13 +73,7 @@ FlightController::FlightController(Options *opts)
     InitialiseItem("GPS", m_gps, opts, m_buzzer, true, 3);
     InitialiseItem("IMU", m_imu, opts, m_buzzer, false, 1);
     
-    Log(LOG_INFO, "Initialised components!");
-    Log(LOG_INFO, "Waiting for a GPS fix...");
-    while (!m_gps->WaitForFix(5000)) {
-        m_buzzer->Play(100, 50, 100);
-    }
-    
-    Log(LOG_INFO, "GPS fix obtained!");    
+    Log(LOG_INFO, "Initialised components!"); 
     m_buzzer->PlayWait(200, 200, 100);
 }
 
@@ -257,4 +253,24 @@ bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts)
     });
     
     return true;
+}
+
+namespace picopter {
+    /**
+     * Stream operator of the Flight Controller.
+     * @return The current state of the flight controller (description).
+     */
+    std::ostream& operator<<(std::ostream &stream, FlightController &fc) {
+        switch(fc.GetCurrentState()) {
+            case STATE_STOPPED:
+                stream << "All stop. Standing by."; break;
+            case STATE_GPS_WAIT_FOR_FIX:
+                stream << "Waiting for a GPS fix."; break;
+            case STATE_AWAITING_AUTH:
+                stream << "Awaiting auto mode."; break;
+            case STATE_INFER_BEARING:
+                stream << "Inferring the bearing."; break;
+        }
+        return stream;
+    }
 }
