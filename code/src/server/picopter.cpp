@@ -12,6 +12,7 @@
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 #include <sstream>
+#include <csignal>
 
 using namespace ::apache::thrift;
 using namespace ::apache::thrift::protocol;
