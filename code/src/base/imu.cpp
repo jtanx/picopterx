@@ -32,8 +32,10 @@ IMU::IMU(Options *opts)
 {
     m_device = new Cmt3();
     if (m_device->openPort(IMU_DEVICE) != XRV_OK) {
+        delete m_device;
         throw std::invalid_argument("Could not open IMU stream");
     } else if (m_device->setTimeoutMeasurement(IMU_TIMEOUT) != XRV_OK) {
+        delete m_device;
         throw std::invalid_argument("Could not set IMU measurement timeout");
     }
     
