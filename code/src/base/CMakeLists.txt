@@ -8,6 +8,8 @@ set (SOURCE
 	 buzzer.cpp
 	 flightboard.cpp
 	 gps.cpp
+	 gps_gpsd.cpp
+	 gps_naza.cpp
 	 imu.cpp
 	 flightcontroller.cpp
 	 PID.cpp
@@ -24,6 +26,8 @@ set (HEADERS
 	 ${PI_INCLUDE}/flightboard.h
 	 ${PI_INCLUDE}/navigation.h
 	 ${PI_INCLUDE}/gps_feed.h
+	 ${PI_INCLUDE}/gps_gpsd.h
+	 ${PI_INCLUDE}/gps_naza.h
 	 ${PI_INCLUDE}/imu_feed.h
 	 ${PI_INCLUDE}/flightcontroller.h
 	 ${PI_INCLUDE}/PID.h

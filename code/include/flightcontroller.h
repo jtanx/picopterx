@@ -7,7 +7,8 @@
 #define _PICOPTERX_FLIGHTCONTROLLER_H
 
 #include "buzzer.h"
-#include "gps_feed.h"
+#include "gps_gpsd.h"
+#include "gps_naza.h"
 #include "imu_feed.h"
 #include "flightboard.h"
 

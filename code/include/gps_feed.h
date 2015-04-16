@@ -1,6 +1,6 @@
 /**
  * @file gps_feed.h
- * @brief GPS interaction code.
+ * @brief Base GPS header.
  */
 
 #ifndef _PICOPTERX_GPS_H
@@ -23,6 +23,8 @@ namespace picopter {
         double speed;
         /** The heading (track angle), in radians. Uncertainty in radians. **/
         double heading;
+        /** The magnetic bearing, in radians, if available. **/
+        double bearing;
     } GPSFix;
     
     /** Holds uncertainty information for a GPS fix. 95% confidence levels. **/
@@ -54,33 +56,26 @@ namespace picopter {
             GPS();
             GPS(Options *opts);
             virtual ~GPS();
-            void GetLatest(GPSData *d);
+            virtual void GetLatest(GPSData *d);
             
             int TimeSinceLastFix();
             bool HasFix();
             bool WaitForFix(int timeout=-1);
-        private:
-            /** The GPS read wait timeout (in us) **/
-            static const int CYCLE_TIMEOUT_DEFAULT = 500000;
+        protected:
             /** The GPS fix timeout (in s) **/
             static const int FIX_TIMEOUT_DEFAULT = 2;
             /** The time checks waits when waiting for a fix (in ms) **/
             static const int WAIT_PERIOD = 200;
-            int m_cycle_timeout;
-            int m_fix_timeout;
-            bool m_had_fix;
             
+            int m_fix_timeout;
             std::atomic<GPSData> m_data;
             std::atomic<int> m_last_fix;
             std::atomic<bool> m_quit;
-            std::thread m_worker;
-            gpsmm *m_gps_rec;
-            
+        private:
             /** Copy constructor (disabled) **/
             GPS(const GPS &other);
             /** Assignment operator (disabled) **/
             GPS& operator= (const GPS &other);
-            void GPSLoop();
     };
 }
 

@@ -67,11 +67,14 @@ FlightController::FlightController(Options *opts)
 , m_task_id{TASK_NONE}
 , m_task{nullptr}
 {
+    GPSGPSD *gps;
     m_buzzer = new Buzzer();
     
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
-    InitialiseItem("GPS", m_gps, opts, m_buzzer, true, 3);
+    InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
     InitialiseItem("IMU", m_imu, opts, m_buzzer, false, 1);
+    
+    m_gps = gps;
     
     Log(LOG_INFO, "Initialised components!"); 
     m_buzzer->PlayWait(200, 200, 100);
