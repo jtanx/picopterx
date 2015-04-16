@@ -24,13 +24,13 @@ def main(naza_log):
             row = l.split(",")
             ctime = datetime.strptime(row[0], time_fmt)
             lat, lon, alt = float(row[1]), float(row[2]), float(row[3])
-            speed, heading = float(row[4]), row[5]
-            hdop, vdop = float(row[6]), float(row[7])
-            fixtype, numsat = int(row[8]), int(row[9])
+            speed, cog, calheading = float(row[4]), float(row[5]), float(row[6])
+            hdop, vdop = float(row[7]), float(row[8])
+            fixtype, numsat = int(row[9]), int(row[10])
                 
             gpx_segment.points.append(GPXTrackPoint(lat,lon,alt,
                 horizontal_dilution=hdop, vertical_dilution=vdop,
-                speed=speed, name=heading, time=ctime))
+                speed=speed, name=str(calheading), time=ctime))
         
         with open("naza_log.gpx", "w") as fpo:
             print(gpx.to_xml(), file=fpo)

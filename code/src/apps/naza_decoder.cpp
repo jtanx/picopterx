@@ -29,11 +29,11 @@ void decodeMessage(NazaDecoderLib &decoder, uint8_t buf) {
                 char buf[BUFSIZ];
                 
                 sprintf(buf,
-                    "%02d/%02d/%02d %02d:%02d:%02d,%.07f,%.07f,%.07f,%.07f,%.07f,%.02f,%.02f,%d,%d",
+                    "%02d/%02d/%02d %02d:%02d:%02d,%.07f,%.07f,%.03f,%.03f,%.03f,%.03f,%.02f,%.02f,%d,%d",
                     decoder.getDay(), decoder.getMonth(), decoder.getYear(),
                     decoder.getHour(), decoder.getMinute(), decoder.getSecond(),
                     decoder.getLat(), decoder.getLon(), decoder.getGpsAlt(),
-                    decoder.getSpeed(), last_heading, decoder.getHdop(),
+                    decoder.getSpeed(), decoder.getCog(), last_heading, decoder.getHdop(),
                     decoder.getVdop(), decoder.getFixType(),
                     decoder.getNumSat());
                 fprintf(stderr, "%s\n", buf);
