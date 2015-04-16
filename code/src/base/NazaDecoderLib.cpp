@@ -11,6 +11,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include "NazaDecoderLib.h"
+//#include <cstdio>
 
 NazaDecoderLib::NazaDecoderLib()
 : payload{0}
@@ -20,10 +21,12 @@ NazaDecoderLib::NazaDecoderLib()
 , msgLen(0)
 , cs1(0)
 , cs2(0)
-, magXMin(0)
-, magXMax(0)
-, magYMin(0)
-, magYMax(0)
+, magXMin(-427)
+, magXMax(614)
+, magYMin(-502)
+, magYMax(556)
+, magZMin(-437)
+, magZMax(542)
 {
 }
 
@@ -64,6 +67,9 @@ uint8_t NazaDecoderLib::getSecond() { return second; }
 int16_t NazaDecoderLib::getMagXval() { return magXVal; }
 int16_t NazaDecoderLib::getMagYval() { return magYVal; }
 int16_t NazaDecoderLib::getMagZval() { return magZVal; }
+int16_t NazaDecoderLib::getMagXRaw() { return magXRaw; }
+int16_t NazaDecoderLib::getMagYRaw() { return magYRaw; }
+int16_t NazaDecoderLib::getMagZRaw() { return magZRaw; }
 
 uint8_t NazaDecoderLib::decode(int input)
 { 
@@ -75,7 +81,10 @@ uint8_t NazaDecoderLib::decode(int input)
     else if(seq == 4) { payload[cnt++] = input; updateCS(input); if(cnt >= msgLen) { seq++; } }             // store payload in buffer
     else if((seq == 5) && (input == cs1)) { seq++; }                                                        // verify checksum #1
     else if((seq == 6) && (input == cs2)) { seq++; }                                                        // verify checksum #2
-    else seq = 0; 
+    else {
+    	//printf("BAD DATA\n");
+    	seq = 0;
+    }
 
     if(seq == 7) // all data in buffer
     {
@@ -137,6 +146,12 @@ uint8_t NazaDecoderLib::decode(int input)
 
             //this makes sense, but it's pretty crude. The copter will need to do a full rotation before it finds the centres of its magnetometers
             //if we want to be really clever, we should probably store these values somwhere.
+            
+           	magXRaw = x;
+           	magYRaw = y;
+           	magZRaw = z;
+            
+            
             if(x > magXMax) magXMax = x;
             if(x < magXMin) magXMin = x;
             if(y > magYMax) magYMax = y;
@@ -147,14 +162,26 @@ uint8_t NazaDecoderLib::decode(int input)
             int16_t magXMid = (magXMax + magXMin)/2;
             int16_t magYMid = (magYMax + magYMin)/2;
             int16_t magZMid = (magZMax + magZMin)/2;
+            
+            int16_t magXRange = (magXMax - magXMin)/2;
+            int16_t magYRange = (magYMax - magYMin)/2;
+            int16_t magZRange = (magZMax - magZMin)/2;
+            int16_t magRadius = (magXRange+magYRange+magZRange)/3;
 
-            magXVal = x - magXMid;
-            magYVal = y - magYMid;
-            magZVal = z - magZMid;
+            magXVal = ((x - magXMid)*magRadius)/magXRange;
+            magYVal = ((y - magYMid)*magRadius)/magYRange;
+            magZVal = ((z - magZMid)*magRadius)/magZRange;
 
             headingNc = -atan2(magYVal, magXVal) * 180.0 / M_PI;
 
-            if(headingNc < 0) headingNc += 360.0; 
+            if(headingNc < 0) headingNc += 360.0;
+            
+            //Our setup has it mounted oppositely
+            if (headingNc < 180) {
+            	headingNc += 180;
+            } else {
+            	headingNc -= 180;
+            }
         }
         return msgId;
     }

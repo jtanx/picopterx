@@ -1,7 +1,7 @@
 # The actual server executable
 
 #Boost (for thrift/web server only)
-find_package (Boost 1.53.0 REQUIRED)
+find_package (Boost REQUIRED) #1.53.0
 include_directories (${Boost_INCLUDE_DIRS})
 
 # Find out where Thrift is

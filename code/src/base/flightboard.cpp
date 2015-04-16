@@ -41,7 +41,7 @@ FlightBoard::FlightBoard() : FlightBoard(NULL) {}
  */
 FlightBoard::~FlightBoard() {
     Stop();
-#if IS_ON_PI
+#ifdef IS_ON_PI
     fclose(m_fp);
 #endif
 }
