@@ -45,13 +45,13 @@ class NazaDecoderLib
         uint8_t getHour(); // Note that for time between 16:00 and 23:59 the hour returned from GPS module is actually 00:00 - 7:59.
         uint8_t getMinute();
         uint8_t getSecond();
-        int16_t getMagXval();
-        int16_t getMagYval();
-        int16_t getMagZval();
-		int16_t getMagXRaw();
-		int16_t getMagYRaw();
-		int16_t getMagZRaw();
-		
+        int16_t getMagXRaw();
+        int16_t getMagYRaw();
+        int16_t getMagZRaw();
+        double getMagXVal();
+        double getMagYVal();
+        double getMagZVal();
+        
     private:
         int payload[58];
         int seq;
@@ -66,10 +66,19 @@ class NazaDecoderLib
         int16_t magYMax;
         int16_t magZMin;
         int16_t magZMax;
-
-        int16_t magXVal;    //compensated magnetometer data
-        int16_t magYVal;
-        int16_t magZVal;
+        
+        double magXMid;
+        double magYMid;
+        double magZMid;
+        
+        double magXVal;
+        double magYVal;
+        double magZVal;
+        
+        double magAvgDiameter;
+        double magXScale;
+        double magYScale;
+        double magZScale;
         
         int16_t magXRaw;
         int16_t magYRaw;

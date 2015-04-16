@@ -10,23 +10,21 @@
 
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <algorithm>
 #include "NazaDecoderLib.h"
-//#include <cstdio>
 
 NazaDecoderLib::NazaDecoderLib()
-: payload{0}
-, seq(0)
-, cnt(0)
-, msgId(0)
-, msgLen(0)
-, cs1(0)
-, cs2(0)
-, magXMin(-427)
-, magXMax(614)
-, magYMin(-502)
-, magYMax(556)
-, magZMin(-437)
-, magZMax(542)
+: seq(0), cnt(0), msgId(0), msgLen(0), cs1(0), cs2(0)
+, magXMin(-427), magXMax(614)
+, magYMin(-502), magYMax(556)
+, magZMin(-437), magZMax(542)
+, magXMid((magXMin+magXMax)/2.0)
+, magYMid((magYMin+magYMax)/2.0)
+, magZMid((magZMin+magZMax)/2.0)
+, magAvgDiameter(((magXMax-magXMin) + (magYMax-magYMin) + (magZMax-magZMin)) / 3.0)
+, magXScale(magAvgDiameter / (magXMax-magXMin))
+, magYScale(magAvgDiameter / (magYMax-magYMin))
+, magZScale(magAvgDiameter / (magZMax-magZMin))
 {
 }
 
@@ -64,12 +62,12 @@ uint8_t NazaDecoderLib::getDay() { return day; }
 uint8_t NazaDecoderLib::getHour() { return hour; }
 uint8_t NazaDecoderLib::getMinute() { return minute; }
 uint8_t NazaDecoderLib::getSecond() { return second; }
-int16_t NazaDecoderLib::getMagXval() { return magXVal; }
-int16_t NazaDecoderLib::getMagYval() { return magYVal; }
-int16_t NazaDecoderLib::getMagZval() { return magZVal; }
 int16_t NazaDecoderLib::getMagXRaw() { return magXRaw; }
 int16_t NazaDecoderLib::getMagYRaw() { return magYRaw; }
 int16_t NazaDecoderLib::getMagZRaw() { return magZRaw; }
+double NazaDecoderLib::getMagXVal() { return magXVal; }
+double NazaDecoderLib::getMagYVal() { return magYVal; }
+double NazaDecoderLib::getMagZVal() { return magZVal; }
 
 uint8_t NazaDecoderLib::decode(int input)
 { 
@@ -82,8 +80,8 @@ uint8_t NazaDecoderLib::decode(int input)
     else if((seq == 5) && (input == cs1)) { seq++; }                                                        // verify checksum #1
     else if((seq == 6) && (input == cs2)) { seq++; }                                                        // verify checksum #2
     else {
-    	//printf("BAD DATA\n");
-    	seq = 0;
+        //printf("BAD DATA\n");
+        seq = 0;
     }
 
     if(seq == 7) // all data in buffer
@@ -138,49 +136,28 @@ uint8_t NazaDecoderLib::decode(int input)
             uint8_t mask = payload[4];
             mask = (((mask ^ (mask >> 4)) & 0x0F) | ((mask << 3) & 0xF0)) ^ (((mask & 0x01) << 3) | ((mask & 0x01) << 7));
 
-            int16_t x = decodeShort(0, mask);
-            int16_t y = decodeShort(2, mask);
+            //3-Axis compass: http://www.rcgroups.com/forums/showpost.php?p=26248426&postcount=62
+            int16_t x = magXRaw = decodeShort(0, mask);
+            int16_t y = magYRaw = decodeShort(2, mask);
+            //can't use decodeShort() because byte 9 is not XORed
+            int16_t z = magZRaw = ((payload[5] ^ mask) << 8) | (payload[4]);
 
-            //three axis compass according to http://www.rcgroups.com/forums/showpost.php?p=26248426&postcount=62
-            int16_t z = ((payload[5] ^ mask) << 8) | (payload[4]);  //can't use decodeShort() because byte 9 is not XORed
+            x = std::max(std::min(x, magXMax), magXMin);
+            y = std::max(std::min(y, magYMax), magYMin);
+            z = std::max(std::min(z, magZMax), magZMin);
 
-            //this makes sense, but it's pretty crude. The copter will need to do a full rotation before it finds the centres of its magnetometers
-            //if we want to be really clever, we should probably store these values somwhere.
-            
-           	magXRaw = x;
-           	magYRaw = y;
-           	magZRaw = z;
-            
-            
-            if(x > magXMax) magXMax = x;
-            if(x < magXMin) magXMin = x;
-            if(y > magYMax) magYMax = y;
-            if(y < magYMin) magYMin = y;
-            if(y > magYMax) magYMax = z;
-            if(y < magYMin) magYMin = z;
-
-            int16_t magXMid = (magXMax + magXMin)/2;
-            int16_t magYMid = (magYMax + magYMin)/2;
-            int16_t magZMid = (magZMax + magZMin)/2;
-            
-            int16_t magXRange = (magXMax - magXMin)/2;
-            int16_t magYRange = (magYMax - magYMin)/2;
-            int16_t magZRange = (magZMax - magZMin)/2;
-            int16_t magRadius = (magXRange+magYRange+magZRange)/3;
-
-            magXVal = ((x - magXMid)*magRadius)/magXRange;
-            magYVal = ((y - magYMid)*magRadius)/magYRange;
-            magZVal = ((z - magZMid)*magRadius)/magZRange;
-
+            magXVal = (x - magXMid) * magXScale;
+            magYVal = (y - magYMid) * magYScale;
+            magZVal = (z - magZMid) * magZScale;
             headingNc = -atan2(magYVal, magXVal) * 180.0 / M_PI;
 
             if(headingNc < 0) headingNc += 360.0;
             
             //Our setup has it mounted oppositely
             if (headingNc < 180) {
-            	headingNc += 180;
+                headingNc += 180;
             } else {
-            	headingNc -= 180;
+                headingNc -= 180;
             }
         }
         return msgId;

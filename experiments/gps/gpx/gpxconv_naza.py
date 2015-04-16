@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sys,os,re
+import sys,os,re,math
 from gpxpy.gpx import GPX, GPXTrack, GPXTrackSegment, GPXTrackPoint, GPXWaypoint
 from datetime import datetime
 import time

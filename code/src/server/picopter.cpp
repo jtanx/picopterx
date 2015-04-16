@@ -63,6 +63,10 @@ public:
 
     bool beginUserTrackingThread()
     {
+        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
+            // ALREADY RUNNING
+            return false;
+        }
         // Your implementation goes here
         printf("beginUserTrackingThread\n");
         return false;
