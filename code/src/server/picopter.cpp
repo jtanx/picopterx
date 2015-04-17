@@ -88,8 +88,11 @@ public:
 
     void requestCoords(coordDeg& _return)
     {
-        // Your implementation goes here
-        printf("requestCoords\n");
+        GPSData d;
+        m_fc->gps->GetLatest(&d);
+        _return.lat = RAD2DEG(d.fix.lat);
+        _return.lon = RAD2DEG(d.fix.lon);
+        printf("requestCoords %f,%f\n", _return.lat, _return.lon);
     }
 
     double requestBearing()
