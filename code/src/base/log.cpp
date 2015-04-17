@@ -61,10 +61,12 @@ void LogEx(int level, const char * funct, const char * file, int line, ...)
     else { //Get the function/method name only
         const char *p1 = strchr(funct, ' '), *p2 = strchr(funct, '(');
         if (p2) {
-            if (p1) { //Got space; must be function/method
+            if (p1 && p2-p1-1 > 0) { //Got space; must be function/method
                 fn = std::string(p1+1, p2-p1-1);
-            } else { //No space; must be ctor
+            } else if (p2-funct > 0) { //No space; must be ctor or lambda func.
                 fn = std::string(funct, p2-funct);
+            } else {
+                fn = std::string(funct);
             }
         } else {
             fn = unspecified_funct;
