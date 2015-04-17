@@ -105,6 +105,7 @@ FlightController::~FlightController() {
  * Send an indication that the flight controller should stop the running task.
  */
 void FlightController::Stop() {
+    Log(LOG_INFO, "All stop received!");
     m_stop.store(true, std::memory_order_relaxed);
 }
 
@@ -191,7 +192,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
     SetCurrentState(STATE_INFER_BEARING);
     
     m_fb->Stop();
-    if (!m_gps->WaitForFix(1000)) {
+    if (!m_gps->WaitForFix(200)) {
         Log(LOG_INFO, "Bearing inferral failed - no GPS fix.");
         SetCurrentState(STATE_STOPPED);
         return false;
@@ -244,12 +245,13 @@ bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts)
     Log(LOG_INFO, "Running new task with id %d.", tid);
     m_task_id.store(tid, std::memory_order_relaxed);
     m_task = task;
-    m_task_thread = std::async(std::launch::async, [this, task, opts] {
+    m_task_thread = std::async(std::launch::async, [this, task, opts, tid] {
         task->Run(this, opts);
         delete m_task;
         m_task = nullptr;
         
         m_fb->Stop();
+        Log(LOG_INFO, "Task with id %d ended.", tid);
         m_state.store(STATE_STOPPED, std::memory_order_relaxed);
         m_stop.store(false, std::memory_order_relaxed);
         m_task_id.store(TASK_NONE, std::memory_order_relaxed);
@@ -273,6 +275,12 @@ namespace picopter {
                 stream << "Awaiting auto mode."; break;
             case STATE_INFER_BEARING:
                 stream << "Inferring the bearing."; break;
+            case STATE_WAYPOINTS_MOVING:
+                stream << "Moving to the waypoint."; break;
+            case STATE_WAYPOINTS_IDLING:
+                stream << "Idling at the current waypoint."; break;
+            case STATE_WAYPOINTS_FINISHED:
+                stream << "Finished the waypoints navigation."; break;
         }
         return stream;
     }

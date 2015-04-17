@@ -106,11 +106,11 @@ void GPSGPSD::GPSLoop() {
                 }
                 m_data = d;
                 
-                time_t t = (time_t) d.timestamp;
+                /*time_t t = (time_t) d.timestamp;
                 Log(LOG_INFO, "Current fix: (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f] at %s",
                     RAD2DEG(d.fix.lat), d.err.lat, RAD2DEG(d.fix.lon), d.err.lon,
                     d.fix.speed, d.err.speed, RAD2DEG(d.fix.heading), 
-                    RAD2DEG(d.err.heading), ctime(&t));
+                    RAD2DEG(d.err.heading), ctime(&t));*/
                 
                 last_fix = steady_clock::now();
                 m_had_fix = true;

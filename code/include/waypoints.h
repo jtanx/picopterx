@@ -23,7 +23,7 @@ namespace picopter {
     /**
      * Class for moving the hexacopter through waypoints.
      */
-    class Waypoints : FlightTask {
+    class Waypoints : public FlightTask {
         public:
             Waypoints(std::deque<navigation::Coord2D> pts, WaypointMethod method);
             Waypoints(Options *opts, std::deque<navigation::Coord2D> pts, WaypointMethod method);
@@ -36,6 +36,7 @@ namespace picopter {
             int m_update_interval;
             double m_waypoint_radius;
             double m_waypoint_control;
+            int m_waypoint_idle;
             PID m_pid1;
             
             void SimpleCalculation(navigation::Coord2D c, navigation::Coord2D d);

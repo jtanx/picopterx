@@ -33,6 +33,7 @@ class webInterfaceHandler : virtual public webInterfaceIf
 {
 private:
     const std::unique_ptr<picopter::FlightController> &m_fc;
+    std::deque<navigation::Coord2D> m_pts;
 public:
     webInterfaceHandler(std::unique_ptr<picopter::FlightController> &fc)
     : m_fc(fc)
@@ -45,10 +46,15 @@ public:
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
             return false;
+        } else {
+            Waypoints *wpts = new Waypoints(m_pts, WAYPOINT_SIMPLE);
+            
+            if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
+                delete wpts;
+                return false;
+            }
         }
-        // Your implementation goes here
-        printf("beginWaypointsThread\n");
-        return false;
+        return true;
     }
 
     bool beginLawnmowerThread()
@@ -58,7 +64,7 @@ public:
             return false;
         }
         // Your implementation goes here
-        printf("beginLawnmowerThread\n");
+        //printf("beginLawnmowerThread\n");
         return false;
     }
 
@@ -69,7 +75,7 @@ public:
             return false;
         }
         // Your implementation goes here
-        printf("beginUserTrackingThread\n");
+        //printf("beginUserTrackingThread\n");
         return false;
     }
 
@@ -98,34 +104,44 @@ public:
     double requestBearing()
     {
         // Your implementation goes here
-        printf("requestBearing\n");
+        //printf("requestBearing\n");
         return false;
     }
 
     void requestNextWaypoint(coordDeg& _return)
     {
         // Your implementation goes here
-        printf("requestNextWaypoint\n");
+        //printf("requestNextWaypoint\n");
     }
 
     bool updateUserPosition(const coordDeg& wpt)
     {
         // Your implementation goes here
-        printf("updateUserPosition\n");
+        //printf("updateUserPosition\n");
         return false;
     }
 
     bool updateWaypoints(const std::vector<coordDeg> & wpts)
     {
-        // Your implementation goes here
-        printf("updateWaypoints\n");
-        return false;
+        Log(LOG_INFO, "Updating waypoints");
+        
+        int i = 1;
+        m_pts.clear();
+        for (coordDeg v : wpts) {
+            navigation::Coord2D wpt;
+            Log(LOG_INFO, "%d: (%.6f,%.6f)", i++, v.lat, v.lon);
+            wpt.lat = DEG2RAD(v.lat);
+            wpt.lon = DEG2RAD(v.lon);
+            m_pts.push_back(wpt);
+        }
+        //printf("updateWaypoints\n");
+        return true;
     }
 
     bool resetWaypoints()
     {
         // Your implementation goes here
-        printf("resetWaypoints\n");
+        //printf("resetWaypoints\n");
         return false;
     }
 };

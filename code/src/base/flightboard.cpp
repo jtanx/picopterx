@@ -88,6 +88,7 @@ void FlightBoard::SetChannel(int channel, int value) {
 #ifdef IS_ON_PI
     fprintf(m_fp, "%d=%d\n", channel, value);
 #else
+    /*
     const char *d;
     int pct;
     
@@ -114,6 +115,7 @@ void FlightBoard::SetChannel(int channel, int value) {
     }
    
     Log(LOG_INFO, "FlightBoard: %s at %d%%", d, pct);
+    */
 #endif
 }
 

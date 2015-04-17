@@ -29,7 +29,13 @@ namespace picopter {
         /** Awaiting user authorisation (the auto mode switch). **/
         STATE_AWAITING_AUTH,
         /** Inferring the bearing of the hexacopter using the GPS. **/
-        STATE_INFER_BEARING
+        STATE_INFER_BEARING,
+        /** Moving towards the waypoint **/
+        STATE_WAYPOINTS_MOVING,
+        /** Waiting at the waypoint **/
+        STATE_WAYPOINTS_IDLING,
+        /** Finished the waypoints manoeuver **/
+        STATE_WAYPOINTS_FINISHED
     } ControllerState;
     
     /**

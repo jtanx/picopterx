@@ -140,7 +140,8 @@ namespace picopter {
             double x = cos(from.lat) * sin(to.lat) -
                        sin(from.lat) * cos(to.lat) * cos(to.lon - from.lon);
             double y = sin(to.lon - from.lon) * cos(to.lat);
-            return fmod((atan2(y, x))+(2.0*M_PI), 2.0*M_PI);
+            double ret = atan2(y, x);
+            return (ret < 0) ? (ret + 360) : ret;
         }
         
         const Coord2D PERTH_BL = {-33, 115};
