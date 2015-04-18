@@ -103,9 +103,12 @@ public:
 
     double requestBearing()
     {
-        // Your implementation goes here
-        //printf("requestBearing\n");
-        return false;
+        GPSData d;
+        m_fc->gps->GetLatest(&d);
+        if (!std::isnan(d.fix.bearing)) {
+            return d.fix.bearing;
+        }
+        return 0;
     }
 
     void requestNextWaypoint(coordDeg& _return)
