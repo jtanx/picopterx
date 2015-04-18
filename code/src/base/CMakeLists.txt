@@ -3,6 +3,7 @@
 #Set the included files
 set (SOURCE
 	 log.cpp
+	 datalog.cpp
 	 opts.cpp
 	 gpio.cpp
 	 buzzer.cpp
@@ -18,7 +19,8 @@ set (SOURCE
 set (HEADERS
 	 flightboard-private.h
 	 ${PI_INCLUDE}/common.h
-	 ${PI_INCLUDE}/log.h 
+	 ${PI_INCLUDE}/log.h
+	 ${PI_INCLUDE}/datalog.h
 	 ${PI_INCLUDE}/opts.h
 	 ${PI_INCLUDE}/gpio.h
 	 ${PI_INCLUDE}/buzzer.h

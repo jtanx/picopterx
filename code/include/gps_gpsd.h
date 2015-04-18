@@ -30,6 +30,7 @@ namespace picopter {
             bool m_had_fix;
             std::thread m_worker;
             gpsmm *m_gps_rec;
+            DataLog m_log;
             
             /** Copy constructor (disabled) **/
             GPSGPSD(const GPSGPSD &other);

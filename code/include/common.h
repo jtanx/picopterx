@@ -8,6 +8,7 @@
 
 #include "config.h"
 #include "log.h"
+#include "datalog.h"
 
 #include <cstdio>
 #include <cstdlib>

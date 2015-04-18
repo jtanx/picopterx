@@ -77,7 +77,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
     double copter_bearing;
     fc->gps->GetLatest(&d);
     
-    if (isnan(d.fix.bearing)) {
+    if (std::isnan(d.fix.bearing)) {
         Log(LOG_WARNING, "No compass bearing present; falling back to bearing inferral.");
         if (!fc->InferBearing(&copter_bearing)) {
             Log(LOG_INFO, "Exiting waypoints navigation; no usable bearing.");
@@ -95,7 +95,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
         double wp_distance, wp_bearing;
         
         fc->gps->GetLatest(&d);
-        if (!isnan(d.fix.bearing)) {
+        if (!std::isnan(d.fix.bearing)) {
             copter_bearing = d.fix.bearing;
         }
         wp_distance = CoordDistance(d.fix, next_point);

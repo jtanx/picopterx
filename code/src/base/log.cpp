@@ -19,6 +19,8 @@ void LogInit()
 #ifdef USE_SYSLOG
     openlog("picopter", LOG_PID | LOG_PERROR, LOG_USER);
 #endif
+    Log(LOG_NOTICE, "Data log files will be stored by default to: %s",
+        PICOPTER_LOG_LOCATION);
 }
 
 /**

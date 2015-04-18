@@ -26,6 +26,7 @@ GPSGPSD::GPSGPSD(Options *opts)
 : GPS(opts)
 , m_cycle_timeout(CYCLE_TIMEOUT_DEFAULT)
 , m_had_fix(false)
+, m_log("gps_gpsd")
 {
     m_gps_rec = new gpsmm("localhost", DEFAULT_GPSD_PORT);
     if (m_gps_rec->stream(WATCH_ENABLE|WATCH_JSON) == NULL) {
@@ -66,6 +67,7 @@ GPSGPSD::~GPSGPSD() {
  */
 void GPSGPSD::GPSLoop() {
     auto last_fix = steady_clock::now() - seconds(m_fix_timeout);
+    bool read_fail = false;
     
     Log(LOG_INFO, "GPS Started!");
     while (!m_quit) {
@@ -73,13 +75,17 @@ void GPSGPSD::GPSLoop() {
         if (m_had_fix && !HasFix()) {
             Log(LOG_WARNING, "Lost the GPS fix. Last fix: %d seconds ago.",
                 m_last_fix.load());
+            m_log.Write(": Lost fix");
             m_had_fix = false;
         }
 
         if (m_gps_rec->waiting(m_cycle_timeout) && !m_quit) {
             struct gps_data_t* data;
             if ((data = m_gps_rec->read()) == NULL) {
-                Log(LOG_WARNING, "Failed to read GPS data");
+                if (!read_fail) {
+                    Log(LOG_WARNING, "Failed to read GPS data");
+                    read_fail = true;
+                }
             } else if ((data->set & LATLON_SET) && (data->set & SPEED_SET)) {
                 GPSData d = m_data;
                 //GPSData d2 = d;
@@ -106,14 +112,14 @@ void GPSGPSD::GPSLoop() {
                 }
                 m_data = d;
                 
-                /*time_t t = (time_t) d.timestamp;
-                Log(LOG_INFO, "Current fix: (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f] at %s",
+                m_log.Write(": (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f]",
                     RAD2DEG(d.fix.lat), d.err.lat, RAD2DEG(d.fix.lon), d.err.lon,
                     d.fix.speed, d.err.speed, RAD2DEG(d.fix.heading), 
-                    RAD2DEG(d.err.heading), ctime(&t));*/
+                    RAD2DEG(d.err.heading));
                 
                 last_fix = steady_clock::now();
                 m_had_fix = true;
+                read_fail = false;
             }
         }
     }
