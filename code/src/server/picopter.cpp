@@ -96,8 +96,8 @@ public:
     {
         GPSData d;
         m_fc->gps->GetLatest(&d);
-        _return.lat = RAD2DEG(d.fix.lat);
-        _return.lon = RAD2DEG(d.fix.lon);
+        _return.lat = d.fix.lat;
+        _return.lon = d.fix.lon;
         printf("requestCoords %f,%f\n", _return.lat, _return.lon);
     }
 
@@ -130,8 +130,8 @@ public:
         for (coordDeg v : wpts) {
             navigation::Coord2D wpt;
             Log(LOG_INFO, "%d: (%.6f,%.6f)", i++, v.lat, v.lon);
-            wpt.lat = DEG2RAD(v.lat);
-            wpt.lon = DEG2RAD(v.lon);
+            wpt.lat = v.lat;
+            wpt.lon = v.lon;
             m_pts.push_back(wpt);
         }
         //printf("updateWaypoints\n");
@@ -157,10 +157,17 @@ void terminate(int signum) {
     } else {
         Log(LOG_WARNING, "Terminate signal received! Attempting termination...");
         
-        g_fc->Stop();
+        if (!g_fc) {
+            Fatal("Flight controller was not initialised; exiting immediately!");
+        } else if (!g_server) {
+            Fatal("Server was not initialised; exiting immediately!");
+        }
+
         g_server->stop();
         sleep_for(milliseconds(400));
-        g_fc->Stop();
+        if (g_fc) {
+            g_fc->Stop();
+        }
     }
 }
 

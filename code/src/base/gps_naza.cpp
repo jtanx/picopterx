@@ -7,7 +7,6 @@
 #include "common.h"
 #include "gps_naza.h"
 #include "NazaDecoderLib.h"
-#include <cmath>
 #include <wiringSerial.h>
 
 using namespace picopter;
@@ -84,13 +83,13 @@ void GPSNaza::GPSLoop() {
                         current.fix.lat = m_decoder->getLat();
                         current.fix.lon = m_decoder->getLon();
                         current.fix.speed = m_decoder->getSpeed();
-                        current.fix.heading = DEG2RAD(m_decoder->getCog());
+                        current.fix.heading = m_decoder->getCog();
                         m_data = current;
                     }
                 } break;
                 case NAZA_MESSAGE_COMPASS: {
                     GPSData current = m_data;
-                    current.fix.bearing = DEG2RAD(m_decoder->getHeadingNc());
+                    current.fix.bearing = m_decoder->getHeadingNc();
                     m_data = current;
                 } break;
             }

@@ -123,6 +123,9 @@ namespace picopter {
          */
         template <typename Coord1, typename Coord2>
         double CoordDistance(Coord1 from, Coord2 to) {
+            CoordInRadians(from);
+            CoordInRadians(to);
+            
             double haversine = sin2((to.lat-from.lat)/2) + 
                                cos(from.lat) * cos(to.lat) * 
                                sin2((to.lon - from.lon)/2);
@@ -137,11 +140,14 @@ namespace picopter {
          */
         template <typename Coord1, typename Coord2>
         double CoordBearing(Coord1 from, Coord2 to) {
+            CoordInRadians(from);
+            CoordInRadians(to);
+            
             double x = cos(from.lat) * sin(to.lat) -
                        sin(from.lat) * cos(to.lat) * cos(to.lon - from.lon);
             double y = sin(to.lon - from.lon) * cos(to.lat);
-            double ret = atan2(y, x);
-            return (ret < 0) ? (ret + 2*M_PI) : ret;
+            double ret = RAD2DEG(atan2(y, x));
+            return (ret < 0) ? (ret + 360) : ret;
         }
         
         const Coord2D PERTH_BL = {-33, 115};

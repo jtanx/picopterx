@@ -3,6 +3,7 @@
  * @brief Sample application to decode and print out NAZA gps data
  */
 #include "common.h"
+#include "navigation.h"
 #include "NazaDecoderLib.h"
 
 #define _USE_MATH_DEFINES
@@ -43,7 +44,7 @@ void decodeMessage(NazaDecoderLib &decoder, uint8_t buf) {
       case NAZA_MESSAGE_COMPASS:
         double inclination = atan2(sqrt(decoder.getMagXVal()*decoder.getMagXVal() +
                                        decoder.getMagYVal()*decoder.getMagYVal()), decoder.getMagZVal());
-        fprintf(stderr, "Heading: %.3f, Magnetic Inclination: %.3f\n", decoder.getHeadingNc(), inclination);
+        fprintf(stderr, "Heading: %.3f, Magnetic Inclination: %.3f\n", decoder.getHeadingNc(), RAD2DEG(inclination));
         last_heading = decoder.getHeadingNc();
         break;
     }   

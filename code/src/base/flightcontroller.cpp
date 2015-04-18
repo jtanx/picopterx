@@ -211,9 +211,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
     }
     
     Log(LOG_INFO, "The inferred bearing is: %.2f deg (%.2f deg, %.2f m)", 
-        RAD2DEG(end.fix.heading),
-        RAD2DEG(navigation::CoordBearing(start.fix, end.fix)), 
-        dist_moved);
+        end.fix.heading, navigation::CoordBearing(start.fix, end.fix), dist_moved);
     *ret = end.fix.heading;
     SetCurrentState(STATE_STOPPED);
     return true;

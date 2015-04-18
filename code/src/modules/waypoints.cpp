@@ -84,7 +84,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             return;
         }
     } else {
-        Log(LOG_INFO, "Bearing determined from compass: %.2f", RAD2DEG(d.fix.bearing));
+        Log(LOG_INFO, "Bearing determined from compass: %.2f", d.fix.bearing);
         copter_bearing = d.fix.bearing;
     }
     
@@ -94,6 +94,13 @@ void Waypoints::Run(FlightController *fc, void *opts) {
     while (!fc->CheckForStop()) {
         double wp_distance, wp_bearing;
         
+        if (!fc->gps->HasFix()) {
+            Log(LOG_WARNING, "GPS Fix was lost! Falling back to manual mode.");
+            fc->buzzer->Play(1000,100,100);
+            fc->fb->Stop();
+            return;
+        }
+        
         fc->gps->GetLatest(&d);
         if (!std::isnan(d.fix.bearing)) {
             copter_bearing = d.fix.bearing;
@@ -101,7 +108,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
         wp_distance = CoordDistance(d.fix, next_point);
         wp_bearing = CoordBearing(d.fix, next_point);
         
-        //Log(LOG_INFO, "%.2f m away at a bearing of %.2f deg", wp_distance, RAD2DEG(wp_bearing));
+        //Log(LOG_INFO, "%.2f m away at a bearing of %.2f deg", wp_distance, wp_bearing);
         if (wp_distance < m_waypoint_radius) {
             Log(LOG_INFO, "At waypoint, idling...");
             fc->fb->Stop();
@@ -128,8 +135,8 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             speed = m_pid1.Compute();
             Log(LOG_INFO, "%.2f, %.2f", speed, wp_distance);
             
-            d.aileron = speed * sin(wp_bearing - copter_bearing);
-            d.elevator = speed * cos(wp_bearing - copter_bearing);
+            d.aileron = speed * sin(DEG2RAD(wp_bearing - copter_bearing));
+            d.elevator = speed * cos(DEG2RAD(wp_bearing - copter_bearing));
             //Log(LOG_INFO, "%d, %d", d.aileron, d.elevator);
             
             fc->fb->SetData(&d);

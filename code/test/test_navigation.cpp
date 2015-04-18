@@ -69,10 +69,6 @@ TEST_F(NavigationTest, TestInBoundsA) {
 TEST_F(NavigationTest, TestCoordDistance) {
     Coord2D a = {-30, 150}, b = {-31, 150}, g = {-35, 151};
 
-    CoordInRadians(a);
-    CoordInRadians(b);
-    CoordInRadians(g);
-
     ASSERT_DOUBLE_EQ(0.0, CoordDistance(a, a));
     ASSERT_DOUBLE_EQ(111089.56111761599, CoordDistance(a, b));
     ASSERT_DOUBLE_EQ(563283.2589389302, CoordDistance(a, g));
@@ -81,14 +77,9 @@ TEST_F(NavigationTest, TestCoordDistance) {
 TEST_F(NavigationTest, TestCoordBearing) {
     Coord2D a = {-30, 150}, b = {-31, 150}, g = {-35, 151};
     
-    //=.=
-    CoordInRadians(a);
-    CoordInRadians(b);
-    CoordInRadians(g);
-    
     ASSERT_DOUBLE_EQ(0.0, CoordBearing(a, a));
-    ASSERT_DOUBLE_EQ(M_PI, CoordBearing(a, b));
+    ASSERT_DOUBLE_EQ(180, CoordBearing(a, b));
     ASSERT_DOUBLE_EQ(0.0, CoordBearing(b, a));
-    ASSERT_DOUBLE_EQ(170.6912616092665, RAD2DEG(CoordBearing(a, g)));
-    ASSERT_DOUBLE_EQ(350.1534404199453, RAD2DEG(CoordBearing(g, a)));
+    ASSERT_DOUBLE_EQ(170.6912616092665, CoordBearing(a, g));
+    ASSERT_DOUBLE_EQ(350.1534404199453, CoordBearing(g, a));
 }

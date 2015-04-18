@@ -5,7 +5,6 @@
 
 #include "common.h"
 #include "imu_feed.h"
-#include <cmath>
 
 #ifndef DISABLE_NONFREE
 #include "cmt3.h"
@@ -74,9 +73,9 @@ IMU::~IMU() {
 void IMU::GetLatest(IMUData *d) {
     std::lock_guard<std::mutex> lock(m_mutex);
     *d = m_data;
-    d->roll = DEG2RAD(d->roll);
-    d->pitch = DEG2RAD(d->pitch);
-    d->yaw = DEG2RAD(d->yaw);
+    d->roll = d->roll;
+    d->pitch = d->pitch;
+    d->yaw = d->yaw;
 }
 
 /**
