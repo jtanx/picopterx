@@ -62,7 +62,6 @@ int main(int argc, char *argv[]) {
         return 1;
 #else
         int fd;
-        wiringPiSetup();
         
         fd = serialOpen("/dev/ttyAMA0", 115200);
         if (fd == -1) {
