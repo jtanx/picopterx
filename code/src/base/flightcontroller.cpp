@@ -242,6 +242,7 @@ bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts)
     
     Log(LOG_INFO, "Running new task with id %d.", tid);
     m_task_id.store(tid, std::memory_order_relaxed);
+    m_stop.store(false, std::memory_order_relaxed);
     m_task = task;
     m_task_thread = std::async(std::launch::async, [this, task, opts, tid] {
         task->Run(this, opts);

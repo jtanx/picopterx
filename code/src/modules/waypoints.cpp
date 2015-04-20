@@ -144,7 +144,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
         auto now = std::chrono::steady_clock::now();
         fc->Sleep(m_update_interval);
         auto diff = std::chrono::steady_clock::now() - now;
-        Log(LOG_WARNING, "%d ms", std::chrono::duration_cast<std::chrono::milliseconds>(diff).count());
+        Log(LOG_WARNING, "%d ms", (int)std::chrono::duration_cast<std::chrono::milliseconds>(diff).count());
     }
     
     SetCurrentState(fc, STATE_WAYPOINTS_FINISHED);

@@ -70,13 +70,7 @@ void GPSNaza::GPSLoop() {
             uint8_t message = m_decoder->decode(serialGetchar(m_fd));
             switch (message) {
                 case NAZA_MESSAGE_GPS: {
-                    if (m_decoder->getFixType() == NazaDecoderLib::NO_FIX) {
-                        if (m_had_fix) {
-                            Log(LOG_WARNING, "Lost the GPS fix. Last fix: %d seconds ago.",
-                                m_last_fix.load());
-                            m_had_fix = false;
-                        }
-                    } else {
+                    if (m_decoder->getFixType() != NazaDecoderLib::NO_FIX) {
                         GPSData current;
                         
                         if (!m_had_fix) {
