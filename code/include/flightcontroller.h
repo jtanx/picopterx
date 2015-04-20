@@ -11,6 +11,7 @@
 #include "gps_naza.h"
 #include "imu_feed.h"
 #include "flightboard.h"
+#include "camera_stream.h"
 
 namespace picopter {
     /* Forward declaration of the options class */
@@ -87,6 +88,8 @@ namespace picopter {
             GPS* const &gps;
             /** A pointer to the Buzzer instance. **/
             Buzzer* const &buzzer;
+            /** A pointer to the Camera stream instance.**/
+            CameraStream* const &cam;
         private:
             /** Holds the sleep interval in ms. **/
             static const int SLEEP_PERIOD = 200;
@@ -98,6 +101,8 @@ namespace picopter {
             IMU *m_imu;
             /** Holds the flight board controller instance. **/
             FlightBoard *m_fb;
+            /** Holds the Camera stream instance. **/
+            CameraStream *m_camera;
             
             /** Indicates if all operations should be stopped. **/
             std::atomic<bool> m_stop;

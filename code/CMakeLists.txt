@@ -39,7 +39,9 @@ set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 #Find prerequisite packages
-#find_package (OpenCV REQUIRED)
+find_package (OpenCV REQUIRED)
+include_directories (${OpenCV_INCLUDE_DIRS})
+link_directories (${OpenCV_LIBRARY_DIRS})
 
 #Check for gpsd
 pkg_check_modules (LIBGPS libgps)

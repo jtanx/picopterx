@@ -15,6 +15,7 @@ set (SOURCE
 	 flightcontroller.cpp
 	 PID.cpp
 	 NazaDecoderLib.cpp
+	 camera_stream.cpp
 )
 set (HEADERS
 	 flightboard-private.h
@@ -34,6 +35,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/flightcontroller.h
 	 ${PI_INCLUDE}/PID.h
 	 ${PI_INCLUDE}/NazaDecoderLib.h
+	 ${PI_INCLUDE}/camera_stream.h
 )
 
 #Compile as a static library
@@ -43,6 +45,8 @@ add_library (picopter_base STATIC ${HEADERS} ${SOURCE})
 target_link_libraries(picopter_base LINK_PUBLIC atomic)
 #Link to gpsd, if present
 target_link_libraries(picopter_base LINK_PRIVATE ${LIBGPS_LIBRARIES})
+#Link to OpenCV bloat
+target_link_libraries(picopter_base LINK_PRIVATE ${OpenCV_LIBS})
 
 #Link to XSens, if present
 if (NOT DISABLE_NONFREE)
