@@ -78,13 +78,18 @@ void GPSNaza::GPSLoop() {
                         }
                     } else {
                         GPSData current;
-                        m_had_fix = true;
+                        
+                        if (!m_had_fix) {
+                        	Log(LOG_INFO, "Got fix! (%.3f, %.3f)", m_decoder->getLat(), m_decoder->getLon());
+                        	m_had_fix = true;
+                        }
                         
                         current.fix.lat = m_decoder->getLat();
                         current.fix.lon = m_decoder->getLon();
                         current.fix.speed = m_decoder->getSpeed();
                         current.fix.heading = m_decoder->getCog();
                         m_data = current;
+                        last_fix = steady_clock::now();
                     }
                 } break;
                 case NAZA_MESSAGE_COMPASS: {
