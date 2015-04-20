@@ -78,6 +78,22 @@ public:
         //printf("beginUserTrackingThread\n");
         return false;
     }
+    
+    bool beginObjectTrackingThread()
+    {
+        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
+            // ALREADY RUNNING
+            return false;
+        } else {
+            ObjectTracker *trk = new ObjectTracker();
+            
+            if (!m_fc->RunTask(TASK_OBJECT_TRACKING, trk, NULL)) {
+                delete trk;
+                return false;
+            }
+        }
+        return true;
+    }
 
     bool allStop()
     {

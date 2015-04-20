@@ -36,7 +36,11 @@ namespace picopter {
         /** Waiting at the waypoint **/
         STATE_WAYPOINTS_IDLING,
         /** Finished the waypoints manoeuver **/
-        STATE_WAYPOINTS_FINISHED
+        STATE_WAYPOINTS_FINISHED,
+        /** Searching for an object to track **/
+        STATE_TRACKING_SEARCHING,
+        /** Tracking a found object **/
+        STATE_TRACKING_LOCKED
     } ControllerState;
     
     /**

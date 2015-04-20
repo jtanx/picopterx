@@ -282,6 +282,10 @@ namespace picopter {
                 stream << "Idling at the current waypoint."; break;
             case STATE_WAYPOINTS_FINISHED:
                 stream << "Finished the waypoints navigation."; break;
+            case STATE_TRACKING_SEARCHING:
+                stream << "Searching for an object to track."; break;
+            case STATE_TRACKING_LOCKED:
+                stream << "Tracking an object."; break;
         }
         return stream;
     }

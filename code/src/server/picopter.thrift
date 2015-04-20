@@ -27,6 +27,7 @@ service webInterface {
 	bool		beginWaypointsThread();
 	bool		beginLawnmowerThread();
 	bool		beginUserTrackingThread();
+	bool		beginObjectTrackingThread();
 	
 	bool		allStop();
 	

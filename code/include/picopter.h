@@ -19,6 +19,7 @@
 #include "flightcontroller.h"
 
 #include "waypoints.h"
+#include "object_tracker.h"
 
 
 #endif // _PICOPTERX_PICOPTER_H
