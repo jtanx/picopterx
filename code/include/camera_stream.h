@@ -13,9 +13,7 @@
 #define _PICOPTERX_CAMERA_STREAM_H
 
 #include "common.h"
-#include <opencv/cv.h>
-#include <opencv/highgui.h> //For CvCapture
-//#include "opencv2/imgproc/imgproc.hpp"
+#include <opencv2/opencv.hpp>
 
 #define STREAM_FILE "/home/pi/out.mjpg"
 
