@@ -113,8 +113,8 @@ public:
     {
         GPSData d;
         m_fc->gps->GetLatest(&d);
-        _return.lat = d.fix.lat;
-        _return.lon = d.fix.lon;
+        _return.lat = std::isnan(d.fix.lat) ? -1 : d.fix.lat;
+        _return.lon = std::isnan(d.fix.lon) ? -1 : d.fix.lon;
         //printf("requestCoords %f,%f\n", _return.lat, _return.lon);
     }
 

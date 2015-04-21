@@ -204,9 +204,7 @@ void PID::SetInterval(float interval) {
 }
 
 void PID::SetSetPoint(float sp) {
-
     setPoint_ = sp;
-
 }
 
 void PID::SetProcessValue(float pv) {
@@ -223,7 +221,51 @@ void PID::SetBias(float bias){
 }
 
 float PID::Compute() {
+    float PV = processVariable_;
+    if (PV > inMax_) {
+        PV = inMax_;
+    } else if (PV < inMin_) {
+        PV = inMin_;
+    }
+    
+    float SP = setPoint_;
+    if (SP > inMax_) {
+        SP = inMax_;
+    } else if (SP < inMin_) {
+        SP = inMin_;
+    }
+    
+    float error = SP - PV;
+    
+    //Check and see if the output is pegged at a limit and only
+    //integrate if it is not. This is to prevent reset-windup.
+    if (!(prevControllerOutput_ >= outMax_ && error > 0) && !(prevControllerOutput_ <= outMin_ && error < 0)) {
+        accError_ += error;
+    }
+    
+    //Compute the current slope of the input signal.
+    float dMeas = (PV - prevProcessVariable_) / tSample_;
 
+    //Perform the PID calculation.
+    controllerOutput_ = bias_ + Kc_ * (error + (tauR_ * accError_) - (tauD_ * dMeas));
+
+    //Make sure the computed output is within output constraints.
+    if (controllerOutput_ < outMin_) {
+        controllerOutput_ = outMin_;
+    } else if (controllerOutput_ > outMax_) {
+        controllerOutput_ = outMax_;
+    }
+
+    //Remember this output for the windup check next time.
+    prevControllerOutput_ = controllerOutput_;
+    //Remember the input for the derivative calculation next time.
+    prevProcessVariable_  = PV;
+
+    return controllerOutput_;
+}
+
+/*
+float PID::Compute() {
     //Pull in the input and setpoint, and scale them into percent span.
     float scaledPV = (processVariable_ - inMin_) / inSpan_;
 
@@ -275,7 +317,7 @@ float PID::Compute() {
     //Scale the output from percent span back out to a real world number.
     return ((controllerOutput_ * outSpan_) + outMin_);
 
-}
+}*/
 
 float PID::GetInMin() {
 

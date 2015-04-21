@@ -14,21 +14,24 @@ using std::chrono::seconds;
 using std::chrono::duration_cast;
 using std::this_thread::sleep_for;
 
-#define TOL_strafe 100			//Pixels
-#define KP_strafe 0.3
+#define TOL_strafe (CAMERA_WIDTH/4)			//Pixels
+#define KP_strafe 0.15
 #define KI_strafe 0
+#define TauI_strafe 4
+#define TauD_strafe 0.0000003
+#define STRAFE_WAIT 200 //Milliseconds
 
-#define TOL_rotate 80			//Pixels
+#define TOL_rotate (CAMERA_WIDTH/5)			//Pixels
 #define KP_rotate 0.1
 
 #define SPEED_LIMIT 40			//Percent
-#define SPIN_SPEED 35			//Percent
+#define SPIN_SPEED 20			//Percent
 #define RAISE_GIMBAL_PERIOD 3	//Seconds
 
 #define GIMBAL_LIMIT 70		//degrees
 #define GIMBAL_STEP 5		//degrees
 
-void setCourse_followObject(FlightData*, ObjectLocation*, ObjectLocation*);
+void setCourse_followObject(FlightData*, ObjectLocation*, ObjectLocation*,double);
 void setCourse_spin(FlightData*, bool);
 void setCourse_faceObject(FlightData*, ObjectLocation*);
 void setCourse_forwardsLowerGimbal(FlightData*, ObjectLocation*);
@@ -76,14 +79,16 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         fc->cam->GetObjectLocations(&locations);
         fc->fb->GetData(&course);
         if (locations.size() > 0) {                                             //We have an object
+            double fps = fc->cam->GetFramerate();
             red_object = locations.front();
             SetCurrentState(fc, STATE_TRACKING_LOCKED);
             
             if(course.gimbal == 0) {						                    //And if gimbal not pitched
-                setCourse_followObject(&course, &red_object, &red_object_old);		//PI ON OBJECT
+                setCourse_followObject(&course, &red_object, &red_object_old, fps);		//PI ON OBJECT
                 fc->fb->SetData(&course);
                 printFlightData(&course);
-                sleep_for(microseconds(200));//SMALL DELAY
+                sleep_for(microseconds((int)(1000000*1.0/fps)));
+                //sleep_for(microseconds(200));//SMALL DELAY
             } else if(abs(red_object.x) < TOL_rotate) {			//Or if gimbal pitched, but in square on object
                 setCourse_forwardsLowerGimbal(&course, &red_object);	//MOVE FORWARDS and Lower Gimbal
                 fc->fb->SetData(&course);
@@ -118,21 +123,43 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
 
 //HELPER FUNCTIONS
-void setCourse_followObject(FlightData *course, ObjectLocation *red_object, ObjectLocation *red_object_old) {
+void setCourse_followObject(FlightData *course, ObjectLocation *red_object, ObjectLocation *red_object_old, double fps) {
+    static PID pidx(KP_strafe, TauI_strafe, TauD_strafe, STRAFE_WAIT*1e-6);
+    static PID pidy(KP_strafe, TauI_strafe, TauD_strafe, STRAFE_WAIT*1e-6);
+    static bool initted = false;
+    
+    //Log(LOG_WARNING, "SHIT!");
+    if (!initted) {
+        pidx.SetInputLimits(-CAMERA_WIDTH/2, CAMERA_WIDTH/2);
+        pidx.SetOutputLimits(-SPEED_LIMIT, SPEED_LIMIT);
+        pidx.SetSetPoint(0);
+        pidy.SetInputLimits(-CAMERA_HEIGHT/2, CAMERA_HEIGHT/2);
+        pidy.SetOutputLimits(-SPEED_LIMIT, SPEED_LIMIT);
+        pidy.SetSetPoint(0);
+        initted = true;
+    }
+    
     if( (red_object->x * red_object->x) + (red_object->y * red_object->y) < TOL_strafe * TOL_strafe) {
         course->aileron = 0;
         course->elevator = 0;
         course->rudder = 0;
         course->gimbal = 0;
+        pidx.Reset();
+        pidy.Reset();
     } else {
-        course->aileron += (int)(KP_strafe*(red_object->x - red_object_old->x) + KI_strafe*(red_object->x));
-        course->elevator += (int)(KP_strafe*(red_object->y - red_object_old->y) + KI_strafe*(red_object->y));
+        pidx.SetProcessValue(-red_object->x);//-red_object->x);
+        pidy.SetProcessValue(-red_object->y);
+        pidx.SetInterval(1.0/fps);
+        pidy.SetInterval(1.0/fps);
+        course->aileron = pidx.Compute();
+        course->elevator = pidy.Compute();
+        
         if(course->aileron * course->aileron + course->elevator * course->elevator > SPEED_LIMIT*SPEED_LIMIT) {
             double speed = sqrt(pow(course->aileron, 2)+pow(course->elevator, 2));
             course->aileron = (int) (course->aileron*SPEED_LIMIT/speed);
             course->elevator = (int) (course->elevator*SPEED_LIMIT/speed);
         }
-        printf("\n%d, %d, %d, %d\n",course->aileron, course->elevator, red_object->x - red_object_old->x, red_object->y - red_object_old->y);
+        //printf("\n%d, %d, %.2f\n",red_object->x, red_object->y, 1.0/fps);
     }
     red_object_old->x = red_object->x;
     red_object_old->y = red_object->y;
@@ -178,4 +205,5 @@ void setCourse_forwardsLowerGimbal(FlightData *course, ObjectLocation *red_objec
 void printFlightData(FlightData* data) {
     printf("A: %03d E: %03d R: %03d G: %03d\r",
     	data->aileron, data->elevator, data->rudder, data->gimbal);
+    fflush(stdout);
 }
