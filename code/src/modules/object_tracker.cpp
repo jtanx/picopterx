@@ -95,19 +95,21 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 printFlightData(&course);
                 sleep_for(microseconds(100));
             }
+            red_object_old = red_object;
         } else if(course.gimbal < GIMBAL_LIMIT) {	//No object found, but can pitch gimbal up to search a wider area - look for it
             SetCurrentState(fc, STATE_TRACKING_SEARCHING);
             now = steady_clock::now();
             raise_gimbal = (duration_cast<seconds>(now-last_raised_gimbal_time).count() > RAISE_GIMBAL_PERIOD);
             setCourse_spin(&course, raise_gimbal);
-            fc->fb->SetData(&course);
+            fc->fb->Stop();
+            //fc->fb->SetData(&course);
             printFlightData(&course);
             if(raise_gimbal) last_raised_gimbal_time = now;
             sleep_for(microseconds(200));												//SMALL DELAY
-            break;
         } else { //No object found, nowhere else to look, give up.
-            Log(LOG_WARNING, "No object detected. Ending object detection.");
-            break;
+            Log(LOG_WARNING, "No object detected. Idling.");
+            fc->fb->Stop();
+            //break;
         }
     }
     Log(LOG_INFO, "Object detection ended.");
@@ -130,6 +132,7 @@ void setCourse_followObject(FlightData *course, ObjectLocation *red_object, Obje
             course->aileron = (int) (course->aileron*SPEED_LIMIT/speed);
             course->elevator = (int) (course->elevator*SPEED_LIMIT/speed);
         }
+        printf("\n%d, %d, %d, %d\n",course->aileron, course->elevator, red_object->x - red_object_old->x, red_object->y - red_object_old->y);
     }
     red_object_old->x = red_object->x;
     red_object_old->y = red_object->y;
@@ -173,8 +176,6 @@ void setCourse_forwardsLowerGimbal(FlightData *course, ObjectLocation *red_objec
 }
 
 void printFlightData(FlightData* data) {
-    std::cout << "A: " << data->aileron << "\t";
-    std::cout << "E: " << data->elevator << "\t";
-    std::cout << "R: " << data->rudder << "\t";
-    std::cout << "G: " << data->gimbal << std::endl;
+    printf("A: %03d E: %03d R: %03d G: %03d\r",
+    	data->aileron, data->elevator, data->rudder, data->gimbal);
 }

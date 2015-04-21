@@ -5,6 +5,7 @@
 
 #include "picopter.h"
 #include "webInterface.h"
+#include <arpa/inet.h>
 #include <thrift/concurrency/ThreadManager.h>
 #include <thrift/concurrency/PosixThreadFactory.h>
 #include <thrift/protocol/TBinaryProtocol.h>
@@ -114,7 +115,7 @@ public:
         m_fc->gps->GetLatest(&d);
         _return.lat = d.fix.lat;
         _return.lon = d.fix.lon;
-        printf("requestCoords %f,%f\n", _return.lat, _return.lon);
+        //printf("requestCoords %f,%f\n", _return.lat, _return.lon);
     }
 
     double requestBearing()

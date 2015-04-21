@@ -68,7 +68,7 @@ FlightController::FlightController(Options *opts)
 , m_task_id{TASK_NONE}
 , m_task{nullptr}
 {
-    GPSGPSD *gps;
+    GPSNaza *gps;
     m_buzzer = new Buzzer();
     
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
@@ -77,6 +77,10 @@ FlightController::FlightController(Options *opts)
     InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
     
     m_gps = gps;
+    if (m_camera) {
+        m_camera->Start();
+        m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);
+    }
     
     Log(LOG_INFO, "Initialised components!"); 
     m_buzzer->PlayWait(200, 200, 100);

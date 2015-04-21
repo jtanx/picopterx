@@ -154,11 +154,11 @@ uint8_t NazaDecoderLib::decode(int input)
             if(headingNc < 0) headingNc += 360.0;
             
             //Our setup has it mounted oppositely
-            if (headingNc < 180) {
+            /*if (headingNc < 180) {
                 headingNc += 180;
             } else {
                 headingNc -= 180;
-            }
+            }*/
         }
         return msgId;
     }
