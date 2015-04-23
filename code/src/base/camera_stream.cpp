@@ -11,8 +11,11 @@
 #include <queue>
 
 using namespace picopter;
-using std::chrono::milliseconds;
 using std::this_thread::sleep_for;
+using std::chrono::steady_clock;
+using std::chrono::duration_cast;
+using std::chrono::seconds;
+using std::chrono::milliseconds;
 
 #define BLACK 0
 #define WHITE 255
@@ -69,6 +72,7 @@ CameraStream::CameraStream(Options *opts)
     }
     cvSetCaptureProperty(m_capture, CV_CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH);
     cvSetCaptureProperty(m_capture, CV_CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT);
+    cvSetCaptureProperty(m_capture, CV_CAP_PROP_FPS, 30);
     
     this->frame_counter = -1;
     this->m_fps = -1;
@@ -76,6 +80,8 @@ CameraStream::CameraStream(Options *opts)
     this->m_save_photo = false;
     this->m_save_filename = "image.jpg";
     
+    opts->SetFamily("GLOBAL");
+    this->m_demo = opts->GetBool("DEMO_MODE", false);
     //cv::namedWindow("TEST", cv::WINDOW_AUTOSIZE);
 }
 
@@ -118,19 +124,8 @@ void CameraStream::SetMode(CameraMode mode) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     m_mode = mode;
 }
-
-
-bool CameraStream::ObjectDetected() {
-    return NumObjectsDetected() > 0;
-}
-
-int CameraStream::NumObjectsDetected() {
-    std::lock_guard<std::mutex> lock(m_worker_mutex);
-    return (int)redObjectList.size();
-}
     
-    
-void CameraStream::GetObjectLocations(std::vector<ObjectLocation> *list) {
+void CameraStream::GetDetectedObjects(std::vector<ObjectLocation> *list) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     *list = redObjectList;
 }
@@ -148,8 +143,9 @@ void CameraStream::TakePhoto(std::string filename) {
     m_save_photo = true;
 }
 
-void CameraStream::ProcessImages() {	
-    time(&start_time);
+void CameraStream::ProcessImages() {
+    auto start_time = steady_clock::now();
+    int frame_duration;
     frame_counter = 0;
     
     while(!m_stop) {
@@ -213,22 +209,27 @@ void CameraStream::ProcessImages() {
         //}
         
         drawFramerate(image);
-        static int i = 0;
-        if ((i++ % 5) == 0) {
+        // Only write the image out for web streaming every 5th frame
+        if ((frame_counter % 5) == 0) {
             cv::VideoWriter outStream(STREAM_FILE, CV_FOURCC('M','J','P','G'), 4, image.size(), true);
             if(outStream.isOpened()) {
                 outStream.write(image);
             }
         }
-        //cv::imshow("TEST", image);
-        //cv::waitKey(1);
+        
+        //Are we in demo mode? If so, display the image on the screen.
+        //Trying to do this when no X server is available will crash the program.
+        if (m_demo) {
+            cv::imshow("Camera stream", image);
+            cv::waitKey(1);
+        }
         
         frame_counter++;
-        time(&end_time);
-        if (difftime(end_time, start_time) > 1) {
-            m_fps = frame_counter / difftime(end_time, start_time);
+        frame_duration = duration_cast<milliseconds>(steady_clock::now() - start_time).count();
+        if (frame_duration > 1000) {
+            m_fps = (frame_counter * 1000.0) / frame_duration;
             frame_counter = 0;
-            start_time = end_time;
+            start_time = steady_clock::now();
         }
         
         /*----------------------*
@@ -545,7 +546,7 @@ int CameraStream::unreduce(int x) {
     return (x*(CHAR_SIZE-1) + (CHAR_SIZE-1)/2) / LOOKUP_SIZE;
 }
 
-void CameraStream::drawCrosshair(cv::Mat img) {
+void CameraStream::drawCrosshair(cv::Mat& img) {
     int thickness = 2;
     int lineType = 8;
     int size = 20;
@@ -559,7 +560,7 @@ void CameraStream::drawCrosshair(cv::Mat img) {
     }
 }
 
-void CameraStream::drawObjectMarker(cv::Mat img, cv::Point centre, cv::Scalar colour) {
+void CameraStream::drawObjectMarker(cv::Mat& img, cv::Point centre, cv::Scalar colour) {
     int thickness = 2;
     int lineType = 8;
     cv::Point cross_points[4];
@@ -572,20 +573,12 @@ void CameraStream::drawObjectMarker(cv::Mat img, cv::Point centre, cv::Scalar co
     }
 }
 
-void CameraStream::drawBox(cv::Mat img, cv::Point topLeft, cv::Point bottomRight, cv::Scalar colour) {
-    int thickness = 2;
-    int lineType = 8;
-    cv::Point box_points[4];
-    box_points[0] = cv::Point(topLeft.x,		topLeft.y);
-    box_points[1] = cv::Point(topLeft.x,		bottomRight.y);
-    box_points[2] = cv::Point(bottomRight.x,	bottomRight.y);
-    box_points[3] = cv::Point(bottomRight.x,	topLeft.y);
-    for(int i=0; i<4; i++) {
-        cv::line(img, box_points[i], box_points[(i+1)%4], colour, thickness, lineType);
-    }
+void CameraStream::drawBox(cv::Mat& img, cv::Point topLeft, cv::Point bottomRight, cv::Scalar colour) {
+    //Thickness 2, lineType 8
+    cv::rectangle(img, topLeft, bottomRight, colour, 2, 8);
 }
 
-void CameraStream::drawFramerate(cv::Mat img) {
+void CameraStream::drawFramerate(cv::Mat& img) {
     //time(&end_time);
     char string_buf[128];
     sprintf(string_buf, "%3.4f fps", m_fps);

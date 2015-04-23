@@ -60,9 +60,7 @@ namespace picopter {
             CameraMode GetMode(void);
             void SetMode(CameraMode mode);
             
-            bool ObjectDetected(void);
-            int NumObjectsDetected(void);
-            void GetObjectLocations(std::vector<ObjectLocation>*);
+            void GetDetectedObjects(std::vector<ObjectLocation>*);
             
             double GetFramerate(void);
             void TakePhoto(std::string);
@@ -82,12 +80,14 @@ namespace picopter {
             
             CvCapture* m_capture;
             
-            time_t start_time, end_time;
             int frame_counter;
             double m_fps;
             
             bool m_save_photo;
             std::string m_save_filename;
+            
+            /** Demo mode **/
+            bool m_demo;
             
             uchar lookup_threshold[LOOKUP_SIZE][LOOKUP_SIZE][LOOKUP_SIZE];
             uchar lookup_reduce_colourspace[CHAR_SIZE];
@@ -108,10 +108,10 @@ namespace picopter {
             void build_lookup_reduce_colourspace(uchar lookup_reduce_colourspace[]);
             int unreduce(int x);
             
-            void drawCrosshair(cv::Mat img);
-            void drawObjectMarker(cv::Mat img, cv::Point centre, cv::Scalar colour);
-            void drawBox(cv::Mat img, cv::Point topLeft, cv::Point bottomRight, cv::Scalar colour);
-            void drawFramerate(cv::Mat img);
+            void drawCrosshair(cv::Mat& img);
+            void drawObjectMarker(cv::Mat& img, cv::Point centre, cv::Scalar colour);
+            void drawBox(cv::Mat& img, cv::Point topLeft, cv::Point bottomRight, cv::Scalar colour);
+            void drawFramerate(cv::Mat& img);
             
             void buildColours(std::vector<cv::Scalar>*);
             

@@ -76,7 +76,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         std::vector<ObjectLocation> locations;
         FlightData course;
         
-        fc->cam->GetObjectLocations(&locations);
+        fc->cam->GetDetectedObjects(&locations);
         fc->fb->GetData(&course);
         if (locations.size() > 0) {                                             //We have an object
             double fps = fc->cam->GetFramerate();

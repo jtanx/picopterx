@@ -193,7 +193,12 @@ void terminate(int signum) {
 
 int main(int argc, char **argv)
 {
+    Options *opts = NULL;
     LogInit();
+    
+    if (argc > 1) {
+        opts = new Options(argv[1]);
+    }
     
     //Signal handlers
     struct sigaction signal_handler;	
@@ -207,7 +212,7 @@ int main(int argc, char **argv)
     int port = 9090;
     
     try {
-        g_fc.reset(new picopter::FlightController());
+        g_fc.reset(new picopter::FlightController(opts));
     } catch (const std::invalid_argument &e) {
         Fatal("Failed to initialise %s which is required, exiting.", e.what());
     }
@@ -231,6 +236,7 @@ int main(int argc, char **argv)
         Fatal("Cannot start server: Thrift port 9090 is already in use.");
     }
     
+    delete opts;
     Log(LOG_INFO, "Server stopped.");
     return 0;
 }
