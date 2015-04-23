@@ -205,6 +205,6 @@ void setCourse_forwardsLowerGimbal(FlightData *course, ObjectLocation *red_objec
 
 void printFlightData(FlightData* data) {
     printf("A: %03d E: %03d R: %03d G: %03d\r",
-    	data->aileron, data->elevator, data->rudder, data->gimbal);
+        data->aileron, data->elevator, data->rudder, data->gimbal);
     fflush(stdout);
 }

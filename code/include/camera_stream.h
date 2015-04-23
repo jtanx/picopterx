@@ -15,7 +15,7 @@
 #include "common.h"
 #include <opencv2/opencv.hpp>
 
-#define STREAM_FILE "/home/pi/out.mjpg"
+#define STREAM_FILE "/home/jeremy/out.mjpg"
 
 #define LOOKUP_SIZE 8
 #define CHAR_SIZE 256
