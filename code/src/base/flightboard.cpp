@@ -86,6 +86,7 @@ void FlightBoard::SetData(FlightData *d) {
  */
 void FlightBoard::SetChannel(int channel, int value) {
 #ifdef IS_ON_PI
+//	Log(LOG_WARNING, "%d", value);
     fprintf(m_fp, "%d=%d\n", channel, value);
 #else
     /*

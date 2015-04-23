@@ -151,7 +151,7 @@ void setCourse_followObject(FlightData *course, ObjectLocation *red_object, Obje
         pidy.SetProcessValue(-red_object->y);
         pidx.SetInterval(1.0/fps);
         pidy.SetInterval(1.0/fps);
-        course->aileron = pidx.Compute();
+        course->rudder = pidx.Compute();
         course->elevator = pidy.Compute();
         
         if(course->aileron * course->aileron + course->elevator * course->elevator > SPEED_LIMIT*SPEED_LIMIT) {
@@ -163,7 +163,8 @@ void setCourse_followObject(FlightData *course, ObjectLocation *red_object, Obje
     }
     red_object_old->x = red_object->x;
     red_object_old->y = red_object->y;
-    course->rudder = 0;
+    course->aileron = 0;
+    ///course->rudder = 0;
     course->gimbal = 0;
 }
 

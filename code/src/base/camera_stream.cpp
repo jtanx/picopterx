@@ -75,6 +75,8 @@ CameraStream::CameraStream(Options *opts)
 	
 	this->m_save_photo = false;
 	this->m_save_filename = "image.jpg";
+	
+	//cv::namedWindow("TEST", cv::WINDOW_AUTOSIZE);
 }
 
 CameraStream::CameraStream() : CameraStream(NULL) {}
@@ -211,10 +213,15 @@ void CameraStream::ProcessImages() {
 		//}
         
         drawFramerate(image);
-        cv::VideoWriter outStream(STREAM_FILE, CV_FOURCC('M','J','P','G'), 4, image.size(), true);
-		if(outStream.isOpened()) {
-			outStream.write(image);
+        static int i = 0;
+        if ((i++ % 5) == 0) {
+		    cv::VideoWriter outStream(STREAM_FILE, CV_FOURCC('M','J','P','G'), 4, image.size(), true);
+			if(outStream.isOpened()) {
+				outStream.write(image);
+			}
 		}
+		//cv::imshow("TEST", image);
+		//cv::waitKey(1);
 		
 		frame_counter++;
         time(&end_time);
