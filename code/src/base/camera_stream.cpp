@@ -11,6 +11,7 @@
 #include <queue>
 
 using namespace picopter;
+using picopter::navigation::Point2D;
 using std::this_thread::sleep_for;
 using std::chrono::steady_clock;
 using std::chrono::duration_cast;
@@ -125,7 +126,7 @@ void CameraStream::SetMode(CameraMode mode) {
     m_mode = mode;
 }
     
-void CameraStream::GetDetectedObjects(std::vector<ObjectLocation> *list) {
+void CameraStream::GetDetectedObjects(std::vector<Point2D> *list) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     *list = redObjectList;
 }
@@ -184,7 +185,7 @@ void CameraStream::ProcessImages() {
                 
             case MODE_CONNECTED_COMPONENTS:
                 if(connectComponents(image) > 0) {
-                    for(std::vector<ObjectLocation>::size_type i=0; i<redObjectList.size(); i++) {
+                    for(std::vector<Point2D>::size_type i=0; i<redObjectList.size(); i++) {
                         cv::Scalar colour = cv::Scalar(255, 255, 255);
                         if(i < windowColours.size()) {
                             colour = windowColours[i];
@@ -246,7 +247,7 @@ void CameraStream::ProcessImages() {
 
 bool CameraStream::centerOfMass(cv::Mat& Isrc) {
     redObjectList.clear();
-    ObjectLocation object;
+    Point2D object;
     
     int nRows = Isrc.rows;
     int nCols = Isrc.cols;
@@ -280,7 +281,7 @@ bool CameraStream::centerOfMass(cv::Mat& Isrc) {
 }
 
 bool CameraStream::camShift(cv::Mat& Isrc) {
-    ObjectLocation object;
+    Point2D object;
     CamWindow window;
     
     if(windowList.empty()) {
@@ -455,7 +456,7 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
     redObjectList.clear();
     windowList.clear();
     
-    ObjectLocation object;
+    Point2D object;
     CamWindow window;
     
     nCols*= PIXEL_SKIP;

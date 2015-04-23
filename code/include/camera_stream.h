@@ -13,6 +13,7 @@
 #define _PICOPTERX_CAMERA_STREAM_H
 
 #include "common.h"
+#include "navigation.h"
 #include <opencv2/opencv.hpp>
 
 #define STREAM_FILE "/home/jeremy/out.mjpg"
@@ -28,11 +29,6 @@
 namespace picopter {
     /* Forward declaration of the options class */
     class Options;
-    
-    typedef struct {
-        int x;
-        int y;
-    } ObjectLocation;
 
     typedef struct {
         int x;
@@ -60,7 +56,7 @@ namespace picopter {
             CameraMode GetMode(void);
             void SetMode(CameraMode mode);
             
-            void GetDetectedObjects(std::vector<ObjectLocation>*);
+            void GetDetectedObjects(std::vector<navigation::Point2D>*);
             
             double GetFramerate(void);
             void TakePhoto(std::string);
@@ -97,7 +93,7 @@ namespace picopter {
             bool camShift(cv::Mat& Isrc);
             int connectComponents(cv::Mat& Isrc);
             
-            std::vector<ObjectLocation> redObjectList;
+            std::vector<navigation::Point2D> redObjectList;
             std::vector<CamWindow> windowList;
 
             std::vector<cv::Scalar> windowColours;

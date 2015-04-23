@@ -7,6 +7,7 @@
 #include "object_tracker.h"
 
 using namespace picopter;
+using picopter::navigation::Point2D;
 using std::chrono::steady_clock;
 using std::chrono::milliseconds;
 using std::chrono::microseconds;
@@ -14,27 +15,27 @@ using std::chrono::seconds;
 using std::chrono::duration_cast;
 using std::this_thread::sleep_for;
 
-#define TOL_strafe (CAMERA_WIDTH/4)			//Pixels
-#define KP_strafe 0.15
+#define TOL_strafe (CAMERA_WIDTH/5)			//Pixels
+#define KP_strafe 0.16
 #define KI_strafe 0
-#define TauI_strafe 4
-#define TauD_strafe 0.0000003
+#define TauI_strafe 3.5
+#define TauD_strafe 0.0000002
 #define STRAFE_WAIT 200 //Milliseconds
 
 #define TOL_rotate (CAMERA_WIDTH/5)			//Pixels
 #define KP_rotate 0.1
 
-#define SPEED_LIMIT 40			//Percent
+#define SPEED_LIMIT 50			//Percent
 #define SPIN_SPEED 20			//Percent
 #define RAISE_GIMBAL_PERIOD 3	//Seconds
 
 #define GIMBAL_LIMIT 70		//degrees
 #define GIMBAL_STEP 5		//degrees
 
-void setCourse_followObject(FlightData*, ObjectLocation*, ObjectLocation*,double);
+void setCourse_followObject(FlightData*, Point2D*,double);
 void setCourse_spin(FlightData*, bool);
-void setCourse_faceObject(FlightData*, ObjectLocation*);
-void setCourse_forwardsLowerGimbal(FlightData*, ObjectLocation*);
+void setCourse_faceObject(FlightData*, Point2D*);
+void setCourse_forwardsLowerGimbal(FlightData*, Point2D*);
 
 void printFlightData(FlightData*);
 
@@ -67,13 +68,13 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     Log(LOG_INFO, "Authorisation acknowledged. Finding object to track...");
     SetCurrentState(fc, STATE_TRACKING_SEARCHING);
     
-    ObjectLocation red_object, red_object_old;
+    Point2D red_object = {0,0}, red_object_old = {0,0};
     auto last_raised_gimbal_time = steady_clock::now();
     auto now = last_raised_gimbal_time;
     bool raise_gimbal = false;
                                     
     while (!fc->CheckForStop()) {
-        std::vector<ObjectLocation> locations;
+        std::vector<Point2D> locations;
         FlightData course;
         
         fc->cam->GetDetectedObjects(&locations);
@@ -84,7 +85,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             SetCurrentState(fc, STATE_TRACKING_LOCKED);
             
             if(course.gimbal == 0) {						                    //And if gimbal not pitched
-                setCourse_followObject(&course, &red_object, &red_object_old, fps);		//PI ON OBJECT
+                setCourse_followObject(&course, &red_object, fps);		//PI ON OBJECT
                 fc->fb->SetData(&course);
                 printFlightData(&course);
                 sleep_for(microseconds((int)(1000000*1.0/fps)));
@@ -123,49 +124,41 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
 
 //HELPER FUNCTIONS
-void setCourse_followObject(FlightData *course, ObjectLocation *red_object, ObjectLocation *red_object_old, double fps) {
+void setCourse_followObject(FlightData *course, Point2D *red_object, double fps) {
     static PID pidx(KP_strafe, TauI_strafe, TauD_strafe, STRAFE_WAIT*1e-6);
     static PID pidy(KP_strafe, TauI_strafe, TauD_strafe, STRAFE_WAIT*1e-6);
     static bool initted = false;
-    
-    //Log(LOG_WARNING, "SHIT!");
+
     if (!initted) {
         pidx.SetInputLimits(-CAMERA_WIDTH/2, CAMERA_WIDTH/2);
         pidx.SetOutputLimits(-SPEED_LIMIT, SPEED_LIMIT);
         pidx.SetSetPoint(0);
+        //We bias the vertical limit to be higher due to the pitch of the camera.
         pidy.SetInputLimits(-CAMERA_HEIGHT/2, CAMERA_HEIGHT/2);
         pidy.SetOutputLimits(-SPEED_LIMIT, SPEED_LIMIT);
-        pidy.SetSetPoint(0);
+        pidy.SetSetPoint(CAMERA_HEIGHT/8);
         initted = true;
     }
     
-    if( (red_object->x * red_object->x) + (red_object->y * red_object->y) < TOL_strafe * TOL_strafe) {
-        course->aileron = 0;
-        course->elevator = 0;
-        course->rudder = 0;
-        course->gimbal = 0;
+    //Zero the course commands
+    memset(course, 0, sizeof(FlightData));
+    if( red_object->magnitude() < TOL_strafe) {
         pidx.Reset();
         pidy.Reset();
     } else {
-        pidx.SetProcessValue(-red_object->x);//-red_object->x);
+        pidx.SetProcessValue(-red_object->x);
         pidy.SetProcessValue(-red_object->y);
         pidx.SetInterval(1.0/fps);
         pidy.SetInterval(1.0/fps);
         course->rudder = pidx.Compute();
         course->elevator = pidy.Compute();
         
-        if(course->aileron * course->aileron + course->elevator * course->elevator > SPEED_LIMIT*SPEED_LIMIT) {
-            double speed = sqrt(pow(course->aileron, 2)+pow(course->elevator, 2));
-            course->aileron = (int) (course->aileron*SPEED_LIMIT/speed);
+        double speed = std::sqrt(course->rudder * course->rudder + course->elevator * course->elevator);
+        if(speed > SPEED_LIMIT) {
+            course->rudder = (int) (course->rudder*SPEED_LIMIT/speed);
             course->elevator = (int) (course->elevator*SPEED_LIMIT/speed);
         }
-        //printf("\n%d, %d, %.2f\n",red_object->x, red_object->y, 1.0/fps);
     }
-    red_object_old->x = red_object->x;
-    red_object_old->y = red_object->y;
-    course->aileron = 0;
-    ///course->rudder = 0;
-    course->gimbal = 0;
 }
 
 void setCourse_spin(FlightData *course, bool raise_gimbal) {
@@ -180,7 +173,7 @@ void setCourse_spin(FlightData *course, bool raise_gimbal) {
     }
 }
 
-void setCourse_faceObject(FlightData *course, ObjectLocation *red_object) {
+void setCourse_faceObject(FlightData *course, Point2D *red_object) {
     course->aileron = 0;
     course->elevator = 0;
     
@@ -193,7 +186,7 @@ void setCourse_faceObject(FlightData *course, ObjectLocation *red_object) {
     }
 }
 
-void setCourse_forwardsLowerGimbal(FlightData *course, ObjectLocation *red_object) {
+void setCourse_forwardsLowerGimbal(FlightData *course, Point2D *red_object) {
     course->aileron = 0;
     course->elevator = SPEED_LIMIT/2;
     course->rudder = 0;

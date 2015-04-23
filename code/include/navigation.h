@@ -48,8 +48,10 @@ namespace picopter {
         typedef struct Point2D {
             /** x-coordinate. **/
             double x;
-            /** y-coordinate **/
+            /** y-coordinate. **/
             double y;
+            /** Returns the vector magnitude. **/
+            double magnitude() { return std::sqrt(x*x + y*y); };
         } Point2D;
         
         /**
@@ -58,12 +60,14 @@ namespace picopter {
         typedef struct Point3D {
             /** x-coordinate. **/
             double x;
-            /** y-coordinate **/
+            /** y-coordinate. **/
             double y;
-            /** z-coordinate **/
+            /** z-coordinate. **/
             double z;
-            /** Implicit conversion to 2D coordinate **/
+            /** Implicit conversion to 2D coordinate. **/
             operator Point2D() { Point2D ret = {x, y}; return ret; }
+            /** Returns the vector magnitude. **/
+            double magnitude() { return std::sqrt(x*x + y*y + z*z); };
         } Point3D;
         
         /**
