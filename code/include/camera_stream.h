@@ -16,7 +16,7 @@
 #include "navigation.h"
 #include <opencv2/opencv.hpp>
 
-#define STREAM_FILE "/home/jeremy/out.mjpg"
+#define STREAM_FILE PICOPTER_HOME_LOCATION "/out.mjpg"
 
 #define LOOKUP_SIZE 8
 #define CHAR_SIZE 256

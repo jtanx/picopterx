@@ -141,19 +141,17 @@ set (CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_LINK_FLAGS}")
 #Pretty filenames (see log.h) and log filepath
 if (NOT MSYS AND NOT CYGWIN)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(abspath $<))\"'")
-	set (PICOPTER_LOG_LOCATION $ENV{HOME})
+	set (PICOPTER_HOME_LOCATION $ENV{HOME})
 else ()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(shell cygpath -m $(abspath $<)))\"'")
 	execute_process (COMMAND cygpath -m ~
 					 OUTPUT_STRIP_TRAILING_WHITESPACE
-					 OUTPUT_VARIABLE PICOPTER_LOG_LOCATION
+					 OUTPUT_VARIABLE PICOPTER_HOME_LOCATION
 	)
 endif()
 
-if (NOT PICOPTER_LOG_LOCATION)
-	set (PICOPTER_LOG_LOCATION "/home/pi/logs")
-else ()
-	set (PICOPTER_LOG_LOCATION "${PICOPTER_LOG_LOCATION}/logs")
+if (NOT PICOPTER_HOME_LOCATION)
+	set (PICOPTER_HOME_LOCATION "/home/pi")
 endif()
 
 #Generate the config file

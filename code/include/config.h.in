@@ -9,8 +9,11 @@
 #define PICOPTER_VERSION "${PICOPTER_VERSION}"
 #define PICOPTER_DATE "${PICOPTER_DATE}"
 
-/* Home location to store logs */
-#define PICOPTER_LOG_LOCATION "${PICOPTER_LOG_LOCATION}"
+/* Home location */
+#define PICOPTER_HOME_LOCATION "${PICOPTER_HOME_LOCATION}"
+
+/* Log location */
+#define PICOPTER_LOG_LOCATION "${PICOPTER_HOME_LOCATION}/logs"
 
 /* Do we use syslog? */
 #cmakedefine USE_SYSLOG
