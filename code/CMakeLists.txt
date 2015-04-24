@@ -88,16 +88,18 @@ if (DOXYGEN_FOUND)
 	endif(LATEX_COMPILER)
 endif(DOXYGEN_FOUND)
 
-#Check if we're building on the pi
-CHECK_C_SOURCE_COMPILES ("
-	#include <stdio.h>
-	#ifndef __arm__
-	#error Not building on the pi
-	#endif
-	int main(){return 0;}
-" IS_ON_PI)
+if (NOT FORCE_EMULATION)
+	#Check if we're building on the pi
+	CHECK_C_SOURCE_COMPILES ("
+		#include <stdio.h>
+		#ifndef __arm__
+		#error Not building on the pi
+		#endif
+		int main(){return 0;}
+	" IS_ON_PI)
+endif()
 
-if (NOT IS_ON_PI OR FORCE_EMULATION)
+if (NOT IS_ON_PI)
 	include_directories (${PI_EMULATE})
 	message (WARNING "${Yellow}Using the emulation files - ${ColourBold}remember to check on the RPi!${ColourReset}")
 else ()
