@@ -29,21 +29,21 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
     }
     
     opts->SetFamily("OBJECT_TRACKER");
-    TRACK_TOL = opts->GetInt("TRACK_TOL", CAMERA_WIDTH/5);
+    TRACK_TOL = opts->GetInt("TRACK_TOL", CAMERA_WIDTH/8);
     TRACK_Kp = opts->GetReal("TRACK_Kp", 0.16);
     TRACK_TauI = opts->GetReal("TRACK_TauI", 3.5);
     TRACK_TauD = opts->GetReal("TRACK_TauD", 0.0000002);
     TRACK_SPEED_LIMIT = opts->GetInt("TRACK_SPEED_LIMIT", 50);
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
     //We bias the vertical limit to be higher due to the pitch of the camera.
-    TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", CAMERA_HEIGHT/8);
+    TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", -CAMERA_HEIGHT/15);
     
     m_pidx.SetTunings(TRACK_Kp, TRACK_TauI, TRACK_TauD);
     m_pidx.SetInputLimits(-CAMERA_WIDTH/2, CAMERA_WIDTH/2);
     m_pidx.SetOutputLimits(-TRACK_SPEED_LIMIT, TRACK_SPEED_LIMIT);
     m_pidx.SetSetPoint(TRACK_SETPOINT_X);
     
-    m_pidy.SetTunings(TRACK_Kp, TRACK_TauI, TRACK_TauD);
+    m_pidy.SetTunings(TRACK_Kp*CAMERA_WIDTH/CAMERA_HEIGHT, TRACK_TauI, TRACK_TauD);
     m_pidy.SetInputLimits(-CAMERA_HEIGHT/2, CAMERA_HEIGHT/2);
     m_pidy.SetOutputLimits(-TRACK_SPEED_LIMIT, TRACK_SPEED_LIMIT);
     m_pidy.SetSetPoint(TRACK_SETPOINT_Y);
@@ -80,9 +80,12 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     Log(LOG_INFO, "Authorisation acknowledged. Finding object to track...");
     SetCurrentState(fc, STATE_TRACKING_SEARCHING);
     
-    Point2D red_object = {0,0};
+    Point2D detected_object = {0,0};
     std::vector<Point2D> locations;
-    FlightData course;    
+    FlightData course;
+    auto last_fix = steady_clock::now() - seconds(2);
+    bool had_fix = false;
+    
     while (!fc->CheckForStop()) {
         double update_rate = 1.0 / fc->cam->GetFramerate();
         auto sleep_time = microseconds((int)(1000000*update_rate));
@@ -92,7 +95,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         
         //Do we have an object?
         if (locations.size() > 0) {                                             
-            red_object = locations.front();
+            detected_object = locations.front();
             SetCurrentState(fc, STATE_TRACKING_LOCKED);
             
             //Set PID update intervals
@@ -100,23 +103,23 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.SetInterval(update_rate);
             
             //Determine trajectory to track the object (PID control)
-            CalculateTrackingTrajectory(&course, &red_object);
+            CalculateTrackingTrajectory(&course, &detected_object, TRACK_SPEED_LIMIT);
             fc->fb->SetData(&course);
             printFlightData(&course);
-        } else if(course.gimbal < SEARCH_GIMBAL_LIMIT) {
-            //No object found, but can pitch gimbal up to search a wider area - look for it
-            SetCurrentState(fc, STATE_TRACKING_SEARCHING);
+            last_fix = steady_clock::now();
+            had_fix = true;
+        } else if (had_fix && steady_clock::now() - last_fix < seconds(2)) {
+            //We had an object, attempt to follow according to last known position, but slower
+            //Set PID update intervals
+            m_pidx.SetInterval(update_rate);
+            m_pidy.SetInterval(update_rate);
             
-            //Reset the accumulated error in the PIDs
-            m_pidx.Reset();
-            m_pidy.Reset();
-            
-            //Actual behaviour TBA
-            fc->fb->Stop();
+            //Determine trajectory to track the object (PID control)
+            CalculateTrackingTrajectory(&course, &detected_object, TRACK_SPEED_LIMIT/2);
+            fc->fb->SetData(&course);
+            printFlightData(&course);
         } else {
-            //No object found, nowhere else to look, give up.
-            Log(LOG_WARNING, "No object detected. Idling.");
-            //Not technically correct. Changes TBA 
+            //Object lost; we should do a search pattern (TBA)
             SetCurrentState(fc, STATE_TRACKING_SEARCHING);
             
             //Reset the accumulated error in the PIDs
@@ -124,6 +127,10 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.Reset();
             
             fc->fb->Stop();
+            if (had_fix) {
+                Log(LOG_WARNING, "No object detected. Idling.");
+                had_fix = false;
+            }
         }
         
         sleep_for(sleep_time);
@@ -132,7 +139,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     fc->fb->Stop();
 }
 
-void ObjectTracker::CalculateTrackingTrajectory(FlightData *course, navigation::Point2D *object_location) {
+void ObjectTracker::CalculateTrackingTrajectory(FlightData *course, navigation::Point2D *object_location, int speed_limit) {
     //Zero the course commands
     memset(course, 0, sizeof(FlightData));
     if(object_location->magnitude() < TRACK_TOL) {
@@ -146,9 +153,9 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightData *course, navigation::
         
         double trackx = m_pidx.Compute(), tracky = m_pidy.Compute();
         double speed = std::sqrt(trackx*trackx + tracky*tracky);
-        if (speed > TRACK_SPEED_LIMIT) {
-            trackx = trackx * TRACK_SPEED_LIMIT / speed;
-            tracky = tracky * TRACK_SPEED_LIMIT / speed;
+        if (speed > speed_limit) {
+            trackx = trackx * speed_limit / speed;
+            tracky = tracky * speed_limit / speed;
         }
         
         course->elevator = tracky;

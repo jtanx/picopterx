@@ -39,7 +39,7 @@ namespace picopter {
             double TRACK_Kp, TRACK_TauI, TRACK_TauD;
             double TRACK_SETPOINT_X, TRACK_SETPOINT_Y;
             
-            void CalculateTrackingTrajectory(FlightData *course, navigation::Point2D *object_location);
+            void CalculateTrackingTrajectory(FlightData *course, navigation::Point2D *object_location, int speed_limit);
             
             /** Copy constructor (disabled) **/
             ObjectTracker(const ObjectTracker &other);

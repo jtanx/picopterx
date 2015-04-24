@@ -616,7 +616,6 @@ void CameraStream::build_lookup_threshold(uchar lookup_threshold[][LOOKUP_SIZE][
     }
 }
 
-
 void CameraStream::build_lookup_reduce_colourspace(uchar lookup_reduce_colourspace[]) {
     for (int i=0; i<CHAR_SIZE; i++) {
         lookup_reduce_colourspace[i] = (uchar)(i*(LOOKUP_SIZE-1)/(CHAR_SIZE-1));
