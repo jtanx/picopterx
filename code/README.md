@@ -10,6 +10,8 @@ written in C++, conforming to the C++11 standard.
 * gcc/g++ >= 4.7 (4.8 or later is recommended)
 * gpsd, libgps-dev (hexacopter only, or otherwise *nix with a GPS/`gpsfake`)
 * wiringPi
+* ServoBlaster - experimental version
+* boost - only for `shared_ptr` and only for the server (src/server/picopter.cpp) due to Thrift dependency
 
 ### Optionals
 * Doxygen (for generating source code documentation)
@@ -53,6 +55,8 @@ cd picopterx/code
 ./configure -Dtest=ON
 make
 ~~~~~
+
+To force emulation of RPi specific components, specify `-DFORCE_EMULATION=ON`.
 
 To make the source code documentation (CMake version 3 or greater only):
 
