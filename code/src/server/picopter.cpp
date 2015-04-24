@@ -80,13 +80,16 @@ public:
         return false;
     }
     
-    bool beginObjectTrackingThread()
+    bool beginObjectTrackingThread(const int32_t method)
     {
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
             return false;
         } else {
             ObjectTracker *trk = new ObjectTracker();
+            if (method == 1) {
+                trk->SetTrackMethod(ObjectTracker::TRACK_ROTATE);
+            }
             
             if (!m_fc->RunTask(TASK_OBJECT_TRACKING, trk, NULL)) {
                 delete trk;

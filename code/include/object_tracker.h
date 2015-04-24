@@ -20,13 +20,22 @@ namespace picopter {
      */
     class ObjectTracker : public FlightTask {
         public:
-            ObjectTracker();
-            ObjectTracker(Options *opts);
+            typedef enum {
+                TRACK_STRAFE,
+                TRACK_ROTATE
+            } TrackMethod;
+        
+            ObjectTracker(TrackMethod method=TRACK_STRAFE);
+            ObjectTracker(Options *opts, TrackMethod method=TRACK_STRAFE);
             virtual ~ObjectTracker() override;
             
+            TrackMethod GetTrackMethod();
+            void SetTrackMethod(TrackMethod method);
             void Run(FlightController *fc, void *opts) override;
         private:
             PID m_pidx, m_pidy;
+            std::atomic<TrackMethod> m_track_method;
+            
             int TRACK_TOL, TRACK_SPEED_LIMIT, SEARCH_GIMBAL_LIMIT;
             double TRACK_Kp, TRACK_TauI, TRACK_TauD;
             double TRACK_SETPOINT_X, TRACK_SETPOINT_Y;

@@ -27,7 +27,7 @@ service webInterface {
 	bool		beginWaypointsThread();
 	bool		beginLawnmowerThread();
 	bool		beginUserTrackingThread();
-	bool		beginObjectTrackingThread();
+	bool		beginObjectTrackingThread(i32 method);
 	
 	bool		allStop();
 	

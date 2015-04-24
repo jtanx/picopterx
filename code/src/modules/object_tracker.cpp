@@ -17,9 +17,10 @@ using std::this_thread::sleep_for;
 
 static void printFlightData(FlightData*);
 
-ObjectTracker::ObjectTracker(Options *opts)
+ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
 : m_pidx(0,0,0,0.03)
 , m_pidy(0,0,0,0.03)
+, m_track_method{method}
 , SEARCH_GIMBAL_LIMIT(60)
 {
     Options clear;
@@ -46,13 +47,21 @@ ObjectTracker::ObjectTracker(Options *opts)
     m_pidy.SetInputLimits(-CAMERA_HEIGHT/2, CAMERA_HEIGHT/2);
     m_pidy.SetOutputLimits(-TRACK_SPEED_LIMIT, TRACK_SPEED_LIMIT);
     m_pidy.SetSetPoint(TRACK_SETPOINT_Y);
-    
 }
 
-ObjectTracker::ObjectTracker() : ObjectTracker(NULL) {}
+ObjectTracker::ObjectTracker(TrackMethod method) : ObjectTracker(NULL, method) {}
 
 ObjectTracker::~ObjectTracker() {
     
+}
+
+ObjectTracker::TrackMethod ObjectTracker::GetTrackMethod() {
+    return m_track_method.load(std::memory_order_relaxed);
+}
+
+void ObjectTracker::SetTrackMethod(TrackMethod method) {
+    Log(LOG_INFO, "Track method: %d", method);
+    m_track_method.store(method, std::memory_order_relaxed);
 }
 
 void ObjectTracker::Run(FlightController *fc, void *opts) {
@@ -130,15 +139,23 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightData *course, navigation::
         m_pidx.Reset();
         m_pidy.Reset();
     } else {
+        TrackMethod method = GetTrackMethod();
+        
         m_pidx.SetProcessValue(-object_location->x);
         m_pidy.SetProcessValue(-object_location->y);
-        course->rudder = m_pidx.Compute();
-        course->elevator = m_pidy.Compute();
         
-        double speed = std::sqrt(course->rudder * course->rudder + course->elevator * course->elevator);
-        if(speed > TRACK_SPEED_LIMIT) {
-            course->rudder = (int) (course->rudder*TRACK_SPEED_LIMIT/speed);
-            course->elevator = (int) (course->elevator*TRACK_SPEED_LIMIT/speed);
+        double trackx = m_pidx.Compute(), tracky = m_pidy.Compute();
+        double speed = std::sqrt(trackx*trackx + tracky*tracky);
+        if (speed > TRACK_SPEED_LIMIT) {
+            trackx = trackx * TRACK_SPEED_LIMIT / speed;
+            tracky = tracky * TRACK_SPEED_LIMIT / speed;
+        }
+        
+        course->elevator = tracky;
+        if (method == TRACK_ROTATE) {
+            course->rudder =trackx;
+        } else {
+            course->aileron = trackx;
         }
     }
 }
