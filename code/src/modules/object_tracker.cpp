@@ -103,7 +103,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.SetInterval(update_rate);
             
             //Determine trajectory to track the object (PID control)
-            CalculateTrackingTrajectory(&course, &detected_object, TRACK_SPEED_LIMIT);
+            CalculateTrackingTrajectory(fc, &course, &detected_object, TRACK_SPEED_LIMIT);
             fc->fb->SetData(&course);
             printFlightData(&course);
             last_fix = steady_clock::now();
@@ -115,7 +115,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.SetInterval(update_rate);
             
             //Determine trajectory to track the object (PID control)
-            CalculateTrackingTrajectory(&course, &detected_object, TRACK_SPEED_LIMIT/2);
+            CalculateTrackingTrajectory(fc, &course, &detected_object, TRACK_SPEED_LIMIT/2);
             fc->fb->SetData(&course);
             printFlightData(&course);
         } else {
@@ -128,6 +128,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             
             fc->fb->Stop();
             if (had_fix) {
+                Point2D vec = {0,0};
+                fc->cam->SetArrow(vec);
                 Log(LOG_WARNING, "No object detected. Idling.");
                 had_fix = false;
             }
@@ -139,12 +141,13 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     fc->fb->Stop();
 }
 
-void ObjectTracker::CalculateTrackingTrajectory(FlightData *course, navigation::Point2D *object_location, int speed_limit) {
+void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point2D *object_location, int speed_limit) {
     //Zero the course commands
     memset(course, 0, sizeof(FlightData));
     if(object_location->magnitude() < TRACK_TOL) {
         m_pidx.Reset();
         m_pidy.Reset();
+        fc->cam->SetArrow({0,0});
     } else {
         TrackMethod method = GetTrackMethod();
         
@@ -164,6 +167,8 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightData *course, navigation::
         } else {
             course->aileron = trackx;
         }
+        
+        fc->cam->SetArrow({100*trackx/TRACK_SPEED_LIMIT, -100*tracky/TRACK_SPEED_LIMIT});
     }
 }
 

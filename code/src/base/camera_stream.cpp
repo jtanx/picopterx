@@ -144,6 +144,17 @@ void CameraStream::TakePhoto(std::string filename) {
     m_save_photo = true;
 }
 
+/** 
+ * Set an arrow to be displayed from the centre of the image.
+ * @param vec The arrow vector, as an integer percentage.
+ *            E.g. 100% vec.x draws an arrow from centre to the right side
+ *            of the image.
+ */
+void CameraStream::SetArrow(Point2D vec) {
+    std::lock_guard<std::mutex> lock(m_aux_mutex);
+    arrow_vec = vec;
+}
+
 void CameraStream::ProcessImages() {
     auto start_time = steady_clock::now();
     int frame_duration;
@@ -195,6 +206,14 @@ void CameraStream::ProcessImages() {
                 }
                 drawCrosshair(image);
                 break;
+        }
+        
+        // Draw an arrow on the image (for displaying where it wants to go for object tracking)
+        {
+            std::lock_guard<std::mutex> lock(m_aux_mutex);
+            if (arrow_vec.x != 0 || arrow_vec.y != 0) {
+                drawArrow(image, cv::Point(image.cols/2, image.rows/2), cv::Point((arrow_vec.x * image.cols) / 200 + image.cols/2, (arrow_vec.y * image.rows) / 200 + image.rows/2));
+            }
         }
         
         /*----------------------*
@@ -624,6 +643,11 @@ void CameraStream::build_lookup_reduce_colourspace(uchar lookup_reduce_colourspa
 
 int CameraStream::unreduce(int x) {
     return (x*(CHAR_SIZE-1) + (CHAR_SIZE-1)/2) / LOOKUP_SIZE;
+}
+
+void CameraStream::drawArrow(cv::Mat& img, cv::Point from, cv::Point to) {
+    //thickness = 2, lineType = 8
+    cv::line(img, from, to, cv::Scalar(255, 255, 255), 2, 8);
 }
 
 void CameraStream::drawCrosshair(cv::Mat& img) {

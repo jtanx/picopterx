@@ -58,6 +58,8 @@ namespace picopter {
             
             void GetDetectedObjects(std::vector<navigation::Point2D>*);
             
+            void SetArrow(navigation::Point2D vec);
+            
             double GetFramerate(void);
             void TakePhoto(std::string);
         private:
@@ -73,6 +75,10 @@ namespace picopter {
             
             std::mutex m_worker_mutex;
             std::future<void> m_worker_thread;
+            
+            std::mutex m_aux_mutex;
+            
+            navigation::Point2D arrow_vec;
             
             CvCapture* m_capture;
             
@@ -109,6 +115,7 @@ namespace picopter {
             void drawObjectMarker(cv::Mat& img, cv::Point centre, cv::Scalar colour);
             void drawBox(cv::Mat& img, cv::Point topLeft, cv::Point bottomRight, cv::Scalar colour);
             void drawFramerate(cv::Mat& img);
+            void drawArrow(cv::Mat& img, cv::Point from, cv::Point to);
             
             void buildColours(std::vector<cv::Scalar>*);
             
