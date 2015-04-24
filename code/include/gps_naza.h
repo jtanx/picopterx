@@ -31,6 +31,8 @@ namespace picopter {
             std::thread m_worker;
             /** The NAZA decoder **/
             NazaDecoderLib *m_decoder;
+            /** The data logger **/
+            DataLog m_log;
             
             /** Copy constructor (disabled) **/
             GPSNaza(const GPSNaza &other);

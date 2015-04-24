@@ -22,6 +22,7 @@ using std::this_thread::sleep_for;
 GPSNaza::GPSNaza(Options *opts)
 : GPS(opts)
 , m_had_fix(false)
+, m_log("gps_naza")
 {
     m_decoder = new NazaDecoderLib();
     m_fd = serialOpen("/dev/ttyAMA0", 115200);
@@ -59,6 +60,7 @@ void GPSNaza::GPSLoop() {
         if (m_had_fix && !HasFix()) {
             Log(LOG_WARNING, "Lost the GPS fix. Last fix: %d seconds ago.",
                 m_last_fix.load());
+            m_log.Write(": Lost fix");
             m_had_fix = false;
         }
         
@@ -71,18 +73,21 @@ void GPSNaza::GPSLoop() {
             switch (message) {
                 case NAZA_MESSAGE_GPS: {
                     if (m_decoder->getFixType() != NazaDecoderLib::NO_FIX) {
-                        GPSData current;
+                        GPSData d;
                         
                         if (!m_had_fix) {
                         	Log(LOG_INFO, "Got fix! (%.3f, %.3f)", m_decoder->getLat(), m_decoder->getLon());
                         	m_had_fix = true;
                         }
                         
-                        current.fix.lat = m_decoder->getLat();
-                        current.fix.lon = m_decoder->getLon();
-                        current.fix.speed = m_decoder->getSpeed();
-                        current.fix.heading = m_decoder->getCog();
-                        m_data = current;
+                        d.fix.lat = m_decoder->getLat();
+                        d.fix.lon = m_decoder->getLon();
+                        d.fix.speed = m_decoder->getSpeed();
+                        d.fix.heading = m_decoder->getCog();
+                        m_data = d;
+                        
+                        m_log.Write(": (%.6f, %.6f) [%.2f at %.2f]",
+                            d.fix.lat, d.fix.lon, d.fix.speed, d.fix.heading);
                         last_fix = steady_clock::now();
                     }
                 } break;
