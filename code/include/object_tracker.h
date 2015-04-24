@@ -14,7 +14,6 @@ namespace picopter {
     /* Forward declaration of the options class */
     class Options;
 
-    
     /**
      * Class for moving the hexacopter through waypoints.
      */

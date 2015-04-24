@@ -92,6 +92,7 @@ namespace picopter {
             bool centerOfMass(cv::Mat& Isrc);
             bool camShift(cv::Mat& Isrc);
             int connectComponents(cv::Mat& Isrc);
+            int ConnectedComponents(cv::Mat& src);
             
             std::vector<navigation::Point2D> redObjectList;
             std::vector<CamWindow> windowList;

@@ -41,7 +41,7 @@ CameraStream::CameraStream(Options *opts)
     if (!opts) {
         opts = &clear;
     }
-    
+
     opts->SetFamily("CAMERA_STREAM");
     this->MIN_HUE		= opts->GetInt("MIN_HUE", 340);
     this->MAX_HUE		= opts->GetInt("MAX_HUE", 20);
@@ -184,7 +184,7 @@ void CameraStream::ProcessImages() {
                 break;
                 
             case MODE_CONNECTED_COMPONENTS:
-                if(connectComponents(image) > 0) {
+                if(ConnectedComponents(image) > 0) {
                     for(std::vector<Point2D>::size_type i=0; i<redObjectList.size(); i++) {
                         cv::Scalar colour = cv::Scalar(255, 255, 255);
                         if(i < windowColours.size()) {
@@ -370,14 +370,13 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
     cv::Mat elementErode(ERODE_ELEMENT, ERODE_ELEMENT, CV_8U, cv::Scalar(255));
     cv::dilate(BW, BW, elementDilate);
     cv::erode(BW, BW, elementErode);
-    
-    
+   
     cv::Mat CC(nRows, nCols, CV_8U, cv::Scalar(0));
     std::queue<vec2> q;
     uchar label = 0;
     
     vec2 temp;
-
+    
     int x, y;
     uchar* p_CC;
     for(j=0; j<nRows; j++) {
@@ -453,6 +452,7 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
         }
     }
     
+    
     redObjectList.clear();
     windowList.clear();
     
@@ -476,6 +476,86 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
             window.x = std::max(comps[k].M10/comps[k].M00 - w/2, 0);
             window.w = std::min(w, nCols-window.x);
             window.y = std::max(comps[k].M01/comps[k].M00 - l/2, 0);
+            window.l = std::min(l, nRows-window.y);
+            
+            redObjectList.push_back(object);
+            windowList.push_back(window);
+        }
+    }
+    return (int)redObjectList.size();
+}
+
+/**
+ * Connected components V2
+ */
+int CameraStream::ConnectedComponents(cv::Mat& src) {
+    int nChannels = src.channels();
+    
+    cv::Mat BW(src.rows*PROCESS_IMAGE_REDUCE, src.cols*PROCESS_IMAGE_REDUCE, CV_8U, cv::Scalar(BLACK));
+    int nRows = BW.rows;
+    int nCols = BW.cols;
+    
+    //Reduce (point resize) and threshold the image
+    int i, j, k;		//k = 3*i
+    uchar* p_src;
+    uchar* p_BW;
+    for(j=0; j<nRows; j++) {
+        p_src = src.ptr<uchar>(j*PIXEL_SKIP);
+        p_BW = BW.ptr<uchar>(j);
+        for (i=0; i<nCols; i++) {
+            k = i*nChannels*PIXEL_SKIP;
+            if(lookup_threshold[lookup_reduce_colourspace[p_src[k+2]]][lookup_reduce_colourspace[p_src[k+1]]][lookup_reduce_colourspace[p_src[k]]]) {
+                p_BW[i] = WHITE;
+            }
+        }
+    }
+    
+    //Blur, dilate and erode the image
+    cv::Mat elementDilate(DILATE_ELEMENT, DILATE_ELEMENT, CV_8U, cv::Scalar(255));
+    cv::Mat elementErode(ERODE_ELEMENT, ERODE_ELEMENT, CV_8U, cv::Scalar(255));
+    cv::blur(BW,BW,cv::Size(3,3)); //MOAR BLUR
+    cv::dilate(BW, BW, elementDilate);
+    cv::erode(BW, BW, elementErode);
+    
+    //Find the contours (connected components)
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(BW, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+    
+    //Calculate the contour moments
+    std::vector<cv::Moments> comps(contours.size());
+    for(size_t i = 0; i < contours.size(); i++) {
+        comps[i] = cv::moments( contours[i], true);
+    }
+    //Sort moments in order of decreasing size (largest first)
+    std::sort(comps.begin(), comps.end(), 
+    [] (const cv::Moments &a, const cv::Moments &b) {
+        return (int)b.m00 < (int)a.m00;
+    });
+    
+    redObjectList.clear();
+    windowList.clear();
+    
+    Point2D object;
+    CamWindow window;
+    
+    nCols*= PIXEL_SKIP;
+    nRows*= PIXEL_SKIP;
+    
+    //Calculate the locations on the original image
+    for(k=0; k < (int)comps.size(); k++) {
+        if(comps[k].m00 > PIXEL_THRESHOLD) {
+            comps[k].m01 *= PIXEL_SKIP;
+            comps[k].m10 *= PIXEL_SKIP;
+            
+            object.x = comps[k].m10/comps[k].m00 - nCols/2;
+            object.y = -(comps[k].m01/comps[k].m00 - nRows/2);
+            
+            int w = (int)(BOX_SIZE*PIXEL_SKIP*sqrt(comps[k].m00));
+            int l = w;
+            
+            window.x = std::max((int)(comps[k].m10/comps[k].m00 - w/2), 0);
+            window.w = std::min(w, nCols-window.x);
+            window.y = std::max((int)(comps[k].m01/comps[k].m00 - l/2), 0);
             window.l = std::min(l, nRows-window.y);
             
             redObjectList.push_back(object);
