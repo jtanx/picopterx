@@ -16,7 +16,7 @@
 #include "navigation.h"
 #include <opencv2/opencv.hpp>
 
-#define STREAM_FILE PICOPTER_HOME_LOCATION "/out.mjpg"
+#define STREAM_FILE PICOPTER_HOME_LOCATION "/out.jpg"
 
 #define LOOKUP_SIZE 8
 #define CHAR_SIZE 256
@@ -64,7 +64,8 @@ namespace picopter {
             void TakePhoto(std::string);
         private:
             int MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL, PIXEL_THRESHOLD;
-            double PROCESS_IMAGE_REDUCE, STREAM_IMAGE_REDUCE;
+            int STREAM_IMAGE_WIDTH;
+            double PROCESS_IMAGE_REDUCE;
             int DILATE_ELEMENT, ERODE_ELEMENT;
             int PIXEL_SKIP;
             int THREAD_SLEEP_TIME;

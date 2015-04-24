@@ -52,7 +52,7 @@ CameraStream::CameraStream(Options *opts)
     this->PIXEL_THRESHOLD	= opts->GetInt("PIXEL_THRESHOLD", 30);
     
     this->PROCESS_IMAGE_REDUCE	= opts->GetReal("PROCESS_IMAGE_REDUCE", 0.5);
-    this->STREAM_IMAGE_REDUCE	= opts->GetReal("STREAM_IMAGE_REDUCE", 0.5);
+    this->STREAM_IMAGE_WIDTH	= opts->GetInt("STREAM_IMAGE_WIDTH", 320);
     this->PIXEL_SKIP = (int)(1/PROCESS_IMAGE_REDUCE);
     
     this->BOX_SIZE		= opts->GetReal("BOX_SIZE", 1.5);
@@ -83,7 +83,11 @@ CameraStream::CameraStream(Options *opts)
     
     opts->SetFamily("GLOBAL");
     this->m_demo = opts->GetBool("DEMO_MODE", false);
-    //cv::namedWindow("TEST", cv::WINDOW_AUTOSIZE);
+
+    if (m_demo) {
+        cv::namedWindow("Thresholded image", cv::WINDOW_AUTOSIZE);
+        cv::namedWindow("Camera stream", cv::WINDOW_AUTOSIZE);
+    }
 }
 
 CameraStream::CameraStream() : CameraStream(NULL) {}
@@ -220,28 +224,21 @@ void CameraStream::ProcessImages() {
          *     Stream image     *
          *----------------------*/
         
-        //cv::Mat frame;
-        //cv::resize(image, frame, cv::Size(), STREAM_IMAGE_REDUCE, STREAM_IMAGE_REDUCE, cv::INTER_NEAREST);
-        //drawFramerate(frame);
-        //cv::VideoWriter outStream(STREAM_FILE, CV_FOURCC('M','J','P','G'), 4, frame.size(), true);
-        //if(outStream.isOpened()) {
-        //	outStream.write(frame);
-        //}
-        
         drawFramerate(image);
-        // Only write the image out for web streaming every 5th frame
-        if ((frame_counter % 5) == 0) {
-            cv::VideoWriter outStream(STREAM_FILE, CV_FOURCC('M','J','P','G'), 4, image.size(), true);
-            if(outStream.isOpened()) {
-                outStream.write(image);
-            }
-        }
-        
         //Are we in demo mode? If so, display the image on the screen.
         //Trying to do this when no X server is available will crash the program.
         if (m_demo) {
             cv::imshow("Camera stream", image);
             cv::waitKey(1);
+        }
+        
+        // Only write the image out for web streaming every 5th frame
+        if ((frame_counter % 5) == 0) {
+            if (STREAM_IMAGE_WIDTH < CAMERA_WIDTH) {
+                cv::resize(image, image, cv::Size(STREAM_IMAGE_WIDTH, (CAMERA_HEIGHT * STREAM_IMAGE_WIDTH) / CAMERA_WIDTH));
+            }
+            std::vector<int> params = {CV_IMWRITE_JPEG_QUALITY, 75};
+            cv::imwrite(STREAM_FILE, image, params);
         }
         
         frame_counter++;
@@ -532,9 +529,15 @@ int CameraStream::ConnectedComponents(cv::Mat& src) {
     //Blur, dilate and erode the image
     cv::Mat elementDilate(DILATE_ELEMENT, DILATE_ELEMENT, CV_8U, cv::Scalar(255));
     cv::Mat elementErode(ERODE_ELEMENT, ERODE_ELEMENT, CV_8U, cv::Scalar(255));
-    cv::blur(BW,BW,cv::Size(3,3)); //MOAR BLUR
+    
+    //cv::blur(BW,BW,cv::Size(6,6)); //MOAR BLUR
     cv::dilate(BW, BW, elementDilate);
     cv::erode(BW, BW, elementErode);
+    
+    if (m_demo) {
+        cv::imshow("Thresholded image", BW);
+        cv::waitKey(1);
+    }
     
     //Find the contours (connected components)
     std::vector<std::vector<cv::Point>> contours;
