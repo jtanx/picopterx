@@ -128,8 +128,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             
             fc->fb->Stop();
             if (had_fix) {
-                Point2D vec = {0,0};
-                fc->cam->SetArrow(vec);
+                fc->cam->SetArrow({0,0});
                 Log(LOG_WARNING, "No object detected. Idling.");
                 had_fix = false;
             }
@@ -137,6 +136,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         
         sleep_for(sleep_time);
     }
+    fc->cam->SetArrow({0,0});
     Log(LOG_INFO, "Object detection ended.");
     fc->fb->Stop();
 }
