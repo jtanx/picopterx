@@ -28,9 +28,10 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
         opts = &clear;
     }
     
+    //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
     TRACK_TOL = opts->GetInt("TRACK_TOL", CAMERA_WIDTH/8);
-    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.16);
+    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.16 * 320.0/CAMERA_WIDTH);
     TRACK_TauI = opts->GetReal("TRACK_TauI", 3.5);
     TRACK_TauD = opts->GetReal("TRACK_TauD", 0.0000002);
     TRACK_SPEED_LIMIT = opts->GetInt("TRACK_SPEED_LIMIT", 50);
