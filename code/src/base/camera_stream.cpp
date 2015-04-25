@@ -36,6 +36,7 @@ typedef struct {
 CameraStream::CameraStream(Options *opts)
 : m_stop{false}
 , m_mode(MODE_NO_PROCESSING)
+, m_capture(-1)
 {
     Options clear;
     if (!opts) {
@@ -66,14 +67,13 @@ CameraStream::CameraStream(Options *opts)
     build_lookup_threshold(lookup_threshold, MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL);
     buildColours(&windowColours);
     
-    m_capture = cvCreateCameraCapture(-1);
-    if (m_capture == NULL) {
-        Log(LOG_WARNING, "cvCreateCameraCapture failed.");
+   if (!m_capture.isOpened()) {
+        Log(LOG_WARNING, "cv::VideoCapture failed.");
         throw std::invalid_argument("Could not open camera stream.");
     }
-    cvSetCaptureProperty(m_capture, CV_CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH);
-    cvSetCaptureProperty(m_capture, CV_CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT);
-    cvSetCaptureProperty(m_capture, CV_CAP_PROP_FPS, 30);
+    m_capture.set(CV_CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH);
+    m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT);
+    m_capture.set(CV_CAP_PROP_FPS, 30);
     
     this->frame_counter = -1;
     this->m_fps = -1;
@@ -97,7 +97,6 @@ CameraStream::~CameraStream() {
     if (m_worker_thread.valid()) {
         m_worker_thread.wait();
     }
-    cvReleaseCapture(&m_capture);
 }
 
 bool CameraStream::Start() {
@@ -170,9 +169,9 @@ void CameraStream::ProcessImages() {
         /*----------------------*
          *      Load image      *
          *----------------------*/
-
-        IplImage* image_raspi = cvQueryFrame(m_capture);
-        cv::Mat image = cv::Mat(image_raspi);
+         
+         cv::Mat image;
+         m_capture >> image;
 
         /*----------------------*
          *     Process image    *

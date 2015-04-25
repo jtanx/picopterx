@@ -81,7 +81,7 @@ namespace picopter {
             
             navigation::Point2D arrow_vec;
             
-            CvCapture* m_capture;
+            cv::VideoCapture m_capture;
             
             int frame_counter;
             double m_fps;
