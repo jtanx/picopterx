@@ -237,7 +237,7 @@ void CameraStream::ProcessImages() {
             if (STREAM_IMAGE_WIDTH < CAMERA_WIDTH) {
                 cv::resize(image, image, cv::Size(STREAM_IMAGE_WIDTH, (CAMERA_HEIGHT * STREAM_IMAGE_WIDTH) / CAMERA_WIDTH));
             }
-            std::vector<int> params = {CV_IMWRITE_JPEG_QUALITY, 75};
+            static const std::vector<int> params = {CV_IMWRITE_JPEG_QUALITY, 75};
             cv::imwrite(STREAM_FILE, image, params);
         }
         
@@ -503,6 +503,7 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
 
 /**
  * Connected components V2
+ * Computes position of 4 largest blobs on the image.
  */
 int CameraStream::ConnectedComponents(cv::Mat& src) {
     int nChannels = src.channels();
@@ -563,8 +564,8 @@ int CameraStream::ConnectedComponents(cv::Mat& src) {
     nCols*= PIXEL_SKIP;
     nRows*= PIXEL_SKIP;
     
-    //Calculate the locations on the original image
-    for(k=0; k < (int)comps.size(); k++) {
+    //Calculate the locations on the original image (first 4 only)
+    for(k=0; k < 4 && k < (int)comps.size(); k++) {
         if(comps[k].m00 > PIXEL_THRESHOLD) {
             comps[k].m01 *= PIXEL_SKIP;
             comps[k].m10 *= PIXEL_SKIP;
