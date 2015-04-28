@@ -32,14 +32,16 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
-    TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/8);
-    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.16 * 320.0/m_camwidth);
-    TRACK_TauI = opts->GetReal("TRACK_TauI", 3.5);
-    TRACK_TauD = opts->GetReal("TRACK_TauD", 0.0000002);
+    TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/7);
+    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.30 * 320.0/m_camwidth);
+    TRACK_TauI = opts->GetReal("TRACK_TauI", 5);
+    TRACK_TauD = opts->GetReal("TRACK_TauD", 0.0000006);
     TRACK_SPEED_LIMIT = opts->GetInt("TRACK_SPEED_LIMIT", 50);
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
     //We bias the vertical limit to be higher due to the pitch of the camera.
     TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", -m_camheight/15);
+    
+    Log(LOG_INFO, "Kp: %.2f, TauI: %.2f", TRACK_Kp, TRACK_TauI);
     
     m_pidx.SetTunings(TRACK_Kp, TRACK_TauI, TRACK_TauD);
     m_pidx.SetInputLimits(-m_camwidth/2, m_camwidth/2);
@@ -118,8 +120,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
             
+            m_pidx.Reset();
+            m_pidy.Reset();
+            
             //Determine trajectory to track the object (PID control)
-            CalculateTrackingTrajectory(fc, &course, &detected_object, TRACK_SPEED_LIMIT/2);
+            CalculateTrackingTrajectory(fc, &course, &detected_object, TRACK_SPEED_LIMIT);
             fc->fb->SetData(&course);
             printFlightData(&course);
         } else {

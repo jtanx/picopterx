@@ -84,7 +84,7 @@ CameraStream::CameraStream(Options *opts)
     }
     
     //Resolution dependent parameters
-    this->PROCESS_HEIGHT = (this->INPUT_HEIGHT * this->INPUT_WIDTH) / this->PROCESS_WIDTH;
+    this->PROCESS_HEIGHT = (this->INPUT_HEIGHT * this->PROCESS_WIDTH) / this->INPUT_WIDTH;
     this->PIXEL_THRESHOLD	= opts->GetInt("PIXEL_THRESHOLD", (30 * this->INPUT_WIDTH) / 320);
     this->PIXEL_SKIP = this->INPUT_WIDTH / this->PROCESS_WIDTH;
     
@@ -266,6 +266,7 @@ void CameraStream::ProcessImages() {
             m_fps = (frame_counter * 1000.0) / frame_duration;
             frame_counter = 0;
             start_time = steady_clock::now();
+            //Log(LOG_INFO, "FPS: %.2f", m_fps);
         }
         
         /*----------------------*
@@ -382,7 +383,7 @@ bool CameraStream::camShift(cv::Mat& Isrc) {
 int CameraStream::connectComponents(cv::Mat& Isrc) {
     int nChannels = Isrc.channels();
     
-    cv::Mat BW(PROCESS_WIDTH, PROCESS_HEIGHT, CV_8U, cv::Scalar(BLACK));
+    cv::Mat BW(PROCESS_HEIGHT, PROCESS_WIDTH, CV_8U, cv::Scalar(BLACK));
     int nRows = BW.rows;
     int nCols = BW.cols;
 
@@ -527,7 +528,7 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
 int CameraStream::ConnectedComponents(cv::Mat& src) {
     int nChannels = src.channels();
     
-    cv::Mat BW(PROCESS_WIDTH, PROCESS_HEIGHT, CV_8U, cv::Scalar(BLACK));
+    cv::Mat BW(PROCESS_HEIGHT,PROCESS_WIDTH, CV_8U, cv::Scalar(BLACK));
     int nRows = BW.rows;
     int nCols = BW.cols;
     

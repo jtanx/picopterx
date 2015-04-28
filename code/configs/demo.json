@@ -1,5 +1,9 @@
 {
 	"GLOBAL": {
 		"DEMO_MODE" : true
+	},
+	"CAMERA_STREAM": {
+		"INPUT_WIDTH" : 320,
+		"INPUT_HEIGHT" : 240
 	}
 }
