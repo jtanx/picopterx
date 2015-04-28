@@ -85,8 +85,9 @@ public:
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
             return false;
-        } else {
-            ObjectTracker *trk = new ObjectTracker();
+        } else if (m_fc->cam != NULL) {
+            int width = m_fc->cam->GetInputWidth(), height = m_fc->cam->GetInputHeight();
+            ObjectTracker *trk = new ObjectTracker(width, height);
             if (method == 1) {
                 trk->SetTrackMethod(ObjectTracker::TRACK_ROTATE);
             }
@@ -95,6 +96,8 @@ public:
                 delete trk;
                 return false;
             }
+        } else {
+            Log(LOG_WARNING, "Not running object tracking - no camera!");
         }
         return true;
     }

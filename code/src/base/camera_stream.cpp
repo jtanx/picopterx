@@ -50,18 +50,18 @@ CameraStream::CameraStream(Options *opts)
     this->MAX_SAT		= opts->GetInt("MAX_SAT", 255);
     this->MIN_VAL		= opts->GetInt("MIN_VAL", 127);
     this->MAX_VAL		= opts->GetInt("MAX_VAL", 255);
-    this->PIXEL_THRESHOLD	= opts->GetInt("PIXEL_THRESHOLD", 30);
     
-    this->PROCESS_IMAGE_REDUCE	= opts->GetReal("PROCESS_IMAGE_REDUCE", 0.5);
-    this->STREAM_IMAGE_WIDTH	= opts->GetInt("STREAM_IMAGE_WIDTH", 320);
-    this->PIXEL_SKIP = (int)(1/PROCESS_IMAGE_REDUCE);
-    
+    this->INPUT_WIDTH   = opts->GetInt("INPUT_WIDTH", 320);
+    this->INPUT_HEIGHT  = opts->GetInt("INPUT_HEIGHT", 240);
+    this->PROCESS_WIDTH = opts->GetInt("PROCESS_WIDTH", 160);
+    this->STREAM_WIDTH	= opts->GetInt("STREAM_WIDTH", 320);
     this->BOX_SIZE		= opts->GetReal("BOX_SIZE", 1.5);
     
     this->THREAD_SLEEP_TIME = opts->GetInt("THREAD_SLEEP_TIME", 5);
     
+    //Are these resolution dependent?
     this->DILATE_ELEMENT = opts->GetInt("DILATE_ELEMENT", 8);
-    this->ERODE_ELEMENT = opts->GetInt("ERODE_ELEMENT", 8);
+    this->ERODE_ELEMENT  = opts->GetInt("ERODE_ELEMENT", 8);
     
     build_lookup_reduce_colourspace(lookup_reduce_colourspace);
     build_lookup_threshold(lookup_threshold, MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL);
@@ -71,9 +71,22 @@ CameraStream::CameraStream(Options *opts)
         Log(LOG_WARNING, "cv::VideoCapture failed.");
         throw std::invalid_argument("Could not open camera stream.");
     }
-    m_capture.set(CV_CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH);
-    m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT);
+    m_capture.set(CV_CAP_PROP_FRAME_WIDTH, INPUT_WIDTH);
+    m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, INPUT_HEIGHT);
     m_capture.set(CV_CAP_PROP_FPS, 30);
+    
+    this->INPUT_WIDTH  = m_capture.get(CV_CAP_PROP_FRAME_WIDTH);
+    this->INPUT_HEIGHT = m_capture.get(CV_CAP_PROP_FRAME_HEIGHT);
+    
+    //If process resolution is larger than input resolution, don't resize
+    if (this->PROCESS_WIDTH > this->INPUT_WIDTH) {
+        this->PROCESS_WIDTH = this->INPUT_WIDTH;
+    }
+    
+    //Resolution dependent parameters
+    this->PROCESS_HEIGHT = (this->INPUT_HEIGHT * this->INPUT_WIDTH) / this->PROCESS_WIDTH;
+    this->PIXEL_THRESHOLD	= opts->GetInt("PIXEL_THRESHOLD", (30 * this->INPUT_WIDTH) / 320);
+    this->PIXEL_SKIP = this->INPUT_WIDTH / this->PROCESS_WIDTH;
     
     this->frame_counter = -1;
     this->m_fps = -1;
@@ -123,6 +136,13 @@ CameraStream::CameraMode CameraStream::GetMode() {
     return m_mode;
 }
 
+int CameraStream::GetInputWidth() {
+    return INPUT_WIDTH;
+}
+
+int CameraStream::GetInputHeight() {
+    return INPUT_HEIGHT;
+}
 
 void CameraStream::SetMode(CameraMode mode) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
@@ -233,8 +253,8 @@ void CameraStream::ProcessImages() {
         
         // Only write the image out for web streaming every 5th frame
         if ((frame_counter % 5) == 0) {
-            if (STREAM_IMAGE_WIDTH < CAMERA_WIDTH) {
-                cv::resize(image, image, cv::Size(STREAM_IMAGE_WIDTH, (CAMERA_HEIGHT * STREAM_IMAGE_WIDTH) / CAMERA_WIDTH));
+            if (STREAM_WIDTH < INPUT_WIDTH) {
+                cv::resize(image, image, cv::Size(STREAM_WIDTH, (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH));
             }
             static const std::vector<int> params = {CV_IMWRITE_JPEG_QUALITY, 75};
             cv::imwrite(STREAM_FILE, image, params);
@@ -362,7 +382,7 @@ bool CameraStream::camShift(cv::Mat& Isrc) {
 int CameraStream::connectComponents(cv::Mat& Isrc) {
     int nChannels = Isrc.channels();
     
-    cv::Mat BW(Isrc.rows*PROCESS_IMAGE_REDUCE, Isrc.cols*PROCESS_IMAGE_REDUCE, CV_8U, cv::Scalar(BLACK));
+    cv::Mat BW(PROCESS_WIDTH, PROCESS_HEIGHT, CV_8U, cv::Scalar(BLACK));
     int nRows = BW.rows;
     int nCols = BW.cols;
 
@@ -507,7 +527,7 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
 int CameraStream::ConnectedComponents(cv::Mat& src) {
     int nChannels = src.channels();
     
-    cv::Mat BW(src.rows*PROCESS_IMAGE_REDUCE, src.cols*PROCESS_IMAGE_REDUCE, CV_8U, cv::Scalar(BLACK));
+    cv::Mat BW(PROCESS_WIDTH, PROCESS_HEIGHT, CV_8U, cv::Scalar(BLACK));
     int nRows = BW.rows;
     int nCols = BW.cols;
     

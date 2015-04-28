@@ -22,9 +22,6 @@
 #define CHAR_SIZE 256
 
 #define CAMERA_OK 0
-
-#define CAMERA_WIDTH 320
-#define CAMERA_HEIGHT 240
  
 namespace picopter {
     /* Forward declaration of the options class */
@@ -53,6 +50,9 @@ namespace picopter {
             bool Start(void);
             void Stop(void);
             
+            int GetInputWidth();
+            int GetInputHeight();
+            
             CameraMode GetMode(void);
             void SetMode(CameraMode mode);
             
@@ -64,9 +64,8 @@ namespace picopter {
             void TakePhoto(std::string);
         private:
             int MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL, PIXEL_THRESHOLD;
-            int STREAM_IMAGE_WIDTH;
-            double PROCESS_IMAGE_REDUCE;
             int DILATE_ELEMENT, ERODE_ELEMENT;
+            int INPUT_WIDTH, INPUT_HEIGHT, PROCESS_WIDTH, PROCESS_HEIGHT, STREAM_WIDTH;
             int PIXEL_SKIP;
             int THREAD_SLEEP_TIME;
             double BOX_SIZE;

@@ -17,8 +17,10 @@ using std::this_thread::sleep_for;
 
 static void printFlightData(FlightData*);
 
-ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
-: m_pidx(0,0,0,0.03)
+ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMethod method)
+: m_camwidth(camwidth)
+, m_camheight(camheight)
+, m_pidx(0,0,0,0.03)
 , m_pidy(0,0,0,0.03)
 , m_track_method{method}
 , SEARCH_GIMBAL_LIMIT(60)
@@ -30,27 +32,28 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
     
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
-    TRACK_TOL = opts->GetInt("TRACK_TOL", CAMERA_WIDTH/8);
-    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.16 * 320.0/CAMERA_WIDTH);
+    TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/8);
+    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.16 * 320.0/m_camwidth);
     TRACK_TauI = opts->GetReal("TRACK_TauI", 3.5);
     TRACK_TauD = opts->GetReal("TRACK_TauD", 0.0000002);
     TRACK_SPEED_LIMIT = opts->GetInt("TRACK_SPEED_LIMIT", 50);
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
     //We bias the vertical limit to be higher due to the pitch of the camera.
-    TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", -CAMERA_HEIGHT/15);
+    TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", -m_camheight/15);
     
     m_pidx.SetTunings(TRACK_Kp, TRACK_TauI, TRACK_TauD);
-    m_pidx.SetInputLimits(-CAMERA_WIDTH/2, CAMERA_WIDTH/2);
+    m_pidx.SetInputLimits(-m_camwidth/2, m_camwidth/2);
     m_pidx.SetOutputLimits(-TRACK_SPEED_LIMIT, TRACK_SPEED_LIMIT);
     m_pidx.SetSetPoint(TRACK_SETPOINT_X);
     
-    m_pidy.SetTunings(TRACK_Kp*CAMERA_WIDTH/CAMERA_HEIGHT, TRACK_TauI, TRACK_TauD);
-    m_pidy.SetInputLimits(-CAMERA_HEIGHT/2, CAMERA_HEIGHT/2);
+    m_pidy.SetTunings(TRACK_Kp*m_camwidth/m_camheight, TRACK_TauI, TRACK_TauD);
+    m_pidy.SetInputLimits(-m_camheight/2, m_camheight/2);
     m_pidy.SetOutputLimits(-TRACK_SPEED_LIMIT, TRACK_SPEED_LIMIT);
     m_pidy.SetSetPoint(TRACK_SETPOINT_Y);
 }
 
-ObjectTracker::ObjectTracker(TrackMethod method) : ObjectTracker(NULL, method) {}
+ObjectTracker::ObjectTracker(int camwidth, int camheight, TrackMethod method)
+: ObjectTracker(NULL, camwidth, camheight, method) {}
 
 ObjectTracker::~ObjectTracker() {
     

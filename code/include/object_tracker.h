@@ -24,14 +24,15 @@ namespace picopter {
                 TRACK_ROTATE
             } TrackMethod;
         
-            ObjectTracker(TrackMethod method=TRACK_STRAFE);
-            ObjectTracker(Options *opts, TrackMethod method=TRACK_STRAFE);
+            ObjectTracker(int camwidth, int camheight, TrackMethod method=TRACK_STRAFE);
+            ObjectTracker(Options *opts, int camwidth, int camheight, TrackMethod method=TRACK_STRAFE);
             virtual ~ObjectTracker() override;
             
             TrackMethod GetTrackMethod();
             void SetTrackMethod(TrackMethod method);
             void Run(FlightController *fc, void *opts) override;
         private:
+            int m_camwidth, m_camheight;
             PID m_pidx, m_pidy;
             std::atomic<TrackMethod> m_track_method;
             
