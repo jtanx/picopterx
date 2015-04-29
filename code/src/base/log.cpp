@@ -106,6 +106,62 @@ void LogEx(int level, const char * funct, const char * file, int line, ...)
 }
 
 /**
+ * Print a message to stderr and log it via syslog. 
+ * The message must be less than BUFSIZ characters long, or it will be truncated.
+ * This is a simple version that does not print the line number/file from which
+ * the call was made.
+ * @param level Specify how severe the message is.
+                If level is higher (less urgent) than the program's verbosity
+                (see options.h) no message will be printed.
+ * @param fmt A format string
+ * @param ... Arguments to be printed according to the format string
+ */
+void LogSimple(int level, const char *fmt, ...)
+{
+    char buffer[BUFSIZ];
+    va_list va;
+
+    // Don't print the message unless we need to
+    //if (level > g_options.verbosity)
+    //	return;
+
+    if (fmt == NULL) // sanity check
+        Fatal("Format string is NULL");
+
+    va_start(va, fmt);
+    vsnprintf(buffer, BUFSIZ, fmt, va);
+    va_end(va);
+
+    // Make a human readable severity string
+    const char *severity;
+    switch (level)
+    {
+        case LOG_ERR:
+            severity = "ERROR";
+            break;
+        case LOG_WARNING:
+            severity = "WARNING";
+            break;
+        case LOG_NOTICE:
+            severity = "NOTICE";
+            break;
+        case LOG_INFO:
+            severity = "INFO";
+            break;
+        default:
+            severity = "DEBUG";
+            break;
+    }
+
+#ifdef USE_SYSLOG
+    syslog(level, "%s: %s", severity, buffer);
+#else
+    fprintf(stderr, "%s: %s\n", severity, buffer);
+    fflush(stderr);
+#endif
+}
+
+/**
  * Handle a Fatal error in the program by printing a message and exiting the program
  * CALLING THIS FUNCTION WILL CAUSE THE PROGAM TO EXIT
  * @param funct - Name of the calling function

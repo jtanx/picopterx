@@ -27,6 +27,7 @@ enum {LOG_ERR=0, LOG_WARNING=1, LOG_NOTICE=2, LOG_INFO=3, LOG_DEBUG=4};
 #endif
 
 extern void LogInit();
+extern void LogSimple(int level, const char * fmt, ...);
 extern void LogEx(int level, const char * funct, const char * file, int line, ...);
 extern void FatalEx(const char * funct, const char * file, int line, ...);  
 

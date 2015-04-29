@@ -102,9 +102,12 @@ int Options::GetInt(const char *key, int otherwise) {
     if (fi) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsInt()) {
-            return vpt->GetInt();
+        	int ret = vpt->GetInt();
+        	LogSimple(LOG_INFO, "%s: %d", key, ret); 
+            return ret;
         }
     }
+    LogSimple(LOG_INFO, "%s [default]: %d", key, otherwise);
     return otherwise;
 }
 
@@ -119,9 +122,12 @@ bool Options::GetBool(const char *key, bool otherwise) {
     if (fi) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsBool()) {
-            return vpt->GetBool();
+        	bool ret = vpt->GetBool();
+        	LogSimple(LOG_INFO, "%s: %s", key, ret ? "true" : "false"); 
+            return ret;
         }
     }
+    LogSimple(LOG_INFO, "%s [default]: %s", key, otherwise ? "true" : "false");
     return otherwise;
 }
 
@@ -139,9 +145,12 @@ const char* Options::GetString(const char *key, const char *otherwise) {
     if (fi) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsString()) {
-            return vpt->GetString();
+        	const char *ret = vpt->GetString();
+            LogSimple(LOG_INFO, "%s: %s", key, ret ? ret : "Null");
+            return ret;
         }
     }
+    LogSimple(LOG_INFO, "%s [default]: %s", key, otherwise ? otherwise : "Null");
     return otherwise;
 }
 
@@ -156,9 +165,12 @@ double Options::GetReal(const char *key, double otherwise) {
     if (fi) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsDouble()) {
-            return vpt->GetDouble();
+            double ret = vpt->GetDouble();
+        	LogSimple(LOG_INFO, "%s: %f", key, ret);
+            return ret;
         }
     }
+    LogSimple(LOG_INFO, "%s [default]: %f", key, otherwise);
     return otherwise;
 }
 

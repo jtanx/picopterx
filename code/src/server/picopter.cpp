@@ -33,11 +33,13 @@ std::unique_ptr<picopter::FlightController> g_fc(nullptr);
 class webInterfaceHandler : virtual public webInterfaceIf
 {
 private:
+	Options *m_opts;
     const std::unique_ptr<picopter::FlightController> &m_fc;
     std::deque<navigation::Coord2D> m_pts;
 public:
-    webInterfaceHandler(std::unique_ptr<picopter::FlightController> &fc)
-    : m_fc(fc)
+    webInterfaceHandler(Options *opts, std::unique_ptr<picopter::FlightController> &fc)
+    : m_opts(opts) 
+    , m_fc(fc)
     {
         // Your initialization goes here
     }
@@ -87,7 +89,7 @@ public:
             return false;
         } else if (m_fc->cam != NULL) {
             int width = m_fc->cam->GetInputWidth(), height = m_fc->cam->GetInputHeight();
-            ObjectTracker *trk = new ObjectTracker(width, height);
+            ObjectTracker *trk = new ObjectTracker(m_opts, width, height);
             if (method == 1) {
                 trk->SetTrackMethod(ObjectTracker::TRACK_ROTATE);
             }
@@ -223,7 +225,7 @@ int main(int argc, char **argv)
         Fatal("Failed to initialise %s which is required, exiting.", e.what());
     }
     
-    shared_ptr<webInterfaceHandler> handler(new webInterfaceHandler(g_fc));
+    shared_ptr<webInterfaceHandler> handler(new webInterfaceHandler(opts, g_fc));
     shared_ptr<TProcessor> processor(new webInterfaceProcessor(handler));
     shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
     shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
