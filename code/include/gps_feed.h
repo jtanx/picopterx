@@ -19,6 +19,8 @@ namespace picopter {
         double lat;
         /** The longitude, in radians. Uncertainty in metres. **/
         double lon;
+        /** The GPS altitude, in metres. Uncertainty in metres.**/
+        double alt;
         /** The speed, in m/s. Uncertainty in m/s. **/
         double speed;
         /** The heading (track angle), in radians. Uncertainty in radians. **/

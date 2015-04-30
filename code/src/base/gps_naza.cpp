@@ -84,10 +84,12 @@ void GPSNaza::GPSLoop() {
                         d.fix.lon = m_decoder->getLon();
                         d.fix.speed = m_decoder->getSpeed();
                         d.fix.heading = m_decoder->getCog();
+                        d.fix.alt = m_decoder->getGpsAlt();
                         m_data = d;
                         
-                        m_log.Write(": (%.6f, %.6f) [%.2f at %.2f]",
-                            d.fix.lat, d.fix.lon, d.fix.speed, d.fix.heading);
+                        m_log.Write(": (%.6f, %.6f) [%.2f at %.2f] (%.2f m)",
+                            d.fix.lat, d.fix.lon, d.fix.speed, d.fix.heading,
+                            d.fix.alt);
                         last_fix = steady_clock::now();
                     }
                 } break;

@@ -33,10 +33,10 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
     TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/7);
-    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.30 * 320.0/m_camwidth);
-    TRACK_TauI = opts->GetReal("TRACK_TauI", 5);
+    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.35 * 320.0/m_camwidth);
+    TRACK_TauI = opts->GetReal("TRACK_TauI", 4);
     TRACK_TauD = opts->GetReal("TRACK_TauD", 0.0000006);
-    TRACK_SPEED_LIMIT = opts->GetInt("TRACK_SPEED_LIMIT", 50);
+    TRACK_SPEED_LIMIT = opts->GetInt("TRACK_SPEED_LIMIT", 65);
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
     //We bias the vertical limit to be higher due to the pitch of the camera.
     TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", -m_camheight/15);
