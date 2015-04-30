@@ -53,7 +53,6 @@ FlightBoard::~FlightBoard() {
  */
 void FlightBoard::Stop() {
     FlightData fd_zero = {0};
-    fd_zero.gimbal = 20;
     m_currentData = fd_zero;
     Actuate();
 }
@@ -74,7 +73,7 @@ void FlightBoard::SetData(FlightData *d) {
     m_currentData.aileron = picopter::clamp(d->aileron, -100, 100);
     m_currentData.elevator = picopter::clamp(d->elevator, -100, 100);
     m_currentData.rudder = picopter::clamp(d->rudder, -100, 100);
-    m_currentData.gimbal = picopter::clamp(d->gimbal, 20, 90); //Temporary fix until we get the ArduPilot
+    m_currentData.gimbal = picopter::clamp(d->gimbal, 0, 90);
     
     Actuate();
 }
@@ -167,7 +166,7 @@ void FlightBoard::SetRudder(int speed) {
  * @param pos The gimbal angle, in degrees (0 to 90)
  */
 void FlightBoard::SetGimbal(int pos) {
-    m_currentData.gimbal = picopter::clamp(pos, 20, 90);
+    m_currentData.gimbal = picopter::clamp(pos, 0, 90);
     SetChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
     FlushData();
 }

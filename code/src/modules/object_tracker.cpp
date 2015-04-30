@@ -36,21 +36,20 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     TRACK_Kp = opts->GetReal("TRACK_Kp", 0.35 * 320.0/m_camwidth);
     TRACK_TauI = opts->GetReal("TRACK_TauI", 4);
     TRACK_TauD = opts->GetReal("TRACK_TauD", 0.0000006);
-    TRACK_SPEED_LIMIT = opts->GetInt("TRACK_SPEED_LIMIT", 65);
+    TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 65);
+    TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 45);
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
     //We bias the vertical limit to be higher due to the pitch of the camera.
     TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", -m_camheight/15);
     
-    Log(LOG_INFO, "Kp: %.2f, TauI: %.2f", TRACK_Kp, TRACK_TauI);
-    
     m_pidx.SetTunings(TRACK_Kp, TRACK_TauI, TRACK_TauD);
     m_pidx.SetInputLimits(-m_camwidth/2, m_camwidth/2);
-    m_pidx.SetOutputLimits(-TRACK_SPEED_LIMIT, TRACK_SPEED_LIMIT);
+    m_pidx.SetOutputLimits(-TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_X);
     m_pidx.SetSetPoint(TRACK_SETPOINT_X);
     
     m_pidy.SetTunings(TRACK_Kp*m_camwidth/m_camheight, TRACK_TauI, TRACK_TauD);
     m_pidy.SetInputLimits(-m_camheight/2, m_camheight/2);
-    m_pidy.SetOutputLimits(-TRACK_SPEED_LIMIT, TRACK_SPEED_LIMIT);
+    m_pidy.SetOutputLimits(-TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Y);
     m_pidy.SetSetPoint(TRACK_SETPOINT_Y);
 }
 
@@ -109,7 +108,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.SetInterval(update_rate);
             
             //Determine trajectory to track the object (PID control)
-            CalculateTrackingTrajectory(fc, &course, &detected_object, TRACK_SPEED_LIMIT);
+            CalculateTrackingTrajectory(fc, &course, &detected_object, true);
             fc->fb->SetData(&course);
             printFlightData(&course);
             last_fix = steady_clock::now();
@@ -124,7 +123,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.Reset();
             
             //Determine trajectory to track the object (PID control)
-            CalculateTrackingTrajectory(fc, &course, &detected_object, TRACK_SPEED_LIMIT);
+            CalculateTrackingTrajectory(fc, &course, &detected_object, false);
             fc->fb->SetData(&course);
             printFlightData(&course);
         } else {
@@ -150,7 +149,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     fc->fb->Stop();
 }
 
-void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point2D *object_location, int speed_limit) {
+void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point2D *object_location, bool has_fix) {
     //Zero the course commands
     memset(course, 0, sizeof(FlightData));
     if(object_location->magnitude() < TRACK_TOL) {
@@ -164,20 +163,21 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
         m_pidy.SetProcessValue(-object_location->y);
         
         double trackx = m_pidx.Compute(), tracky = m_pidy.Compute();
-        double speed = std::sqrt(trackx*trackx + tracky*tracky);
-        if (speed > speed_limit) {
-            trackx = trackx * speed_limit / speed;
-            tracky = tracky * speed_limit / speed;
+        
+        //We've temporarily lost the object, reduce speed slightly
+        if (!has_fix) {
+            trackx *= 0.75;
+            tracky *= 0.75;
         }
         
         course->elevator = tracky;
         if (method == TRACK_ROTATE) {
-            course->rudder =trackx;
+            course->rudder = trackx;
         } else {
             course->aileron = trackx;
         }
         
-        fc->cam->SetArrow({100*trackx/TRACK_SPEED_LIMIT, -100*tracky/TRACK_SPEED_LIMIT});
+        fc->cam->SetArrow({100*trackx/TRACK_SPEED_LIMIT_X, -100*tracky/TRACK_SPEED_LIMIT_Y});
     }
 }
 
