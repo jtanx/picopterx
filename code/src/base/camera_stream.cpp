@@ -36,6 +36,7 @@ typedef struct {
 CameraStream::CameraStream(Options *opts)
 : m_stop{false}
 , m_mode(MODE_NO_PROCESSING)
+, m_arrow_vec{0,0}
 , m_capture(-1)
 {
     Options clear;
@@ -55,7 +56,10 @@ CameraStream::CameraStream(Options *opts)
     this->INPUT_HEIGHT  = opts->GetInt("INPUT_HEIGHT", 240);
     this->PROCESS_WIDTH = opts->GetInt("PROCESS_WIDTH", 160);
     this->STREAM_WIDTH	= opts->GetInt("STREAM_WIDTH", 320);
-    this->BOX_SIZE		= opts->GetReal("BOX_SIZE", 1.5);
+    this->BOX_SIZE      = opts->GetReal("BOX_SIZE", 1.5);
+
+    this->LEARN_SIZE    = picopter::clamp(opts->GetInt("LEARN_SIZE", 50), 20, 100);
+    this->LEARN_HUE_WIDTH = opts->GetInt("LEARN_HUE_WIDTH", 20);
     
     this->THREAD_SLEEP_TIME = opts->GetInt("THREAD_SLEEP_TIME", 5);
     
@@ -148,6 +152,31 @@ void CameraStream::SetMode(CameraMode mode) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     m_mode = mode;
 }
+
+void CameraStream::SetLearningSize(bool decrease) {
+    std::lock_guard<std::mutex> lock(m_worker_mutex);
+    if (decrease) {
+        LEARN_SIZE = picopter::clamp(LEARN_SIZE-10, 20, 100);
+    } else {
+        LEARN_SIZE = picopter::clamp(LEARN_SIZE+10, 20, 100);
+    }
+}
+
+void CameraStream::DoLearning() {
+    std::lock_guard<std::mutex> lock(m_worker_mutex);
+    if (m_mode == CameraMode::MODE_LEARN_COLOUR) {
+        MIN_HUE = LEARN_MIN_HUE;
+        MAX_HUE = LEARN_MAX_HUE;
+        Log(LOG_INFO, "Learnt colour: %d < hue < %d", MIN_HUE, MAX_HUE);
+        build_lookup_reduce_colourspace(lookup_reduce_colourspace);
+        build_lookup_threshold(lookup_threshold, MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL);
+    }
+}
+
+int CameraStream::GetLearningHue() {
+    std::lock_guard<std::mutex> lock(m_worker_mutex);
+    return LEARN_AVG_HUE;
+}
     
 void CameraStream::GetDetectedObjects(std::vector<Point2D> *list) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
@@ -175,7 +204,7 @@ void CameraStream::TakePhoto(std::string filename) {
  */
 void CameraStream::SetArrow(Point2D vec) {
     std::lock_guard<std::mutex> lock(m_aux_mutex);
-    arrow_vec = vec;
+    m_arrow_vec = vec;
 }
 
 void CameraStream::ProcessImages() {
@@ -183,6 +212,7 @@ void CameraStream::ProcessImages() {
     int frame_duration;
     frame_counter = 0;
     
+
     while(!m_stop) {
         std::unique_lock<std::mutex> lock(m_worker_mutex);
         
@@ -201,6 +231,16 @@ void CameraStream::ProcessImages() {
             default:
                 drawCrosshair(image);
                 break;
+
+            case MODE_LEARN_COLOUR: {
+                int lwidth = (LEARN_SIZE*image.cols)/100, lheight = (LEARN_SIZE*image.rows)/100;
+                cv::Point left((image.cols-lwidth)/2, (image.rows-lheight)/2);
+                cv::Point right((image.cols+lwidth)/2, (image.rows+lheight)/2);
+
+                drawCrosshair(image);
+                drawBox(image, left, right, cv::Scalar(255, 255, 255));
+                LearnHue(image, left, right);
+            }   break;
             
             case MODE_COM:	//Center of mass detection
                 if(centerOfMass(image)) {
@@ -234,8 +274,8 @@ void CameraStream::ProcessImages() {
         // Draw an arrow on the image (for displaying where it wants to go for object tracking)
         {
             std::lock_guard<std::mutex> lock(m_aux_mutex);
-            if (arrow_vec.x != 0 || arrow_vec.y != 0) {
-                drawArrow(image, cv::Point(image.cols/2, image.rows/2), cv::Point((arrow_vec.x * image.cols) / 200 + image.cols/2, (arrow_vec.y * image.rows) / 200 + image.rows/2));
+            if (m_arrow_vec.x != 0 || m_arrow_vec.y != 0) {
+                drawArrow(image, cv::Point(image.cols/2, image.rows/2), cv::Point((m_arrow_vec.x * image.cols) / 200 + image.cols/2, (m_arrow_vec.y * image.rows) / 200 + image.rows/2));
             }
         }
         
@@ -519,6 +559,27 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
         }
     }
     return (int)redObjectList.size();
+}
+
+void CameraStream::LearnHue(cv::Mat& src, cv::Point &left, cv::Point &right) {
+    cv::Mat roi(src, cv::Rect(left.x, left.y, right.x, right.y));
+    cv::Scalar m = cv::mean(roi);
+    int h,s,v;
+
+    RGB2HSV(m.val[2], m.val[1], m.val[0], &h, &s, &v);
+    LEARN_MIN_HUE = h - LEARN_HUE_WIDTH;
+    LEARN_MAX_HUE = h + LEARN_HUE_WIDTH;
+    LEARN_AVG_HUE = h;
+
+    if (LEARN_MIN_HUE < 0) {
+        LEARN_MIN_HUE += 360;
+    }
+
+    if (LEARN_MAX_HUE > 360) {
+        LEARN_MAX_HUE -= 360;
+    }
+
+    //Log(LOG_INFO, "%d,%d,%d", h, s, v);
 }
 
 /**

@@ -74,6 +74,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     if (fc->cam == NULL) {
         Log(LOG_WARNING, "Not running object detection - no usable camera!");
         return;
+    } else if (!fc->gps->WaitForFix(30)) {
+        Log(LOG_WARNING, "Not running object detection - no GPS fix!");
+        return;
     }
     
     Log(LOG_INFO, "Object detection initiated; awaiting authorisation...");
@@ -91,11 +94,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     FlightData course;
     auto last_fix = steady_clock::now() - seconds(2);
     bool had_fix = false;
-    
+
     while (!fc->CheckForStop()) {
         double update_rate = 1.0 / fc->cam->GetFramerate();
         auto sleep_time = microseconds((int)(1000000*update_rate));
-        
+
         fc->cam->GetDetectedObjects(&locations);
         fc->fb->GetData(&course);
         
@@ -151,6 +154,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 }
 
 void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point2D *object_location, int speed_limit) {
+    GPSData data;
+
+    fc->gps->GetLatest(&data);
     //Zero the course commands
     memset(course, 0, sizeof(FlightData));
     if(object_location->magnitude() < TRACK_TOL) {
@@ -159,7 +165,23 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
         fc->cam->SetArrow({0,0});
     } else {
         TrackMethod method = GetTrackMethod();
-        
+         /*
+        //Angles from image normal
+        double pcal = 2;
+        double theta = atan(object_location->y * 40/(750.0 * pcal)); //y angle
+        double phi   = atan(object_location->x * 40/(750.0 * pcal)); //x angle
+
+        double tilt = fc->fb->GetGimbalTilt();
+
+        double objectAngle = tilt + theta;
+        double forwardPosition = tan(objectAngle) * data.fix.alt;
+
+        double desiredTilt = DEG2RAD(20);
+        */
+
+
+
+
         m_pidx.SetProcessValue(-object_location->x);
         m_pidy.SetProcessValue(-object_location->y);
         

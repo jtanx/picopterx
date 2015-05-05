@@ -27,7 +27,12 @@ service webInterface {
 	bool		beginWaypointsThread();
 	bool		beginLawnmowerThread();
 	bool		beginUserTrackingThread();
-	bool		beginObjectTrackingThread(i32 method);
+	bool		beginObjectTrackingThread(1: i32 method);
+
+	bool		setCameraMode(1: i32 mode);
+	bool		setCameraLearningSize(1: bool decrease);
+	bool		doCameraLearning();
+	i32			requestLearningHue();
 	
 	bool		allStop();
 	

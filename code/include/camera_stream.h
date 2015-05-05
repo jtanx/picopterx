@@ -40,7 +40,8 @@ namespace picopter {
                 MODE_NO_PROCESSING = 0,
                 MODE_COM = 1,
                 MODE_CAMSHIFT = 2,
-                MODE_CONNECTED_COMPONENTS = 3
+                MODE_CONNECTED_COMPONENTS = 3,
+                MODE_LEARN_COLOUR = 999
             } CameraMode;
             
             CameraStream();
@@ -55,6 +56,10 @@ namespace picopter {
             
             CameraMode GetMode(void);
             void SetMode(CameraMode mode);
+
+            void SetLearningSize(bool decrease);
+            int GetLearningHue();
+            void DoLearning();
             
             void GetDetectedObjects(std::vector<navigation::Point2D>*);
             
@@ -67,6 +72,7 @@ namespace picopter {
             int DILATE_ELEMENT, ERODE_ELEMENT;
             int INPUT_WIDTH, INPUT_HEIGHT, PROCESS_WIDTH, PROCESS_HEIGHT, STREAM_WIDTH;
             int PIXEL_SKIP;
+            int LEARN_SIZE, LEARN_HUE_WIDTH, LEARN_MIN_HUE, LEARN_AVG_HUE, LEARN_MAX_HUE;
             int THREAD_SLEEP_TIME;
             double BOX_SIZE;
             
@@ -78,7 +84,7 @@ namespace picopter {
             
             std::mutex m_aux_mutex;
             
-            navigation::Point2D arrow_vec;
+            navigation::Point2D m_arrow_vec;
             
             cv::VideoCapture m_capture;
             
@@ -99,6 +105,7 @@ namespace picopter {
             bool camShift(cv::Mat& Isrc);
             int connectComponents(cv::Mat& Isrc);
             int ConnectedComponents(cv::Mat& src);
+            void LearnHue(cv::Mat& src, cv::Point &left, cv::Point &right);
             
             std::vector<navigation::Point2D> redObjectList;
             std::vector<CamWindow> windowList;
