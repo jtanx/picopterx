@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 #include <deque>
+#include <map>
+#include <stdint.h>
 
 #include "opts.h"
 

@@ -58,8 +58,10 @@ namespace picopter {
             void SetMode(CameraMode mode);
 
             void SetLearningSize(bool decrease);
+            void ShowLearningThreshold(bool show);
             int GetLearningHue();
-            void DoLearning();
+            void DoAutoLearning(std::map<std::string, int32_t> *ret);
+            void DoManualLearning(const std::map<std::string, int32_t> & values, std::map<std::string, int32_t> *ret);
             
             void GetDetectedObjects(std::vector<navigation::Point2D>*);
             
@@ -72,7 +74,9 @@ namespace picopter {
             int DILATE_ELEMENT, ERODE_ELEMENT;
             int INPUT_WIDTH, INPUT_HEIGHT, PROCESS_WIDTH, PROCESS_HEIGHT, STREAM_WIDTH;
             int PIXEL_SKIP;
-            int LEARN_SIZE, LEARN_HUE_WIDTH, LEARN_MIN_HUE, LEARN_AVG_HUE, LEARN_MAX_HUE;
+            int LEARN_SIZE, LEARN_HUE_WIDTH, LEARN_MIN_HUE, LEARN_AVG_HUE, LEARN_MAX_HUE,
+                LEARN_MIN_SAT, LEARN_AVG_SAT, LEARN_MAX_SAT,
+                LEARN_MIN_VAL, LEARN_AVG_VAL, LEARN_MAX_VAL;
             int THREAD_SLEEP_TIME;
             double BOX_SIZE;
             
@@ -87,6 +91,8 @@ namespace picopter {
             navigation::Point2D m_arrow_vec;
             
             cv::VideoCapture m_capture;
+            
+            bool m_learning_show_threshold;
             
             int frame_counter;
             double m_fps;
@@ -105,6 +111,7 @@ namespace picopter {
             bool camShift(cv::Mat& Isrc);
             int connectComponents(cv::Mat& Isrc);
             int ConnectedComponents(cv::Mat& src);
+            void Threshold(cv::Mat& src, cv::Mat&out);
             void LearnHue(cv::Mat& src, cv::Point &left, cv::Point &right);
             
             std::vector<navigation::Point2D> redObjectList;

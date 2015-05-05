@@ -29,9 +29,12 @@ service webInterface {
 	bool		beginUserTrackingThread();
 	bool		beginObjectTrackingThread(1: i32 method);
 
-	bool		setCameraMode(1: i32 mode);
+	i32			setCameraMode(1: i32 mode);
+	i32			requestCameraMode();
+	bool		showLearningThreshold(1: bool show);
 	bool		setCameraLearningSize(1: bool decrease);
-	bool		doCameraLearning();
+	map<string,i32>	doCameraAutoLearning();
+	map<string,i32>	setCameraLearningValues(1: map<string,i32>	values);
 	i32			requestLearningHue();
 	
 	bool		allStop();

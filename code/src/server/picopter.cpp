@@ -104,12 +104,20 @@ public:
         return true;
     }
 
-    bool setCameraMode(int32_t mode) {
+    int32_t setCameraMode(int32_t mode) {
         if (m_fc->cam) {
             Log(LOG_INFO, "Mode: %d", mode);
             m_fc->cam->SetMode(static_cast<CameraStream::CameraMode>(mode));
+            return m_fc->cam->GetMode();
         }
-        return true;
+        return -1;
+    }
+
+    int32_t requestCameraMode() {
+        if (m_fc->cam) {
+            return m_fc->cam->GetMode();
+        }
+        return -1;
     }
 
     bool setCameraLearningSize(bool decrease) {
@@ -119,11 +127,24 @@ public:
         return true;
     }
 
-    bool doCameraLearning() {
+    bool showLearningThreshold(bool show) {
         if (m_fc->cam) {
-            m_fc->cam->DoLearning();
+            m_fc->cam->ShowLearningThreshold(show);
+            return true;
         }
-        return true;
+        return false;
+    }
+
+    void doCameraAutoLearning(std::map<std::string, int32_t> & _return) {
+        if (m_fc->cam) {
+            m_fc->cam->DoAutoLearning(&_return);
+        }
+    }
+
+    void setCameraLearningValues(std::map<std::string, int32_t> & _return, const std::map<std::string, int32_t> & values)  {
+        if (m_fc->cam) {
+            m_fc->cam->DoManualLearning(values, &_return);
+        }
     }
 
     int32_t requestLearningHue() {

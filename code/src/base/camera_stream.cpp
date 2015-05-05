@@ -38,6 +38,7 @@ CameraStream::CameraStream(Options *opts)
 , m_mode(MODE_NO_PROCESSING)
 , m_arrow_vec{0,0}
 , m_capture(-1)
+, m_learning_show_threshold(false)
 {
     Options clear;
     if (!opts) {
@@ -153,6 +154,11 @@ void CameraStream::SetMode(CameraMode mode) {
     m_mode = mode;
 }
 
+void CameraStream::ShowLearningThreshold(bool show) {
+    std::lock_guard<std::mutex> lock(m_worker_mutex);
+    m_learning_show_threshold = show;
+}
+
 void CameraStream::SetLearningSize(bool decrease) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     if (decrease) {
@@ -162,13 +168,55 @@ void CameraStream::SetLearningSize(bool decrease) {
     }
 }
 
-void CameraStream::DoLearning() {
+void CameraStream::DoAutoLearning(std::map<std::string, int32_t> *ret) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     if (m_mode == CameraMode::MODE_LEARN_COLOUR) {
         MIN_HUE = LEARN_MIN_HUE;
         MAX_HUE = LEARN_MAX_HUE;
+        //MIN_SAT = LEARN_MIN_SAT;
+        //MAX_SAT = LEARN_MAX_SAT;
+        //MIN_VAL = LEARN_MIN_VAL;
+        //MAX_VAL = LEARN_MAX_VAL;
+        if (ret) {
+            (*ret)["MIN_HUE"] = MIN_HUE;
+            (*ret)["MAX_HUE"] = MAX_HUE;
+            (*ret)["MIN_SAT"] = MIN_SAT;
+            (*ret)["MAX_SAT"] = MAX_SAT;
+            (*ret)["MIN_VAL"] = MIN_VAL;
+            (*ret)["MAX_VAL"] = MAX_VAL;
+        }
         Log(LOG_INFO, "Learnt colour: %d < hue < %d", MIN_HUE, MAX_HUE);
-        build_lookup_reduce_colourspace(lookup_reduce_colourspace);
+        build_lookup_threshold(lookup_threshold, MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL);
+    }
+}
+
+template <typename T1, typename T2, typename T3>
+T3 GetFromMap(T1 &m, T2 val, T3 otherwise) {
+    auto search = m.find(val);
+    if (search != m.end()) {
+        return search->second;
+    }
+    return otherwise;
+}
+
+void CameraStream::DoManualLearning(const std::map<std::string, int32_t> &values, std::map<std::string, int32_t> *ret) {
+    std::lock_guard<std::mutex> lock(m_worker_mutex);
+    if (m_mode == CameraMode::MODE_LEARN_COLOUR) {
+        MIN_HUE = GetFromMap(values, "MIN_HUE", MIN_HUE);
+        MAX_HUE = GetFromMap(values, "MAX_HUE", MAX_HUE);
+        MIN_SAT = GetFromMap(values, "MIN_SAT", MIN_SAT);
+        MAX_SAT = GetFromMap(values, "MAX_SAT", MAX_SAT);
+        MIN_VAL = GetFromMap(values, "MIN_VAL", MIN_VAL);
+        MAX_VAL = GetFromMap(values, "MAX_VAL", MAX_VAL);
+        
+        if (ret) {
+            (*ret)["MIN_HUE"] = MIN_HUE;
+            (*ret)["MAX_HUE"] = MAX_HUE;
+            (*ret)["MIN_SAT"] = MIN_SAT;
+            (*ret)["MAX_SAT"] = MAX_SAT;
+            (*ret)["MIN_VAL"] = MIN_VAL;
+            (*ret)["MAX_VAL"] = MAX_VAL;
+        }
         build_lookup_threshold(lookup_threshold, MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL);
     }
 }
@@ -236,10 +284,16 @@ void CameraStream::ProcessImages() {
                 int lwidth = (LEARN_SIZE*image.cols)/100, lheight = (LEARN_SIZE*image.rows)/100;
                 cv::Point left((image.cols-lwidth)/2, (image.rows-lheight)/2);
                 cv::Point right((image.cols+lwidth)/2, (image.rows+lheight)/2);
+                
+                LearnHue(image, left, right);
+                if (m_learning_show_threshold) {
+                    cv::Mat out;
+                    Threshold(image, out);
+                    image = out;
+                }
 
                 drawCrosshair(image);
                 drawBox(image, left, right, cv::Scalar(255, 255, 255));
-                LearnHue(image, left, right);
             }   break;
             
             case MODE_COM:	//Center of mass detection
@@ -427,7 +481,6 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
     int nRows = BW.rows;
     int nCols = BW.cols;
 
-
     int i, j, k;		//k = 3*i
     uchar* p_src;
     uchar* p_BW;
@@ -561,16 +614,39 @@ int CameraStream::connectComponents(cv::Mat& Isrc) {
     return (int)redObjectList.size();
 }
 
+void CameraStream::Threshold(cv::Mat& src, cv::Mat&out) {
+    int i, j, k;		//k = 3*i
+    uchar* p_src;
+    uchar* p_BW;
+    
+    int nChannels = src.channels();
+    out.create(src.rows, src.cols, CV_8U);
+    for(j=0; j < src.rows; j++) {
+        p_src = src.ptr<uchar>(j);
+        p_BW = out.ptr<uchar>(j);
+        for (i=0; i < src.cols; i++) {
+            k = i*nChannels;
+            if(lookup_threshold[lookup_reduce_colourspace[p_src[k+2]]][lookup_reduce_colourspace[p_src[k+1]]][lookup_reduce_colourspace[p_src[k]]]) {
+                p_BW[i] = WHITE;
+            } else {
+                p_BW[i] = BLACK;
+            }
+        }
+    }
+}
+
 void CameraStream::LearnHue(cv::Mat& src, cv::Point &left, cv::Point &right) {
     cv::Mat roi(src, cv::Rect(left.x, left.y, right.x, right.y));
     cv::Scalar m = cv::mean(roi);
-    int h,s,v;
 
-    RGB2HSV(m.val[2], m.val[1], m.val[0], &h, &s, &v);
-    LEARN_MIN_HUE = h - LEARN_HUE_WIDTH;
-    LEARN_MAX_HUE = h + LEARN_HUE_WIDTH;
-    LEARN_AVG_HUE = h;
-
+    RGB2HSV(m.val[2], m.val[1], m.val[0], &LEARN_AVG_HUE, &LEARN_AVG_SAT, &LEARN_AVG_VAL);
+    LEARN_MIN_HUE = LEARN_AVG_HUE - LEARN_HUE_WIDTH;
+    LEARN_MAX_HUE = LEARN_AVG_HUE + LEARN_HUE_WIDTH;
+    LEARN_MIN_SAT = std::max(LEARN_AVG_SAT - 20, 0);
+    LEARN_MAX_SAT = std::min(LEARN_AVG_SAT + 40, 255);
+    LEARN_MIN_VAL = std::max(LEARN_AVG_VAL - 20, 0);
+    LEARN_MAX_VAL = std::min(LEARN_AVG_VAL + 40, 255);
+    
     if (LEARN_MIN_HUE < 0) {
         LEARN_MIN_HUE += 360;
     }
