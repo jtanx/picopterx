@@ -1,0 +1,369 @@
+html, body {
+	font-family: 			"Helvetica Neue",Helvetica,Arial,sans-serif;
+	background-color: 		#000;
+	margin: 				0px;
+	padding: 				0px;
+    height:                 100%;
+	
+	font-weight:			bold;
+	text-transform:			uppercase;
+}
+
+/***************************** PRIMARIES */
+
+
+/***************************** INFORMATIONAL */
+
+.text {
+	font-size:				16px;
+	color:					#9999cd;
+}
+
+#status {
+	width:					100%;
+	padding-left:			20px;
+}
+
+#bearing {
+	width:				100%;
+	padding-left:			20px;
+}
+
+#response {
+	color:					#FF965B;
+	width:					100%;
+	padding-left:			20px;
+}
+
+#information {
+	color:					#FF965B;
+	width:					100%;
+	padding-left:			20px;
+	float:					clear;
+}
+
+#videoElement {
+	width:					100%;
+	height:					100%;
+	background-color:		#666;
+}
+
+.headline {
+	background-color:		#FB8500;
+	margin-bottom:			14px;
+	margin-left:			20px;
+	margin-right:			20px;
+}
+
+.boxtext {
+    padding-left:           20px;
+}
+
+.vstretch {
+    height:                 100%;
+}
+
+.h3 {
+	font-size:				16px;
+	font-weight:			bold;
+	color:					#FF965B;
+	text-transform:			uppercase;
+	
+	background-color:		#000;
+	
+	padding:				2px 6px;
+	margin-left:			20px;
+	vertical-align:			middle;
+}
+
+/***************************** LCARS STRUCTURE */
+
+#menu-button-holder {
+	width:					140px;
+	float:					left;
+	background-color:		#000;
+	margin:					0 auto;
+}
+
+#secondary-button-holder {
+	padding-left:			140px;
+	margin:					0;
+}
+
+#tertiary-holder {
+	clear:					both;
+	width:					100%;
+	background-color:		#000;
+}
+
+#tertiary-menu-a {
+	width:					140px;
+	height:					44px;
+	float:					left;
+	background-color:		#FF965B;
+	margin:					0 auto;
+	border-bottom-left-radius: 30px;
+}
+
+#tertiary-menu-b {
+	padding-left:			140px;
+	height:					44px;
+	margin:					0;
+	background-color:		#FF965B;
+	border-bottom-left-radius: 30px;
+}
+
+#tertiary-menu-c {
+	width:					40px;
+	height:					442px;
+	float:					left;
+	background-color:		#FF965B;
+	margin:					0 auto;
+	margin-top:				4px;
+	border-top-left-radius: 30px;
+}
+
+#tertiary-menu-d {
+	padding-left:			40px;
+	height:					44px;
+	margin:					0;
+	margin-top:				4px;
+	background-color:		#FF965B;
+	border-top-left-radius: 30px;
+}
+
+#menu-top-a {
+	background-color:		#C0484C;
+	width:					100%;
+	height:					44px;
+	margin:					none;
+	position:				relative;
+}
+
+#menu-top-b {
+	background-color:		#000;
+	width:					100%;
+	height:					22px;
+	position:				absolute;
+	bottom:					0px;
+	border:					none;
+	border-top-left-radius: 30px;
+}
+
+#menu-top-c {
+	background-color:		#FF965B;
+	width:					100%;
+	height:					44px;
+	margin:					none;
+	position:				relative;
+}
+
+#menu-top-d {
+	background-color:		#000;
+	width:					100%;
+	height:					22px;
+	position:				absolute;
+	top:					0px;
+	border:					none;
+	border-bottom-left-radius: 30px;
+}
+
+#menu-bottom-a {
+	background-color:		#FF965B;
+	width:					100%;
+	height:					44px;
+	margin:					none;
+	position:				relative;
+}
+
+#menu-bottom-b {
+	background-color:		#000;
+	width:					100%;
+	height:					22px;
+	position:				absolute;
+	bottom:					0px;
+	border:					none;
+	border-top-left-radius: 30px;
+}
+
+.orange-toggle {
+	background-color:		#FB8500 !important;
+    border-color:           #FB8500 !important;
+}
+
+/***************************** SIDE PANEL */
+
+.nav-a {
+	width:					100%;
+	background-color:		#C0484C;
+	height:					44px;
+	border-top-left-radius: 30px;
+}
+
+.nav-b {
+	width:					100%;
+	background-color:		#C0484C;
+	height:					44px;
+}
+
+.nav-c {
+	width:					100%;
+	background-color:		#FB8500;
+	height:					44px;
+}
+
+.nav-d {
+	width:					100%;
+	background-color:		#FF965B;
+	height:					44px;
+}
+
+.nav-e {
+	width:					100%;
+	background-color:		#FF965B;
+	height:					44px;
+	border-top-left-radius: 30px;
+}
+
+/***************************** BUTTONS */
+
+.cbtn {
+	font-size:				16px;
+	text-align:				right;
+	text-transform:			uppercase;
+	font-weight:			bold;
+	border:					none;
+	margin-bottom:			4px;
+}
+
+.sidebtn {
+	background-color:		#AC6A80;
+
+	padding:				16px 16px 6px 0px;
+	margin-bottom:			14px;
+	margin-left:			14px;
+	
+
+	border-top-right-radius: 30px;
+	border-bottom-right-radius: 30px;
+}
+
+.roundbtn {
+	background-color:		#B781B8;
+    text-align:             center;
+
+	width:					180px;
+	
+	padding:				10px 6px;
+	margin-bottom:			14px;
+	margin-left:			14px;
+	
+	border-radius: 30px;
+}
+
+.squarebtn {
+	background-color:		#AC6A80;
+    text-align:             center;
+    
+	width:					200px;
+	
+	padding:				10px 6px;
+	margin-bottom:			14px;
+	margin-left:			14px;
+}
+
+.halfroundbtn {
+	background-color:		#AC6A80;
+
+	width:					200px;
+	
+	padding:				16px 16px 6px 0px;
+	margin-bottom:			14px;
+	margin-left:			14px;
+	
+	border-top-right-radius: 30px;
+	border-bottom-right-radius: 30px;
+}
+
+.btn-pressed {
+	background-color:		#FB8500;
+}
+
+.btn-disabled {
+	background-color:		#654765;
+}
+
+/* Primary and secondary containers */
+#mainwindow {
+    height:				100%;
+    border:             22px solid #7F74EF;
+    border-left:        none;
+    border-radius:      0 30px 30px 0;
+    padding-right:      0;
+}
+
+#sidepanel {
+    padding-left:		4px;
+}
+
+/***************************** ORIENTATIONAL */
+
+@media screen and (orientation:portrait) {
+ 	/* Primary and secondary containers */
+    #mainwindow {
+        height:             80%;
+        border:             22px solid #7F74EF;
+        padding:            0;
+        border-radius:      0;
+    }
+	
+	#tertiary-holder {
+		display:			none;
+	}
+	
+    
+	#map-canvas{
+		height:				100%;
+	}
+	
+	#camera-main {
+		height:				100%;
+	}
+	
+	#camera-main-img {
+		width:				calc(100% - 10px);
+	}
+}
+
+@media screen and (orientation:landscape) {	
+	#map-canvas {
+		height:				100%;
+		width:				100%;
+	}
+	
+	#camera-main {
+		height:				100%;
+		width:				100%;
+	}
+	
+	#camera-secondary {
+		width:				100%;
+	}
+	
+	#camera-main-img {
+		padding-left:		50px;
+		height:				350px;
+	}
+	
+	#settings-camera {
+		display:			none;
+	}
+	
+	#main-vertical {
+		overflow:			hidden;
+		width:				1.5%;
+		height:				100%;
+		background-color:	#7F74EF;
+		border-top-right-radius: 30px;
+	}
+}
