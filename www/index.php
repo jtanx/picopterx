@@ -23,7 +23,7 @@
 			</div>
 			<div id="sidepanel" class="col-md-5">
 				<div class="row">
-					<div id="menu-button-holder" class="col-md-3 col-sm-2">
+					<div id="menu-button-holder" class="col-md-3 col-sm-2 col-xs-4">
 						<button type="button" class="cbtn nav-a" onclick="allStop()">All Stop</button>
 						<button type="button" class="cbtn nav-b" onclick="statusMode()">Status</button>
 						<button type="button" class="cbtn nav-c" onclick="manualMode()">Manual</button>
@@ -32,7 +32,7 @@
 						<button type="button" class="cbtn nav-c" onclick="calibrationMode()">Calibration</button>
 						<button type="button" class="cbtn nav-d" onclick="settingsMode()">Settings</button>
 					</div>
-					<div id="secondary-button-holder" class="col-md-9 col-sm-10">
+					<div id="secondary-button-holder" class="col-md-9 col-sm-10 col-xs-8">
 						<div id="menu-top-a">
 							<div id="menu-top-b"></div>
 						</div>

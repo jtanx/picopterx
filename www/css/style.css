@@ -94,6 +94,10 @@ html, body {
     display: block;
 }
 
+.noUi-horizontal {
+    margin: 8px 0;
+}
+
 /***************************** LCARS STRUCTURE */
 
 #menu-button-holder {
