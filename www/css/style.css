@@ -275,13 +275,20 @@ html, body {
 	background-color:		#B781B8;
     text-align:             center;
 
-	width:					180px;
+	min-width:					60px;
 	
 	padding:				10px 6px;
 	margin-bottom:			14px;
 	margin-left:			14px;
 	
 	border-radius: 30px;
+}
+
+.minibtn {
+    background-color:		#B781B8;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: inherit;
 }
 
 .squarebtn {

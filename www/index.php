@@ -89,8 +89,6 @@
 							<div class="headline">
 								<span class="h3">Camera Calibration</span>
 							</div>
-							<button id="cycle-mode" class="cbtn roundbtn disabled" onclick="setCameraMode()">Cycle mode</button>
-							<button id="cal-learn" class="cbtn roundbtn disabled" onclick="doCameraAutoLearning()">Auto learn</button>
 							
 							<div class="row boxtext">
 								<div class="col-md-5">
@@ -102,9 +100,11 @@
 									<div id="cal-val"></div>
 								</div>
 								<div class="col-md-7">
-									<button id="cal-inc" class="cbtn roundbtn disabled" onclick="setCameraLearningSize(false)">Inc size</button>
-									<button id="cal-dec" class="cbtn roundbtn disabled" onclick="setCameraLearningSize(true)">Dec size</button>
-									<button id="cal-man" class="cbtn roundbtn disabled" onclick="setCameraLearningValues()">Man. set</button>
+									<button id="cycle-mode" class="cbtn minibtn disabled" onclick="setCameraMode()">Cycle mode</button><br>
+									<button id="cal-learn" class="cbtn minibtn disabled" onclick="doCameraAutoLearning()">Auto learn</button>
+									<button id="cal-man" class="cbtn minibtn disabled" onclick="setCameraLearningValues()">Man. set</button>
+									<button id="cal-dec" class="cbtn minibtn disabled" onclick="setCameraLearningSize(true)">Dec size</button>
+									<button id="cal-inc" class="cbtn minibtn disabled" onclick="setCameraLearningSize(false)">Inc size</button>
 								</div>
 							</div>
 						</div>
@@ -143,8 +143,10 @@
 									<span class="h3">Camera Feed</span>
 								</div>
 								<div class="boxtext">
-									<div id="camera-mode" class="text col-md-8 col-sm-8">Connected components</div>
-									<button type="button" class="col-md-4 col-sm-4" onclick="toggleLearningThreshold()">Toggle threshold</button>
+									<div id="camera-mode" class="text col-md-7 col-sm-7">Connected components</div>
+									<div class="col-md-5 col-sm-5">
+									<button type="button" class="cbtn minibtn" onclick="toggleLearningThreshold()">Toggle threshold</button>
+									</div>
 								</div>
 								
 								<div id="camera-secondary"></div>
