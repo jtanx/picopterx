@@ -100,9 +100,8 @@
 									<div id="cal-val"></div>
 								</div>
 								<div class="col-md-7">
-									<button id="cycle-mode" class="cbtn minibtn disabled" onclick="setCameraMode()">Cycle mode</button><br>
+									<button id="cycle-mode" class="cbtn minibtn disabled" onclick="setCameraMode()">Cycle mode</button>
 									<button id="cal-learn" class="cbtn minibtn disabled" onclick="doCameraAutoLearning()">Auto learn</button>
-									<button id="cal-man" class="cbtn minibtn disabled" onclick="setCameraLearningValues()">Man. set</button>
 									<button id="cal-dec" class="cbtn minibtn disabled" onclick="setCameraLearningSize(true)">Dec size</button>
 									<button id="cal-inc" class="cbtn minibtn disabled" onclick="setCameraLearningSize(false)">Inc size</button>
 								</div>

@@ -29,8 +29,14 @@ function sliderify(selector, startmin, startmax, rangemin, rangemax) {
       'min': rangemin,
       'max': rangemax
     }
-  }).Link('upper').to('-inline-<div class="slidertooltip"></div>', sliderToolTip)
-  .Link('lower').to('-inline-<div class="slidertooltip"></div>', sliderToolTip);
+  })
+  .Link('upper').to('-inline-<div class="slidertooltip"></div>', sliderToolTip)
+  .Link('lower').to('-inline-<div class="slidertooltip"></div>', sliderToolTip)
+  .on({
+    set : function () {
+      setCameraLearningValues();
+    }
+  });
 }
 
 
