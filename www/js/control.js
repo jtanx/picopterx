@@ -4,13 +4,42 @@ var canEditBounds = false;
 var cameraEnabled = false;
 var pathEnabled = true;
 
+/**
+ *  Make a div into a slider
+ *  @param [in] selector The jQuery selector
+ *  @param [in] startmin Minimum starting value
+ *  @param [in] startmax Maximum starting value
+ *  @param [in] rangemin The range minimum
+ *  @param [in] rangemax The range maximum
+ *  @return The object
+ */
+function sliderify(selector, startmin, startmax, rangemin, rangemax) {
+  function sliderToolTip(value) {
+    //value|0 - conversion to int
+    $(this).html(
+      '<span>' + (value|0) + '</span>'
+    );
+  }
+  
+  return $(selector).noUiSlider({
+    start: [startmin, startmax],
+    connect: true,
+    step: 1,
+    range: {
+      'min': rangemin,
+      'max': rangemax
+    }
+  }).Link('upper').to('-inline-<div class="slidertooltip"></div>', sliderToolTip)
+  .Link('lower').to('-inline-<div class="slidertooltip"></div>', sliderToolTip);
+}
+
 
 (function cameraInit() {
 	url = "http://" + document.domain + ":5000/?action=stream";
 	$("#camera-secondary").html("<img id='camera-main-img' src='" + url + "'/>");
-  $("#cal-hue").slider({});
-  $("#cal-sat").slider({});
-  $("#cal-val").slider({});
+  sliderify("#cal-hue", -20, 20, -360, 360);
+  sliderify("#cal-sat", 97, 255, 0, 255);
+  sliderify("#cal-val", 127, 255, 0, 255);
 })();
   
 function cameraMode() {

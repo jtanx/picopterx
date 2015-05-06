@@ -4,14 +4,14 @@
 		<!-- Header. CSS includes. -->
 		<meta charset="utf-8">
 		<title>Copter LCARS</title>
-		<link rel="icon" href="/css/markers/trek.png" />
+		<link rel="icon" href="css/markers/trek.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css">
-		<link rel="stylesheet" type="text/css" href="/css/bootstrap-theme.min.css">
-		<link rel="stylesheet" type="text/css" href="/css/bootstrap-slider.css">
-		<link rel="stylesheet" type="text/css" href="/css/style.css">
-		<link rel="stylesheet" href="/css/leaflet.css" />
-		<link rel="stylesheet" href="/css/leaflet-numbered-markers.css" />
+		<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+		<link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css">
+		<link rel="stylesheet" type="text/css" href="css/jquery.nouislider.min.css">
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<link rel="stylesheet" href="css/leaflet.css" />
+		<link rel="stylesheet" href="css/leaflet-numbered-markers.css" />
 		
 	</head>
 	<body>
@@ -94,11 +94,11 @@
 						<div class="row boxtext">
 							<div class="col-md-5">
 								<div class="text">Hue</div>
-								<input id="cal-hue" type="text" value="" data-slider-min="-360" data-slider-max="360" data-slider-step="5" data-slider-value="[-20,20]"/>
+								<div id="cal-hue"></div>
 								<div class="text">Saturation</div>
-								<input id="cal-sat" type="text" value="" data-slider-min="0" data-slider-max="255" data-slider-step="5" data-slider-value="[95,255]"/>
+								<div id="cal-sat"></div>
 								<div class="text">Value</div>
-								<input id="cal-val" type="text" value="" data-slider-min="0" data-slider-max="255" data-slider-step="5" data-slider-value="[127,255]"/>
+								<div id="cal-val"></div>
 							</div>
 							<div class="col-md-4">
 								<button id="cal-inc" class="cbtn roundbtn disabled" onclick="setCameraLearningSize(false)">Inc size</button>
@@ -142,7 +142,7 @@
 		<script src="/js/external/jquery-2.1.1.min.js"></script>
 		<script src="/js/external/jquery-blink.js"></script>
 		<script src="/js/external/bootstrap.min.js"></script>
-		<script src="/js/external/bootstrap-slider.min.js"></script>
+		<script src="/js/external/jquery.nouislider.all.min.js"></script>
 		<script src="/js/external/leaflet.js"></script>
 		<script src="/js/leaflet-numbered-markers.js"></script>
 		<script src="/js/map.js"></script>

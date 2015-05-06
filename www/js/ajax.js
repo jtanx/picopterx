@@ -120,17 +120,21 @@ function doCameraAutoLearning() {
     if (ret["MIN_HUE"] > ret["MAX_HUE"]) {
       ret["MIN_HUE"] = ret["MIN_HUE"] - 360;
     }
-    $("#cal-hue").slider('setValue', [ret["MIN_HUE"], ret["MAX_HUE"]]);
-    $("#cal-sat").slider('setValue', [ret["MIN_SAT"], ret["MAX_SAT"]]);
-    $("#cal-val").slider('setValue', [ret["MIN_VAL"], ret["MAX_VAL"]]);
+    $("#cal-hue").val([ret["MIN_HUE"], ret["MAX_HUE"]]);
+    $("#cal-sat").val([ret["MIN_SAT"], ret["MAX_SAT"]]);
+    $("#cal-val").val([ret["MIN_VAL"], ret["MAX_VAL"]]);
   });
 }
 
 function setCameraLearningValues() {
+  function toInts(val) {
+    return parseInt(val, 10);
+  };
+  
   var ret={};
-  var h = $("#cal-hue").slider('getValue');
-  var s = $("#cal-sat").slider('getValue');
-  var v = $("#cal-val").slider('getValue');
+  var h = $("#cal-hue").val().map(toInts);
+  var s = $("#cal-sat").val().map(toInts);
+  var v = $("#cal-val").val().map(toInts);
   
   ret["MIN_HUE"] = h[0]; ret["MAX_HUE"] = h[1];
   ret["MIN_SAT"] = s[0]; ret["MAX_SAT"] = s[1];
@@ -145,9 +149,9 @@ function setCameraLearningValues() {
     if (ret["MIN_HUE"] > ret["MAX_HUE"]) {
       ret["MIN_HUE"] = ret["MIN_HUE"] - 360;
     }
-    $("#cal-hue").slider('setValue', [ret["MIN_HUE"], ret["MAX_HUE"]]);
-    $("#cal-sat").slider('setValue', [ret["MIN_SAT"], ret["MAX_SAT"]]);
-    $("#cal-val").slider('setValue', [ret["MIN_VAL"], ret["MAX_VAL"]]);
+    $("#cal-hue").val([ret["MIN_HUE"], ret["MAX_HUE"]]);
+    $("#cal-sat").val([ret["MIN_SAT"], ret["MAX_SAT"]]);
+    $("#cal-val").val([ret["MIN_VAL"], ret["MAX_VAL"]]);
   });
 }
 
