@@ -120,7 +120,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             estimatePositionFromImageCoords(fc, &detected_object, &object_body_coords);
 
             if (!m_observation_mode) {
-                CalculateTrackingTrajectory(fc, &course, &object_position, true);
+                CalculateTrackingTrajectory(fc, &course, &object_body_coords, true);
                 fc->fb->SetData(&course);
             }
             printFlightData(&course);
@@ -137,7 +137,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             
             //Determine trajectory to track the object (PID control)
             if (!m_observation_mode) {
-                CalculateTrackingTrajectory(fc, &course, &object_position, false);
+                CalculateTrackingTrajectory(fc, &course, &object_body_coords, false);
                 fc->fb->SetData(&course);
             }
             printFlightData(&course);
@@ -166,13 +166,20 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 }
 
 //create the body coordinate vector for the object in the image
-//void estimateTargetLocationFromImageCoordinatesButNotLidarOrStereoscopy(  //long function names :P
+//in the absence of a distance sensor, we're assuming the object is on the ground, at the height we launched from.
 void ObjectTracker::estimatePositionFromImageCoords(FlightController *fc, navigation::Point2D *object_location, navigation::Point3D *object_position){
     GPSData data;       //required for altitude estimation
     fc->gps->GetLatest(&data);
-    data.fix.alt = 0.8; //hard-coded for lab test
+
+    #warning "using 8m as ground level"
+    double launchAlt = 8.0; //the James Oval is about 8m above sea level
+    double heightAboveTarget = data.fix.alt - launchAlt;
+
+    #warning "using 0.8m as height above target"
+    heightAboveTarget = 0.8;    //hard-coded for lab test
+
     double L = 2587.5 * m_camwidth/2592.0;
-    double gimbalVertical = 50;
+    double gimbalVertical = 50; //gimbal value that sets the camera to vertical
 
     FlightData current;
     TrackMethod method = GetTrackMethod();
@@ -185,18 +192,14 @@ void ObjectTracker::estimatePositionFromImageCoords(FlightController *fc, naviga
     //Tilt - in radians from vertical
     double gimbalTilt = DEG2RAD(gimbalVertical - current.gimbal);
     double objectAngleY = gimbalTilt + theta;
-    //Altitude needs to be relative to launch, not from sea level
-    double forwardPosition = tan(objectAngleY) * data.fix.alt;
-    double lateralPosition = data.fix.alt * (object_location->x / L) / cos(objectAngleY);
+    double forwardPosition = tan(objectAngleY) * heightAboveTarget;
+    double lateralPosition = heightAboveTarget * (object_location->x / L) / cos(objectAngleY);
 
     object_position->y = lateralPosition;
     object_position->x = forwardPosition;
-    object_position->z = data.fix.alt;
-
+    object_position->z = heightAboveTarget;
 
     Log(LOG_INFO, "X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm", RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
-
-
 }
 
 void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point3D *object_position, bool has_fix) {
@@ -223,7 +226,6 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
     m_pidy.SetProcessValue(-object_position->y * (distanceError/objectDistance) );
     */  
 
-    
     double trackx = m_pidx.Compute(), tracky = m_pidy.Compute();
     
     //We've temporarily lost the object, reduce speed slightly
