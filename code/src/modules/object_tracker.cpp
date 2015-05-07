@@ -30,6 +30,10 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
         opts = &clear;
     }
     
+    //Observation mode: Don't actually send the commands to the props
+    opts->SetFamily("GLOBAL");
+    m_observation_mode = opts->GetBool("OBSERVATION_MODE", false);
+
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
     TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/7);
@@ -73,10 +77,10 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     if (fc->cam == NULL) {
         Log(LOG_WARNING, "Not running object detection - no usable camera!");
         return;
-    } else if (!fc->gps->WaitForFix(30)) {
+    } /*else if (!fc->gps->WaitForFix(30)) {
         Log(LOG_WARNING, "Not running object detection - no GPS fix!");
         return;
-    }
+    }*/
     
     Log(LOG_INFO, "Object detection initiated; awaiting authorisation...");
     SetCurrentState(fc, STATE_AWAITING_AUTH);
@@ -112,7 +116,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             
             //Determine trajectory to track the object (PID control)
             CalculateTrackingTrajectory(fc, &course, &detected_object, true);
-            fc->fb->SetData(&course);
+            if (!m_observation_mode) {
+                fc->fb->SetData(&course);
+            }
             printFlightData(&course);
             last_fix = steady_clock::now();
             had_fix = true;
@@ -127,7 +133,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             
             //Determine trajectory to track the object (PID control)
             CalculateTrackingTrajectory(fc, &course, &detected_object, false);
-            fc->fb->SetData(&course);
+            if (!m_observation_mode) {
+                fc->fb->SetData(&course);
+            }
             printFlightData(&course);
         } else {
             //Object lost; we should do a search pattern (TBA)
@@ -137,7 +145,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.Reset();
             m_pidy.Reset();
             
-            fc->fb->Stop();
+            //fc->fb->Stop();
             if (had_fix) {
                 fc->cam->SetArrow({0,0});
                 Log(LOG_WARNING, "No object detected. Idling.");
@@ -156,51 +164,52 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
     GPSData data;
 
     fc->gps->GetLatest(&data);
+    data.fix.alt = 0.8;
     //Zero the course commands
     memset(course, 0, sizeof(FlightData));
-    if(object_location->magnitude() < TRACK_TOL) {
-        m_pidx.Reset();
-        m_pidy.Reset();
-        fc->cam->SetArrow({0,0});
-    } else {
-        TrackMethod method = GetTrackMethod();
-         /*
-        //Angles from image normal
-        double pcal = 2;
-        double theta = atan(object_location->y * 40/(750.0 * pcal)); //y angle
-        double phi   = atan(object_location->x * 40/(750.0 * pcal)); //x angle
 
-        double tilt = fc->fb->GetGimbalTilt();
-
-        double objectAngle = tilt + theta;
-        double forwardPosition = tan(objectAngle) * data.fix.alt;
-
-        double desiredTilt = DEG2RAD(20);
-        */
-
-
+    FlightData current;
+    TrackMethod method = GetTrackMethod();
+    
+    //Angles from image normal
+    double L = 2587.5 * m_camwidth/2592.0;
+    double theta = atan(object_location->y/L); //y angle
+    double phi   = atan(object_location->x/L); //x angle
+    
+    fc->fb->GetData(&current);
+    //Tilt - in radians from vertical
+    double gimbalTilt = DEG2RAD(50 - current.gimbal);
+    double objectAngleY = gimbalTilt + theta;
+    //Altitude needs to be relative to launch, not from sea level
+    double forwardPosition = tan(objectAngleY) * data.fix.alt;
+    //double lateralPosition = data.fix.alt * (object_location->x / L) / cos(objectAngleY);
+    double desiredSlope = 1;
+    double desiredForwardPosition = data.fix.alt/desiredSlope;
+    Log(LOG_INFO, "X: %.2f, Y: %.2f, FP: %.2f, DFP: %.2f", RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, desiredForwardPosition);
 
 
-        m_pidx.SetProcessValue(-object_location->x);
-        m_pidy.SetProcessValue(-object_location->y);
-        
-        double trackx = m_pidx.Compute(), tracky = m_pidy.Compute();
-        
-        //We've temporarily lost the object, reduce speed slightly
-        if (!has_fix) {
-            trackx *= 0.75;
-            tracky *= 0.75;
-        }
-        
-        course->elevator = tracky;
-        if (method == TRACK_ROTATE) {
-            course->rudder = trackx;
-        } else {
-            course->aileron = trackx;
-        }
-        
-        fc->cam->SetArrow({100*trackx/TRACK_SPEED_LIMIT_X, -100*tracky/TRACK_SPEED_LIMIT_Y});
+    m_pidx.SetProcessValue(-phi);
+    m_pidy.SetProcessValue(-forwardPosition + desiredForwardPosition);
+    
+    double trackx = m_pidx.Compute(), tracky = m_pidy.Compute();
+    
+    //We've temporarily lost the object, reduce speed slightly
+    if (!has_fix) {
+        trackx *= 0.75;
+        tracky *= 0.75;
     }
+    
+    course->elevator = tracky;
+    if (method == TRACK_ROTATE) {
+        course->rudder = trackx;
+    } else {
+        course->aileron = trackx;
+    }
+    
+    //Fix the angle for now...
+    course->gimbal = 30;
+    fc->cam->SetArrow({100*trackx/TRACK_SPEED_LIMIT_X, -100*tracky/TRACK_SPEED_LIMIT_Y});
+
 }
 
 void printFlightData(FlightData* data) {

@@ -1,0 +1,9 @@
+{
+	"CAMERA_STREAM" : {
+		"PROCESS_WIDTH" : 320
+	}
+	"OBJECT_TRACKER" :  {
+		"TRACK_Kp" : 0.20,
+		"TRACK_TauI" : 4
+	}
+}

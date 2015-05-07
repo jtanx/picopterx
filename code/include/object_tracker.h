@@ -32,6 +32,7 @@ namespace picopter {
             void SetTrackMethod(TrackMethod method);
             void Run(FlightController *fc, void *opts) override;
         private:
+            bool m_observation_mode;
             int m_camwidth, m_camheight;
             PID m_pidx, m_pidy;
             std::atomic<TrackMethod> m_track_method;
