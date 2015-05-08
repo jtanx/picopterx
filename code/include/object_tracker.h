@@ -42,8 +42,8 @@ namespace picopter {
             double TRACK_SETPOINT_X, TRACK_SETPOINT_Y;
             int TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y;
             
-            void CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point2D *object_location, bool has_fix);
-            
+            void estimatePositionFromImageCoords(FlightController *fc, navigation::Point2D *object_location, navigation::Point3D *object_position);
+            void CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point3D *object_position, bool has_fix);
             /** Copy constructor (disabled) **/
             ObjectTracker(const ObjectTracker &other);
             /** Assignment operator (disabled) **/

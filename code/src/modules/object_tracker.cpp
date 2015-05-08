@@ -93,6 +93,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     SetCurrentState(fc, STATE_TRACKING_SEARCHING);
     
     Point2D detected_object = {0,0};
+    Point3D *object_body_coords = {0,0,0};  //location of the target in body coordinates
+
     std::vector<Point2D> locations;
     FlightData course;
     auto last_fix = steady_clock::now() - seconds(2);
@@ -115,8 +117,10 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.SetInterval(update_rate);
             
             //Determine trajectory to track the object (PID control)
-            CalculateTrackingTrajectory(fc, &course, &detected_object, true);
+            estimatePositionFromImageCoords(fc, &detected_object, &object_body_coords);
+
             if (!m_observation_mode) {
+                CalculateTrackingTrajectory(fc, &course, &object_body_coords, true);
                 fc->fb->SetData(&course);
             }
             printFlightData(&course);
@@ -132,8 +136,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.Reset();
             
             //Determine trajectory to track the object (PID control)
-            CalculateTrackingTrajectory(fc, &course, &detected_object, false);
             if (!m_observation_mode) {
+                CalculateTrackingTrajectory(fc, &course, &object_body_coords, false);
                 fc->fb->SetData(&course);
             }
             printFlightData(&course);
@@ -144,7 +148,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             //Reset the accumulated error in the PIDs
             m_pidx.Reset();
             m_pidy.Reset();
-            
+            //m_pid_yaw.Reset();
+
             //fc->fb->Stop();
             if (had_fix) {
                 fc->cam->SetArrow({0,0});
@@ -160,45 +165,77 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     fc->fb->Stop();
 }
 
-void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point2D *object_location, bool has_fix) {
-    GPSData data;
-
+//create the body coordinate vector for the object in the image
+//in the absence of a distance sensor, we're assuming the object is on the ground, at the height we launched from.
+void ObjectTracker::estimatePositionFromImageCoords(FlightController *fc, navigation::Point2D *object_location, navigation::Point3D *object_position){
+    GPSData data;       //required for altitude estimation
     fc->gps->GetLatest(&data);
-    data.fix.alt = 0.8;
+
+    #warning "using 8m as ground level"
+    double launchAlt = 8.0; //the James Oval is about 8m above sea level
+    double heightAboveTarget = data.fix.alt - launchAlt;
+
+    #warning "using 0.8m as height above target"
+    heightAboveTarget = 0.8;    //hard-coded for lab test
+
+    double L = 2587.5 * m_camwidth/2592.0;
+    double gimbalVertical = 50; //gimbal value that sets the camera to vertical
+
+    FlightData current;
+    TrackMethod method = GetTrackMethod();
+    
+    //Angles from image normal
+    double theta = atan(object_location->y/L); //y angle
+    double phi   = atan(object_location->x/L); //x angle
+    
+    fc->fb->GetData(&current);
+    //Tilt - in radians from vertical
+    double gimbalTilt = DEG2RAD(gimbalVertical - current.gimbal);
+    double objectAngleY = gimbalTilt + theta;
+    double forwardPosition = tan(objectAngleY) * heightAboveTarget;
+    double lateralPosition = heightAboveTarget * (object_location->x / L) / cos(objectAngleY);
+
+    object_position->y = lateralPosition;
+    object_position->x = forwardPosition;
+    object_position->z = heightAboveTarget;
+
+    Log(LOG_INFO, "X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm", RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
+}
+
+void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point3D *object_position, bool has_fix) {
     //Zero the course commands
     memset(course, 0, sizeof(FlightData));
 
     FlightData current;
     TrackMethod method = GetTrackMethod();
     
-    //Angles from image normal
-    double L = 2587.5 * m_camwidth/2592.0;
-    double theta = atan(object_location->y/L); //y angle
-    double phi   = atan(object_location->x/L); //x angle
-    
-    fc->fb->GetData(&current);
-    //Tilt - in radians from vertical
-    double gimbalTilt = DEG2RAD(50 - current.gimbal);
-    double objectAngleY = gimbalTilt + theta;
-    //Altitude needs to be relative to launch, not from sea level
-    double forwardPosition = tan(objectAngleY) * data.fix.alt;
-    //double lateralPosition = data.fix.alt * (object_location->x / L) / cos(objectAngleY);
     double desiredSlope = 1;
     double desiredForwardPosition = data.fix.alt/desiredSlope;
-    Log(LOG_INFO, "X: %.2f, Y: %.2f, FP: %.2f, DFP: %.2f", RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, desiredForwardPosition);
-
-
-    m_pidx.SetProcessValue(-phi);
-    m_pidy.SetProcessValue(-forwardPosition + desiredForwardPosition);
     
+    //need to add a way of passing target bearings over here so we don't re-compute, can I use a Point2D?
+    phi = atan(object_position->x/object_position->y);   //check this, I think the form changed.
+
+    m_pidx.SetProcessValue(-phi);   //rename this to m_pid_yaw or something, we can seriously use an X controller in chase now.
+    m_pidy.SetProcessValue(-object_position->y + desiredForwardPosition);
+
+    /*    //Now we can take full advantage of this omnidirectional platform.
+    objectDistance = sqrt(object_position->x*object_position->x + object_position->y*object_position->y);
+    distanceError = objectDistance - desiredForwardPosition;
+    m_pid_yaw.SetProcessValue(-phi);
+    m_pidx.SetProcessValue(-object_position->x * (distanceError/objectDistance) );  //the place we want to put the copter, relative to the copter.
+    m_pidy.SetProcessValue(-object_position->y * (distanceError/objectDistance) );
+    */  
+
     double trackx = m_pidx.Compute(), tracky = m_pidy.Compute();
     
     //We've temporarily lost the object, reduce speed slightly
+    //We should probably skip all of the above computations so we don't corrupt the PIDs if we don't have a fix.
     if (!has_fix) {
         trackx *= 0.75;
         tracky *= 0.75;
     }
     
+    //this looks silly now.
     course->elevator = tracky;
     if (method == TRACK_ROTATE) {
         course->rudder = trackx;
