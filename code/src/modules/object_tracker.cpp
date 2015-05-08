@@ -7,7 +7,7 @@
 #include "object_tracker.h"
 
 using namespace picopter;
-using picopter::navigation::Point2D;
+using namespace picopter::navigation;
 using std::chrono::steady_clock;
 using std::chrono::milliseconds;
 using std::chrono::microseconds;
@@ -37,7 +37,8 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
     TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/7);
-    TRACK_Kp = opts->GetReal("TRACK_Kp", 0.2 * 320.0/m_camwidth);
+    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 10 * 320.0/m_camwidth);
+    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 10 * 320.0/m_camwidth);
     TRACK_TauI = opts->GetReal("TRACK_TauI", 3.8);
     TRACK_TauD = opts->GetReal("TRACK_TauD", 0.0000006);
     TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 65);
@@ -46,12 +47,12 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     //We bias the vertical limit to be higher due to the pitch of the camera.
     TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", -m_camheight/15);
     
-    m_pidx.SetTunings(TRACK_Kp, TRACK_TauI, TRACK_TauD);
+    m_pidx.SetTunings(TRACK_Kpx, TRACK_TauI, TRACK_TauD);
     m_pidx.SetInputLimits(-m_camwidth/2, m_camwidth/2);
     m_pidx.SetOutputLimits(-TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_X);
     m_pidx.SetSetPoint(TRACK_SETPOINT_X);
     
-    m_pidy.SetTunings(TRACK_Kp*m_camwidth/m_camheight, TRACK_TauI, TRACK_TauD);
+    m_pidy.SetTunings(TRACK_Kpy, TRACK_TauI, TRACK_TauD);
     m_pidy.SetInputLimits(-m_camheight/2, m_camheight/2);
     m_pidy.SetOutputLimits(-TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Y);
     m_pidy.SetSetPoint(TRACK_SETPOINT_Y);
@@ -93,10 +94,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     SetCurrentState(fc, STATE_TRACKING_SEARCHING);
     
     Point2D detected_object = {0,0};
-    Point3D *object_body_coords = {0,0,0};  //location of the target in body coordinates
+    Point3D object_body_coords = {0,0,0};  //location of the target in body coordinates
 
     std::vector<Point2D> locations;
     FlightData course;
+    GPSData gps_position;
     auto last_fix = steady_clock::now() - seconds(2);
     bool had_fix = false;
 
@@ -106,6 +108,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
         fc->cam->GetDetectedObjects(&locations);
         fc->fb->GetData(&course);
+        fc->gps->GetLatest(&gps_position);
         
         //Do we have an object?
         if (locations.size() > 0) {                                             
@@ -117,7 +120,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.SetInterval(update_rate);
             
             //Determine trajectory to track the object (PID control)
-            estimatePositionFromImageCoords(fc, &detected_object, &object_body_coords);
+            EstimatePositionFromImageCoords(&gps_position, &course, &detected_object, &object_body_coords);
 
             if (!m_observation_mode) {
                 CalculateTrackingTrajectory(fc, &course, &object_body_coords, true);
@@ -167,53 +170,45 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
 //create the body coordinate vector for the object in the image
 //in the absence of a distance sensor, we're assuming the object is on the ground, at the height we launched from.
-void ObjectTracker::estimatePositionFromImageCoords(FlightController *fc, navigation::Point2D *object_location, navigation::Point3D *object_position){
-    GPSData data;       //required for altitude estimation
-    fc->gps->GetLatest(&data);
-
+void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, Point2D *object_location, Point3D *object_position){
     #warning "using 8m as ground level"
     double launchAlt = 8.0; //the James Oval is about 8m above sea level
-    double heightAboveTarget = data.fix.alt - launchAlt;
+    double heightAboveTarget = std::max(pos->fix.alt - launchAlt, 0.0);
 
     #warning "using 0.8m as height above target"
     heightAboveTarget = 0.8;    //hard-coded for lab test
 
+    //Calibration factor
     double L = 2587.5 * m_camwidth/2592.0;
-    double gimbalVertical = 50; //gimbal value that sets the camera to vertical
+    double gimbalVertical = 37; //gimbal angle that sets the camera to point straight down
 
-    FlightData current;
-    TrackMethod method = GetTrackMethod();
-    
     //Angles from image normal
     double theta = atan(object_location->y/L); //y angle
     double phi   = atan(object_location->x/L); //x angle
     
-    fc->fb->GetData(&current);
     //Tilt - in radians from vertical
-    double gimbalTilt = DEG2RAD(gimbalVertical - current.gimbal);
+    double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
     double objectAngleY = gimbalTilt + theta;
     double forwardPosition = tan(objectAngleY) * heightAboveTarget;
     double lateralPosition = heightAboveTarget * (object_location->x / L) / cos(objectAngleY);
 
-    object_position->y = lateralPosition;
-    object_position->x = forwardPosition;
+    object_position->y = forwardPosition;
+    object_position->x = lateralPosition;
     object_position->z = heightAboveTarget;
 
-    Log(LOG_INFO, "X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm", RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
+    Log(LOG_INFO, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
+        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
 }
 
-void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point3D *object_position, bool has_fix) {
+void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, Point3D *object_position, bool has_fix) {
     //Zero the course commands
     memset(course, 0, sizeof(FlightData));
-
-    FlightData current;
-    TrackMethod method = GetTrackMethod();
     
     double desiredSlope = 1;
-    double desiredForwardPosition = data.fix.alt/desiredSlope;
+    double desiredForwardPosition = object_position->z/desiredSlope;
     
     //need to add a way of passing target bearings over here so we don't re-compute, can I use a Point2D?
-    phi = atan(object_position->x/object_position->y);   //check this, I think the form changed.
+    double phi = atan(object_position->x/object_position->y);   //check this, I think the form changed.
 
     m_pidx.SetProcessValue(-phi);   //rename this to m_pid_yaw or something, we can seriously use an X controller in chase now.
     m_pidy.SetProcessValue(-object_position->y + desiredForwardPosition);
@@ -224,7 +219,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
     m_pid_yaw.SetProcessValue(-phi);
     m_pidx.SetProcessValue(-object_position->x * (distanceError/objectDistance) );  //the place we want to put the copter, relative to the copter.
     m_pidy.SetProcessValue(-object_position->y * (distanceError/objectDistance) );
-    */  
+    */
 
     double trackx = m_pidx.Compute(), tracky = m_pidy.Compute();
     
@@ -237,14 +232,10 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
     
     //this looks silly now.
     course->elevator = tracky;
-    if (method == TRACK_ROTATE) {
-        course->rudder = trackx;
-    } else {
-        course->aileron = trackx;
-    }
+    course->rudder = trackx;
     
     //Fix the angle for now...
-    course->gimbal = 30;
+    course->gimbal = 37;
     fc->cam->SetArrow({100*trackx/TRACK_SPEED_LIMIT_X, -100*tracky/TRACK_SPEED_LIMIT_Y});
 
 }

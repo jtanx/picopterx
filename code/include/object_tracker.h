@@ -38,11 +38,11 @@ namespace picopter {
             std::atomic<TrackMethod> m_track_method;
             
             int TRACK_TOL, SEARCH_GIMBAL_LIMIT;
-            double TRACK_Kp, TRACK_TauI, TRACK_TauD;
+            double TRACK_Kpx, TRACK_Kpy, TRACK_TauI, TRACK_TauD;
             double TRACK_SETPOINT_X, TRACK_SETPOINT_Y;
             int TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y;
             
-            void estimatePositionFromImageCoords(FlightController *fc, navigation::Point2D *object_location, navigation::Point3D *object_position);
+            void EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, navigation::Point2D *object_location, navigation::Point3D *object_position);
             void CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point3D *object_position, bool has_fix);
             /** Copy constructor (disabled) **/
             ObjectTracker(const ObjectTracker &other);
