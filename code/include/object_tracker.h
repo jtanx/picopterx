@@ -38,7 +38,7 @@ namespace picopter {
             std::atomic<TrackMethod> m_track_method;
             
             int TRACK_TOL, SEARCH_GIMBAL_LIMIT;
-            double TRACK_Kpx, TRACK_Kpy, TRACK_TauI, TRACK_TauD;
+            double TRACK_Kpx, TRACK_Kpy, TRACK_TauIx, TRACK_TauIy, TRACK_TauDx, TRACK_TauDy;
             double TRACK_SETPOINT_X, TRACK_SETPOINT_Y;
             int TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y;
             

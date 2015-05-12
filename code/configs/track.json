@@ -1,9 +1,13 @@
 {
 	"CAMERA_STREAM" : {
 		"PROCESS_WIDTH" : 320
-	}
+	},
 	"OBJECT_TRACKER" :  {
-		"TRACK_Kp" : 0.20,
-		"TRACK_TauI" : 4
+		"TRACK_Kpx" : 50.0,
+		"TRACK_Kpy" : 50.0,
+		"TRACK_TauIx" : 5.0,
+		"TRACK_TauIy" : 5.5,
+		"TRACK_TauDx" : 0.004,
+		"TRACK_TauDy" : 0.004
 	}
 }
