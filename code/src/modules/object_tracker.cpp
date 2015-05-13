@@ -37,19 +37,35 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
     TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/7);
+
+    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 50);
     TRACK_Kpx = opts->GetReal("TRACK_Kpx", 50);
     TRACK_Kpy = opts->GetReal("TRACK_Kpy", 30);
-    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 5);//3.8);
-    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.004);//0.008);
+    TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
+    TRACK_TauIw = opts->GetReal("TRACK_TauIw", 5);
+    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 4);
     TRACK_TauIy = opts->GetReal("TRACK_TauIy", 4);
+    TRACK_TauIz = opts->GetReal("TRACK_TauIz", 5);
+    TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.004);
+    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.004);//0.008);//0.008);
     TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.004);
+    TRACK_TauDz = opts->GetReal("TRACK_TauDz", 0.004);//0.008);
+    TRACK_SPEED_LIMIT_W = opts->GetInt("TRACK_SPEED_LIMIT_W", 40);
     TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 40);
     TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 50);
+    TRACK_SPEED_LIMIT_Z = opts->GetInt("TRACK_SPEED_LIMIT_Z", 50);
+    TRACK_SETPOINT_W = opts->GetReal("TRACK_SETPOINT_W", 0);
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
     TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", 0);
+    TRACK_SETPOINT_Z = opts->GetReal("TRACK_SETPOINT_Z", 0);
 
+    m_pidw.SetTunings(TRACK_Kpw, TRACK_TauIw, TRACK_TauDw);
+    m_pidw.SetInputLimits(-M_PI/2, M_PI/2);
+    m_pidw.SetOutputLimits(-TRACK_SPEED_LIMIT_W, TRACK_SPEED_LIMIT_W);
+    m_pidw.SetSetPoint(TRACK_SETPOINT_W);
+    
     m_pidx.SetTunings(TRACK_Kpx, TRACK_TauIx, TRACK_TauDx);
-    m_pidx.SetInputLimits(-M_PI/2, M_PI/2);
+    m_pidx.SetInputLimits(-8, 8);
     m_pidx.SetOutputLimits(-TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_X);
     m_pidx.SetSetPoint(TRACK_SETPOINT_X);
     
@@ -57,6 +73,11 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     m_pidy.SetInputLimits(-8,8);
     m_pidy.SetOutputLimits(-TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Y);
     m_pidy.SetSetPoint(TRACK_SETPOINT_Y);
+    //throttle not used
+    m_pidz.SetTunings(-TRACK_Kpz, TRACK_TauIz, TRACK_TauDz);
+    m_pidz.SetInputLimits(-8,8);
+    m_pidz.SetOutputLimits(-TRACK_SPEED_LIMIT_Z, TRACK_SPEED_LIMIT_Z);
+    m_pidz.SetSetPoint(TRACK_SETPOINT_Z);
 }
 
 ObjectTracker::ObjectTracker(int camwidth, int camheight, TrackMethod method)
@@ -199,7 +220,8 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
     double objectAngleY = gimbalTilt + theta;
     double forwardPosition = tan(objectAngleY) * heightAboveTarget;
-    double lateralPosition = (object_location->x / L) / cos(objectAngleY) * heightAboveTarget;
+
+    double lateralPosition = ((object_location->x / L) / cos(objectAngleY)) * heightAboveTarget;
 
     object_position->y = forwardPosition;
     object_position->x = lateralPosition;
@@ -220,33 +242,40 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
         //Zero the course commands
         memset(course, 0, sizeof(FlightData));
         
-        //double desiredSlope = 1;
-        //double desiredForwardPosition = object_position->z/desiredSlope;
-        double desiredForwardPosition = 1; //1m away
-        m_pidy.SetSetPoint(desiredForwardPosition);
+        double desiredSlope = 1.5;    //Maintain about the same camera angle 
+        double desiredForwardPosition = object_position->z/desiredSlope;
+        //double desiredForwardPosition = 1; //1m away
+        //m_pidy.SetSetPoint(desiredForwardPosition);
+        m_pidx.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
+        m_pidy.SetSetPoint(0);  //maybe swap x,y out for PID on distance and object bearing?
 
-        //need to add a way of passing target bearings over here so we don't re-compute, can I use a Point2D?
+        //We can't quite use the original image bearing here, computing against actual position is more appropriate.
         //This needs to be angle from the center, hence 90deg - angle
         double phi = M_PI/2 - atan2(object_position->y,object_position->x);
 
+        /*
         m_pidx.SetProcessValue(-phi);   //rename this to m_pid_yaw or something, we can seriously use an X controller in chase now.
         m_pidy.SetProcessValue(object_position->y);
-        Log(LOG_INFO, "PIDX: %.2f, PIDY: %.2f", -phi, -object_position->y);
-
-        /*    //Now we can take full advantage of this omnidirectional platform.
+        */
+            //Now we can take full advantage of this omnidirectional platform.
         objectDistance = sqrt(object_position->x*object_position->x + object_position->y*object_position->y);
         distanceError = objectDistance - desiredForwardPosition;
         m_pid_yaw.SetProcessValue(-phi);
         m_pidx.SetProcessValue(-object_position->x * (distanceError/objectDistance) );  //the place we want to put the copter, relative to the copter.
         m_pidy.SetProcessValue(-object_position->y * (distanceError/objectDistance) );
-        */
+        //m_pidz.SetProcessValue(  //throttle controller not used
 
+        Log(LOG_INFO, "PIDX: %.2f, PIDY: %.2f", -phi, -object_position->y);
+
+        trackw = m_pidw.Compute();
         trackx = m_pidx.Compute();
         tracky = m_pidy.Compute();
+        //trackz = m_pidz.Compute();
     }
     
+    course->rudder = trackw;
+    course->aileron = trackx;
     course->elevator = tracky;
-    course->rudder = trackx;
     //Fix the angle for now...
     //course->gimbal = 50;
     fc->cam->SetArrow({100*trackx/TRACK_SPEED_LIMIT_X, -100*tracky/TRACK_SPEED_LIMIT_Y});

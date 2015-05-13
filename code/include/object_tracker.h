@@ -34,13 +34,15 @@ namespace picopter {
         private:
             bool m_observation_mode;
             int m_camwidth, m_camheight;
-            PID m_pidx, m_pidy;
+            PID m_pidw, m_pidx, m_pidy, m_pidz;
             std::atomic<TrackMethod> m_track_method;
             
             int TRACK_TOL, SEARCH_GIMBAL_LIMIT;
-            double TRACK_Kpx, TRACK_Kpy, TRACK_TauIx, TRACK_TauIy, TRACK_TauDx, TRACK_TauDy;
-            double TRACK_SETPOINT_X, TRACK_SETPOINT_Y;
-            int TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y;
+            double TRACK_Kpw, TRACK_Kpx, TRACK_Kpy, TRACK_Kpz;
+            double TRACK_TauIw, TRACK_TauIx, TRACK_TauIy, TRACK_TauIz;
+            double TRACK_TauDw, TRACK_TauDx, TRACK_TauDy, TRACK_TauDz; 
+            double TRACK_SETPOINT_W, TRACK_SETPOINT_X, TRACK_SETPOINT_Y, TRACK_SETPOINT_Z;
+            int TRACK_SPEED_LIMIT_W, TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Z;
             
             void EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, navigation::Point2D *object_location, navigation::Point3D *object_position);
             void CalculateTrackingTrajectory(FlightController *fc, FlightData *course, navigation::Point3D *object_position, bool has_fix);
