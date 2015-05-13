@@ -168,6 +168,10 @@ double Options::GetReal(const char *key, double otherwise) {
             double ret = vpt->GetDouble();
         	LogSimple(LOG_INFO, "%s: %f", key, ret);
             return ret;
+        } else if (vpt && vpt->IsInt()) {
+            int ret = vpt->GetInt();
+            LogSimple(LOG_INFO, "%s: %d", key, ret);
+            return ret;
         }
     }
     LogSimple(LOG_INFO, "%s [default]: %f", key, otherwise);
