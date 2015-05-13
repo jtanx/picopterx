@@ -16,13 +16,14 @@
 	</head>
 	<body>
 		<!-- Body -->
-		<div class="row vstretch">
+		<div id="main-row" class="row vstretch">
 			<div id="mainwindow" class="col-md-7">
-				<div id="map-canvas"></div>
+				<div id="map-canvas" class="vstretch"></div>
 				<!--<div id="camera-main" style="display:none;"></div>-->
 			</div>
 			<div id="sidepanel" class="col-md-5">
-				<div class="row">
+				<div id="sidepanel-top" class="row">
+					<!-- Sidepanel - buttons on the left -->
 					<div id="menu-button-holder" class="col-md-3 col-sm-2 col-xs-4">
 						<button type="button" class="cbtn nav-a" onclick="allStop()">All Stop</button>
 						<button type="button" class="cbtn nav-b" onclick="statusMode()">Status</button>
@@ -32,6 +33,7 @@
 						<button type="button" class="cbtn nav-c" onclick="calibrationMode()">Calibration</button>
 						<button type="button" class="cbtn nav-d" onclick="settingsMode()">Settings</button>
 					</div>
+					<!-- Sidepanel - information box on the right -->
 					<div id="secondary-button-holder" class="col-md-9 col-sm-10 col-xs-8">
 						<div id="menu-top-a">
 							<div id="menu-top-b"></div>
@@ -114,60 +116,47 @@
 					</div>
 				</div><!-- row -->
 				
-				<div id="tertiary-holder">
-					<div class="row">
-						<div class="col-md-3 col-sm-2 hidden-xs" style="padding-right: 0;">
-							<div id="tertiary-menu-a">
-							</div>
-						</div>
-						<div class="col-md-9 col-sm-10 hidden-xs" style="padding-left: 0;">
-							<div id="tertiary-menu-b">
-								<div id="menu-top-c">
-									<div id="menu-top-d"></div>
-								</div>
-							</div>
+				<div id="sidepanel-top-closeout" class="row">
+					<div class="col-md-3 col-sm-2 hidden-xs" style="padding-right: 0;">
+						<div id="tertiary-menu-a">
 						</div>
 					</div>
-					
-					<div class="row">
-						<div class="col-md-1 col-sm-1 hidden-xs" style="padding-right: 0;">
-							<div id="tertiary-menu-c">
-							</div>
-						</div>
-						<div class="col-md-11 col-sm-11" style="padding-left: 0;">
-							<div id="tertiary-menu-d">
-								<div id="menu-bottom-a">
-									<div id="menu-bottom-b"></div>
-								</div>
-								<div class="headline">
-									<span class="h3">Camera Feed</span>
-								</div>
-								<div class="boxtext">
-									<div id="camera-mode" class="text col-md-7 col-sm-7">Connected components</div>
-									<div class="col-md-5 col-sm-5">
-									<button type="button" class="cbtn minibtn" onclick="toggleLearningThreshold()">Toggle threshold</button>
-									</div>
-								</div>
-								
-								<div id="camera-secondary"></div>
+					<div class="col-md-9 col-sm-10 hidden-xs" style="padding-left: 0;">
+						<div id="tertiary-menu-b">
+							<div id="menu-top-c">
+								<div id="menu-top-d"></div>
 							</div>
 						</div>
 					</div>
 				</div>
 				
+				<div id="tertiary-holder" class="row">
+						<div class="headline">
+							<span class="h3">Camera Feed</span>
+						</div>
+						<div class="boxtext">
+							<div id="camera-mode" class="text col-md-7 col-sm-7">Connected components</div>
+							<div class="col-md-5 col-sm-5">
+							<button type="button" class="cbtn minibtn" onclick="toggleLearningThreshold()">Toggle threshold</button>
+							</div>
+						</div>
+						
+						<div id="camera-secondary"></div>
+				</div>
+				
 			</div>
 		</div>
 		
-		<script src="/js/external/jquery-2.1.1.min.js"></script>
-		<script src="/js/external/jquery-blink.js"></script>
-		<script src="/js/external/bootstrap.min.js"></script>
-		<script src="/js/external/jquery.nouislider.all.min.js"></script>
-		<script src="/js/external/leaflet.js"></script>
-		<script src="/js/leaflet-numbered-markers.js"></script>
-		<script src="/js/map.js"></script>
-		<script src="/js/ajax.js"></script>
-		<script src="/js/control.js"></script>
-		<!--<script src="/js/camera.js"></script>-->	
+		<script src="js/external/jquery-2.1.1.min.js"></script>
+		<script src="js/external/jquery-blink.js"></script>
+		<script src="js/external/bootstrap.min.js"></script>
+		<script src="js/external/jquery.nouislider.all.min.js"></script>
+		<script src="js/external/leaflet.js"></script>
+		<script src="js/leaflet-numbered-markers.js"></script>
+		<script src="js/map.js"></script>
+		<script src="js/ajax.js"></script>
+		<script src="js/control.js"></script>
+		<!--<script src="js/camera.js"></script>-->	
 	</body>
 </html>
 
@@ -176,7 +165,7 @@
 
 <!-- Footer. Javascript includes. 
 		<script src="/jwplayer/jwplayer.js"></script>
-		<script src="/js/piCameraStream.js"></script>
+		<script src="js/piCameraStream.js"></script>
 		
 		<div id="sidepanel_bottom">
 				<object type="application/x-shockwave-flash" data="jwplayer/jwplayer.flash.swf" width="100%" height="100%" bgcolor="#000000" id="video-jwplayer" name="video-jwplayer" tabindex="0">
