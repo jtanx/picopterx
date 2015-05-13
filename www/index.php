@@ -131,17 +131,17 @@
 				</div>
 				
 				<div id="tertiary-holder" class="row">
-						<div class="headline">
+						<div class="row headline">
 							<span class="h3">Camera Feed</span>
 						</div>
-						<div class="boxtext">
+						<div class="row boxtext">
 							<div id="camera-mode" class="text col-md-7 col-sm-7">Connected components</div>
 							<div class="col-md-5 col-sm-5">
 							<button type="button" class="cbtn minibtn" onclick="toggleLearningThreshold()">Toggle threshold</button>
 							</div>
 						</div>
 						
-						<div id="camera-secondary"></div>
+						<div class="row boxtext" id="camera-secondary"></div>
 				</div>
 				
 			</div>
