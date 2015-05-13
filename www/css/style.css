@@ -111,6 +111,12 @@ html, body {
 }
 
 #tertiary-holder {
+    border-top: 20px solid #FF965B;
+    border-left: 20px solid #FF965B;
+    border-bottom: 20px solid #FF965B;
+    border-radius: 38px 0 0 38px;
+    padding: 1.5em 1em;
+    margin: 0.3em auto;
     /*
 	clear:					both;
 	width:					100%;
@@ -351,11 +357,6 @@ html, body {
 		display:			none;
 	}
 	
-    
-	#map-canvas{
-		height:				100%;
-	}
-	
 	#camera-main {
 		height:				100%;
 	}
@@ -366,10 +367,6 @@ html, body {
 }
 
 @media screen and (orientation:landscape) {	
-	#map-canvas {
-		height:				100%;
-		width:				100%;
-	}
 	
 	#camera-main {
 		height:				100%;
@@ -381,7 +378,6 @@ html, body {
 	}
 	
 	#camera-main-img {
-		padding-left:		50px;
 		height:				350px;
 	}
 	

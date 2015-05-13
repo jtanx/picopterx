@@ -1,6 +1,12 @@
 /**
  *  Functions that interact with the server via AJAX.
  */
+ 
+(function onPageLoad() {
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(updateUserPosition);
+  }
+})();
 
 /**
  *  Pack the coordinates into something that thrift can understand.
@@ -199,8 +205,6 @@ function toggleLearningThreshold() {
 			$("#status").html("ERROR: No connection to flight control program.");
 		}
 	});
-	
-	if (navigator.geolocation) navigator.geolocation.getCurrentPosition(updateUserPosition);
 	
 	setTimeout(worker, 2000);
 })();
