@@ -20,10 +20,11 @@ static void printFlightData(FlightData*);
 ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMethod method)
 : m_camwidth(camwidth)
 , m_camheight(camheight)
+, m_pidw(0,0,0,0.03)
 , m_pidx(0,0,0,0.03)
 , m_pidy(0,0,0,0.03)
 , m_track_method{method}
-, SEARCH_GIMBAL_LIMIT(60)
+, SEARCH_GIMBAL_LIMIT(60)   
 {
     Options clear;
     if (!opts) {
@@ -36,28 +37,28 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
 
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
-    TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/7);
+    int TRACK_TOL = opts->GetInt("TRACK_TOL", m_camwidth/7);
 
-    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 50);
-    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 50);
-    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 30);
-    TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
-    TRACK_TauIw = opts->GetReal("TRACK_TauIw", 5);
-    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 4);
-    TRACK_TauIy = opts->GetReal("TRACK_TauIy", 4);
-    TRACK_TauIz = opts->GetReal("TRACK_TauIz", 5);
-    TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.004);
-    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.004);//0.008);//0.008);
-    TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.004);
-    TRACK_TauDz = opts->GetReal("TRACK_TauDz", 0.004);//0.008);
-    TRACK_SPEED_LIMIT_W = opts->GetInt("TRACK_SPEED_LIMIT_W", 40);
-    TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 40);
-    TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 50);
-    TRACK_SPEED_LIMIT_Z = opts->GetInt("TRACK_SPEED_LIMIT_Z", 50);
-    TRACK_SETPOINT_W = opts->GetReal("TRACK_SETPOINT_W", 0);
-    TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
-    TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", 0);
-    TRACK_SETPOINT_Z = opts->GetReal("TRACK_SETPOINT_Z", 0);
+    double TRACK_Kpw = opts->GetReal("TRACK_Kpw", 50);
+    double TRACK_Kpx = opts->GetReal("TRACK_Kpx", 50);
+    double TRACK_Kpy = opts->GetReal("TRACK_Kpy", 30);
+    //double TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
+    double TRACK_TauIw = opts->GetReal("TRACK_TauIw", 5);
+    double TRACK_TauIx = opts->GetReal("TRACK_TauIx", 4);
+    double TRACK_TauIy = opts->GetReal("TRACK_TauIy", 4);
+    //double TRACK_TauIz = opts->GetReal("TRACK_TauIz", 5);
+    double TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.004);
+    double TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.004);//0.008);//0.008);
+    double TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.004);
+    //double TRACK_TauDz = opts->GetReal("TRACK_TauDz", 0.004);//0.008);
+    int TRACK_SPEED_LIMIT_W = opts->GetInt("TRACK_SPEED_LIMIT_W", 40);
+    int TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 40);
+    int TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 50);
+    //int TRACK_SPEED_LIMIT_Z = opts->GetInt("TRACK_SPEED_LIMIT_Z", 50);
+    double TRACK_SETPOINT_W = opts->GetReal("TRACK_SETPOINT_W", 0);
+    double TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
+    double TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", 0);
+    //double TRACK_SETPOINT_Z = opts->GetReal("TRACK_SETPOINT_Z", 0);
 
     m_pidw.SetTunings(TRACK_Kpw, TRACK_TauIw, TRACK_TauDw);
     m_pidw.SetInputLimits(-M_PI/2, M_PI/2);
@@ -74,10 +75,10 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     m_pidy.SetOutputLimits(-TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Y);
     m_pidy.SetSetPoint(TRACK_SETPOINT_Y);
     //throttle not used
-    m_pidz.SetTunings(-TRACK_Kpz, TRACK_TauIz, TRACK_TauDz);
-    m_pidz.SetInputLimits(-8,8);
-    m_pidz.SetOutputLimits(-TRACK_SPEED_LIMIT_Z, TRACK_SPEED_LIMIT_Z);
-    m_pidz.SetSetPoint(TRACK_SETPOINT_Z);
+    //m_pidz.SetTunings(-TRACK_Kpz, TRACK_TauIz, TRACK_TauDz);
+    //m_pidz.SetInputLimits(-8,8);
+    //m_pidz.SetOutputLimits(-TRACK_SPEED_LIMIT_Z, TRACK_SPEED_LIMIT_Z);
+    //m_pidz.SetSetPoint(TRACK_SETPOINT_Z);
 }
 
 ObjectTracker::ObjectTracker(int camwidth, int camheight, TrackMethod method)
@@ -180,7 +181,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             //Reset the accumulated error in the PIDs
             m_pidx.Reset();
             m_pidy.Reset();
-            //m_pid_yaw.Reset();
+            m_pidw.Reset();
 
             fc->fb->Stop();
             if (had_fix) {
@@ -260,7 +261,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
             //Now we can take full advantage of this omnidirectional platform.
         objectDistance = sqrt(object_position->x*object_position->x + object_position->y*object_position->y);
         distanceError = objectDistance - desiredForwardPosition;
-        m_pid_yaw.SetProcessValue(-phi);
+        m_pidw.SetProcessValue(-phi);
         m_pidx.SetProcessValue(-object_position->x * (distanceError/objectDistance) );  //the place we want to put the copter, relative to the copter.
         m_pidy.SetProcessValue(-object_position->y * (distanceError/objectDistance) );
         //m_pidz.SetProcessValue(  //throttle controller not used
