@@ -38,20 +38,20 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
 
-    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 50);
-    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 50);
+    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 60);
+    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 40);
     TRACK_Kpy = opts->GetReal("TRACK_Kpy", 30);
     //double TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
     TRACK_TauIw = opts->GetReal("TRACK_TauIw", 5);
-    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 4);
-    TRACK_TauIy = opts->GetReal("TRACK_TauIy", 4);
+    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 5);
+    TRACK_TauIy = opts->GetReal("TRACK_TauIy", 5);
     //double TRACK_TauIz = opts->GetReal("TRACK_TauIz", 5);
-    TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.004);
-    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.004);//0.008);//0.008);
-    TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.004);
+    TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.000); //0.004 caused oscillation
+    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.000);//0.008);//0.008);
+    TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.000);
     //double TRACK_TauDz = opts->GetReal("TRACK_TauDz", 0.004);//0.008);
     TRACK_SPEED_LIMIT_W = opts->GetInt("TRACK_SPEED_LIMIT_W", 40);
-    TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 40);
+    TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 50);
     TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 50);
     //int TRACK_SPEED_LIMIT_Z = opts->GetInt("TRACK_SPEED_LIMIT_Z", 50);
     TRACK_SETPOINT_W = opts->GetReal("TRACK_SETPOINT_W", 0);
@@ -118,7 +118,6 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     Point2D detected_object = {0,0};
     //Point2D input_limits = {m_camwidth/2.0, m_camheight/2.0};
     Point3D object_body_coords = {0,0,0};  //location of the target in body coordinates
-    Point3D object_limits = {0,0,0}; //Location limits in body coordinates
 
     std::vector<Point2D> locations;
     FlightData course;
@@ -143,22 +142,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
             
-            //Determine trajectory to track the object (PID control)
-            Point3D FOV_TLCorner;
-            Point3D FOV_BLCorner;
-            Point2D Corner;
-            //find the body Coords of the top and bottom of the frame
-            Corner.x = -m_camwidth/2;
-            Corner.y = m_camheight/2;
-            EstimatePositionFromImageCoords(&gps_position, &course, &Corner, &FOV_TLCorner);
-            Corner.y = -m_camheight/2;
-            EstimatePositionFromImageCoords(&gps_position, &course, &Corner, &FOV_BLCorner);
-            double yaw_lim = atan2(FOV_BLCorner.x, FOV_BLCorner.y);     //make an appropriate yaw limit
-            m_pidw.SetInputLimits(-yaw_lim, yaw_lim);
-            m_pidx.SetInputLimits(-FOV_TLCorner.x, FOV_TLCorner.x);
-            m_pidy.SetInputLimits(FOV_BLCorner.y, FOV_TLCorner.y);
-
-            Log(LOG_INFO, "LX: %.2f, LY: %.2f", object_limits.x, object_limits.y);
+            EstimatePositionFromImageCoords(&gps_position, &course, &detected_object, &object_body_coords);
 
             if (!m_observation_mode) {
                 CalculateTrackingTrajectory(fc, &course, &object_body_coords, true);
@@ -245,8 +229,9 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
     
     if (!has_fix) {
         //Decay the speed
-        trackx = course->rudder * 0.995;
+        trackx = course->aileron * 0.995;
         tracky = course->elevator * 0.995;
+        trackw = course->rudder * 0.995;
     } else {
         //Zero the course commands
         memset(course, 0, sizeof(FlightData));
