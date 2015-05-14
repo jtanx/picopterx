@@ -87,7 +87,7 @@ void PID::SetInputLimits(float inMin, float inMax) {
     }
 
     //Rescale the working variables to reflect the changes.
-    prevProcessVariable_ *= (inMax - inMin) / inSpan_;
+    /*prevProcessVariable_ *= (inMax - inMin) / inSpan_;
     accError_            *= (inMax - inMin) / inSpan_;
 
     //Make sure the working variables are within the new limits.
@@ -95,6 +95,12 @@ void PID::SetInputLimits(float inMin, float inMax) {
         prevProcessVariable_ = 1;
     } else if (prevProcessVariable_ < 0) {
         prevProcessVariable_ = 0;
+    }*/
+    
+    if (prevProcessVariable_ > inMax) {
+        prevProcessVariable_ = inMax;
+    } else if (prevProcessVariable_ < inMin) {
+        prevProcessVariable_ = inMin;
     }
 
     inMin_  = inMin;
@@ -111,13 +117,13 @@ void PID::SetOutputLimits(float outMin, float outMax) {
     }
 
     //Rescale the working variables to reflect the changes.
-    prevControllerOutput_ *= (outMax - outMin) / outSpan_;
+    //prevControllerOutput_ *= (outMax - outMin) / outSpan_;
 
     //Make sure the working variables are within the new limits.
-    if (prevControllerOutput_ > 1) {
-        prevControllerOutput_ = 1;
-    } else if (prevControllerOutput_ < 0) {
-        prevControllerOutput_ = 0;
+    if (prevControllerOutput_ > outMax) {
+        prevControllerOutput_ = outMax;
+    } else if (prevControllerOutput_ < outMin) {
+        prevControllerOutput_ = outMin;
     }
 
     outMin_  = outMin;
@@ -166,13 +172,16 @@ void PID::Reset(void) {
     float scaledBias = 0.0;
 
     if (usingFeedForward) {
-        scaledBias = (bias_ - outMin_) / outSpan_;
+        //scaledBias = (bias_ - outMin_) / outSpan_;
+        scaledBias = (bias_ - outMin_);
     } else {
-        scaledBias = (realOutput_ - outMin_) / outSpan_;
+        //scaledBias = (realOutput_ - outMin_) / outSpan_;
+        scaledBias = (realOutput_ - outMin_);
     }
 
     prevControllerOutput_ = scaledBias;
-    prevProcessVariable_  = (processVariable_ - inMin_) / inSpan_;
+    //prevProcessVariable_  = (processVariable_ - inMin_) / inSpan_;
+    prevProcessVariable_  = (processVariable_ - inMin_);
 
     //Clear any error in the integral.
     accError_ = 0;
