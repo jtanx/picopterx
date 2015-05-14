@@ -116,7 +116,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     SetCurrentState(fc, STATE_TRACKING_SEARCHING);
     
     Point2D detected_object = {0,0};
-    Point2D input_limits = {m_camwidth/2.0, m_camheight/2.0};
+    //Point2D input_limits = {m_camwidth/2.0, m_camheight/2.0};
     Point3D object_body_coords = {0,0,0};  //location of the target in body coordinates
     Point3D object_limits = {0,0,0}; //Location limits in body coordinates
 
@@ -144,13 +144,21 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.SetInterval(update_rate);
             
             //Determine trajectory to track the object (PID control)
-            EstimatePositionFromImageCoords(&gps_position, &course, &detected_object, &object_body_coords);
-            //Fixme: These limits are not symmetrical.
-            //Determine input limits to prevent integral windup
-            //EstimatePositionFromImageCoords(&gps_position, &course, &input_limits, &object_limits);
-            //m_pidw.SetInputLimits(-object_limits.x, object_limits.x);
-            //m_pidy.SetInputLimits(-object_limits.y, object_limits.y);
-            //Log(LOG_INFO, "LX: %.2f, LY: %.2f", object_limits.x, object_limits.y);
+            Point3D FOV_TLCorner;
+            Point3D FOV_BLCorner;
+            Point2D Corner;
+            //find the body Coords of the top and bottom of the frame
+            Corner.x = -m_camwidth/2;
+            Corner.y = m_camheight/2;
+            EstimatePositionFromImageCoords(&gps_position, &course, &Corner, &FOV_TLCorner);
+            Corner.y = -m_camheight/2;
+            EstimatePositionFromImageCoords(&gps_position, &course, &Corner, &FOV_BLCorner);
+            double yaw_lim = atan2(FOV_BLCorner.x, FOV_BLCorner.y);     //make an appropriate yaw limit
+            m_pidw.SetInputLimits(-yaw_lim, yaw_lim);
+            m_pidx.SetInputLimits(-FOV_TLCorner.x, FOV_TLCorner.x);
+            m_pidy.SetInputLimits(FOV_BLCorner.y, FOV_TLCorner.y);
+
+            Log(LOG_INFO, "LX: %.2f, LY: %.2f", object_limits.x, object_limits.y);
 
             if (!m_observation_mode) {
                 CalculateTrackingTrajectory(fc, &course, &object_body_coords, true);
