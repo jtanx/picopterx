@@ -14,7 +14,7 @@ var popup = L.popup();
 /* ************************************* INITIALISATION */
 
 function initialise() {
-	L.tileLayer('/tiles/sat/gs_{x}_{y}_{z}.jpg', {
+	L.tileLayer('tiles/sat/gs_{x}_{y}_{z}.jpg', {
 		maxZoom: 21,
 		minZoom: 17
 	}).addTo(map);
@@ -35,7 +35,7 @@ $(function() {
 function addUser() {
 	if (navigator.geolocation) {
 		var userIcon = L.icon({
-			iconUrl:	'/css/markers/marker-user.png',
+			iconUrl:	'css/markers/marker-user.png',
 			iconSize:	[32,37],
 			iconAnchor:	[16,35]
 		});
@@ -50,7 +50,7 @@ function addUser() {
 
 function addCopter() {
 	var copterIcon = L.icon({
-		iconUrl:	'/css/markers/helicopter.png',
+		iconUrl:	'css/markers/helicopter.png',
 		iconSize:	[32,37],
 		iconAnchor:	[16,35]
 	});

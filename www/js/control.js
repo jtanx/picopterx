@@ -160,7 +160,7 @@ function toggleEdit(data) {
 			value.dragging.disable();
 		});
 		
-		ajaxSend('updateWaypoints', data);
+		ajaxSend('updateWaypoints', packageCoordinates(data));
 	}
 }
 
