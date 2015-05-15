@@ -7,7 +7,7 @@ from matplotlib import rc
 from scipy import stats
 
 oldfps_noload = [30,21,18,6.1,7.5,2.2]
-oldfps_load   = [30,12,9.5,2.5,2.5,0.9]
+oldfps_load   = [23,12,9.5,2.5,2.5,0.9]
 newfps = [30,25,20,8,9.4,2.8]
 labelz= ["320x240\n(160x120)", "320x240\n(320x240)", "640x480\n(320x240)",
          "640x480\n(640x480)", "1280x720\n(640x480)", "1280x720\n(1280x720)"]
