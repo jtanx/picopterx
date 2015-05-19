@@ -78,6 +78,8 @@ if (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
 			target_link_libraries(${_name} LINK_PRIVATE tcmalloc profiler)
 		endif()
 	endmacro()
+else (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
+	message (WARNING "${Yellow}Google perftools (tcmalloc/profiler) was not found. Installation is strongly recommended!${ColourReset}")
 endif (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
 
 #Include rapidjson
