@@ -13,6 +13,7 @@ set (Yellow      "${Esc}[33m")
 
 #Includes
 include (CheckCSourceCompiles)
+include (CheckLibraryExists) 
 include (FindPkgConfig)
 include (ExternalProject)
 
