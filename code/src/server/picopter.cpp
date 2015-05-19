@@ -175,6 +175,24 @@ public:
         _return.lon = std::isnan(d.fix.lon) ? -1 : d.fix.lon;
         //printf("requestCoords %f,%f\n", _return.lat, _return.lon);
     }
+    
+    void requestSettings(std::string& _return) {
+        if (m_opts) {
+            _return = m_opts->Serialise();
+        } else {
+            _return = "{}";
+        }
+    }
+    
+    bool updateSettings(const std::string& settings) {
+        //Only update if we're not running anything...
+        if (m_fc->GetCurrentTaskId() == TASK_NONE && m_opts) {
+            if (m_opts->Merge(settings.c_str())) {
+                return m_fc->ReloadSettings(m_opts);
+            }
+        }
+        return false;
+    }
 
     double requestBearing()
     {
@@ -254,8 +272,11 @@ int main(int argc, char **argv)
     Options *opts = NULL;
     LogInit();
     
+    //We need options irregardless.
     if (argc > 1) {
         opts = new Options(argv[1]);
+    } else {
+        opts = new Options();
     }
     
     //Signal handlers

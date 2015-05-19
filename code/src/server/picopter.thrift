@@ -42,6 +42,8 @@ service webInterface {
 	string		requestStatus();
 	coordDeg	requestCoords();
 	double		requestBearing();
+	string		requestSettings();
+	bool		updateSettings(1: string settings);
 	
 	coordDeg	requestNextWaypoint();
 	bool		updateUserPosition(1: coordDeg wpt);

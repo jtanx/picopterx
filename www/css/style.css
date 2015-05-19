@@ -9,6 +9,14 @@ html, body {
 	text-transform:			uppercase;
 }
 
+.light {
+    background-color: #fff;
+}
+
+.lightpad {
+    padding: 1em;
+}
+
 /***************************** PRIMARIES */
 
 

@@ -46,6 +46,7 @@
 							
 							<button id="settings-camera" class="cbtn roundbtn" onclick="cameraMode();">Toggle Camera</button>
 							<button id="settings-path" class="cbtn roundbtn" onclick="togglePath()">Toggle Flight Path</button>
+							<a href="set-options.php" target="_blank" class="cbtn roundbtn">Configure settings <span class="glyphicon glyphicon-share-alt"></span></a>
 						</div>
 						
 						<div id="status-holder" style="display: none">
