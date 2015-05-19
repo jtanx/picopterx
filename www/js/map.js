@@ -140,6 +140,10 @@ function addPath() {
 	pathLine = L.polyline(copterMarker.getLatLng(), {color: 'red'}).addTo(map);
 }
 
+function removePath() {
+	map.removeLayer(pathLine);
+}
+
 function updateWptPath() {
 	if (wptPathLine.getLatLngs().length > 0) map.removeLayer(wptPathLine);
 	

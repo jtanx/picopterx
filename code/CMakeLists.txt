@@ -13,6 +13,7 @@ set (Yellow      "${Esc}[33m")
 
 #Includes
 include (CheckCSourceCompiles)
+include (CheckLibraryExists) 
 include (FindPkgConfig)
 include (ExternalProject)
 
@@ -63,6 +64,23 @@ if (NOT DISABLE_NONFREE)
 	add_subdirectory (${XSENS_FOLDER})
 	include_directories (${XSENS_FOLDER})
 endif (NOT DISABLE_NONFREE)
+
+#Optional libraries (tcmalloc; from google perftools)
+CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
+CHECK_LIBRARY_EXISTS(profiler malloc "" HAVE_LIBPROFILER)
+
+if (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
+	#We want to link tcmalloc and the profiler to *everything*
+	macro (add_executable _name)
+		# invoke built-in add_executable
+		_add_executable(${ARGV})
+		if (TARGET ${_name})
+			target_link_libraries(${_name} LINK_PRIVATE tcmalloc profiler)
+		endif()
+	endmacro()
+else (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
+	message (WARNING "${Yellow}Google perftools (tcmalloc/profiler) was not found. Installation is strongly recommended!${ColourReset}")
+endif (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
 
 #Include rapidjson
 include_directories (${PI_THIRD_PARTY}/rapidjson)

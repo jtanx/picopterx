@@ -256,6 +256,16 @@ html, body {
 
 /***************************** BUTTONS */
 
+a.cbtn {
+    display:                inline-block;
+    color:                  #000;
+    padding:                10px;
+}
+
+a.cbtn:hover, a.cbtn:active, a.cbtn:focus {
+    text-decoration:        none;
+}
+
 .cbtn {
 	font-size:				16px;
 	text-align:				right;
@@ -336,10 +346,16 @@ html, body {
     border-left:        none;
     border-radius:      0 30px 30px 0;
     padding-right:      0;
+    overflow:           hidden;
+    text-align:         center;
 }
 
 #sidepanel {
     padding-left:		4px;
+}
+
+#camera-secondary-img {
+    height: 350px;
 }
 
 /***************************** ORIENTATIONAL */
@@ -360,10 +376,6 @@ html, body {
 	#camera-main {
 		height:				100%;
 	}
-	
-	#camera-main-img {
-		width:				calc(100% - 10px);
-	}
 }
 
 @media screen and (orientation:landscape) {	
@@ -371,18 +383,6 @@ html, body {
 	#camera-main {
 		height:				100%;
 		width:				100%;
-	}
-	
-	#camera-secondary {
-		width:				100%;
-	}
-	
-	#camera-main-img {
-		height:				350px;
-	}
-	
-	#settings-camera {
-		display:			none;
 	}
 	
 	#main-vertical {
