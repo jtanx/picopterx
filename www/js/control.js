@@ -1,3 +1,7 @@
+/**
+ * Functions to make the web page interactive.  
+ */
+
 var canEdit = false;
 var canEditMarkers = false;
 var canEditBounds = false;
@@ -32,15 +36,6 @@ function sliderify(selector, startmin, startmax, rangemin, rangemax) {
   }).Link('upper').to('-inline-<div class="slidertooltip"></div>', sliderToolTip)
   .Link('lower').to('-inline-<div class="slidertooltip"></div>', sliderToolTip);
 }
-
-
-(function cameraInit() {
-	url = "http://" + document.domain + ":5000/?action=stream";
-	$("#camera-secondary").html("<img id='camera-main-img' src='" + url + "'/>");
-  sliderify("#cal-hue", -20, 20, -360, 360);
-  sliderify("#cal-sat", 97, 255, 0, 255);
-  sliderify("#cal-val", 127, 255, 0, 255);
-})();
   
 function cameraMode() {
 	if (!cameraEnabled) {

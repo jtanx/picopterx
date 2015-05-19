@@ -132,7 +132,12 @@
 				
 				<div id="tertiary-holder" class="row">
 						<div class="row headline">
-							<span class="h3">Camera Feed</span>
+							<span class="h3">
+								Camera Feed
+								<a href="camera-fullscreen.php" target="_blank">
+									<span class="glyphicon glyphicon-share-alt"></span>
+								</a>
+							</span> 
 						</div>
 						<div class="row boxtext">
 							<div id="camera-mode" class="text col-md-7 col-sm-7">Connected components</div>
@@ -156,6 +161,7 @@
 		<script src="js/map.js"></script>
 		<script src="js/ajax.js"></script>
 		<script src="js/control.js"></script>
+		<script src="js/autorun.js"></script>
 		<!--<script src="js/camera.js"></script>-->	
 	</body>
 </html>

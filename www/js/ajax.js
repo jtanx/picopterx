@@ -1,12 +1,6 @@
 /**
  *  Functions that interact with the server via AJAX.
  */
- 
-(function onPageLoad() {
-  if (navigator.geolocation) {
-    navigator.geolocation.watchPosition(updateUserPosition);
-  }
-})();
 
 /**
  *  Pack the coordinates into something that thrift can understand.
@@ -168,43 +162,3 @@ function toggleLearningThreshold() {
   toggleLearningThreshold.show = !toggleLearningThreshold.show;
   ajaxSend('showLearningThreshold', toggleLearningThreshold.show ? 1 : 0);
 }
-
-(function worker() {
-	if ( typeof userMarker !== 'undefined' ) {
-		lat = userMarker.getLatLng().lat;
-		lon = userMarker.getLatLng().lng;
-		
-		data = {
-			'action': 'requestAll',
-			'lat': lat,
-			'lon': lon
-		}
-	} else {
-		data = {
-			'action': 'requestAll'
-		}
-	}
-	
-	$.ajax({
-		type: "POST",
-		dataType: "json",
-		url:'ajax-thrift.php',
-		data: data,
-		success: function(data) {
-			$("#status").html(data.status);
-			
-			$("#bearing").html("Facing " + Math.round(data.bearing) + "&deg;");
-			
-			var latlng = L.latLng(data.lat, data.lon);
-			copterMarker.setLatLng(latlng).update();
-			
-			if (pathEnabled) updatePath(latlng);
-			
-		},
-		error: function() {
-			$("#status").html("ERROR: No connection to flight control program.");
-		}
-	});
-	
-	setTimeout(worker, 2000);
-})();
