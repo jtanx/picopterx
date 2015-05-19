@@ -193,13 +193,22 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 //create the body coordinate vector for the object in the image
 //in the absence of a distance sensor, we're assuming the object is on the ground, at the height we launched from.
 void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, Point2D *object_location, Point3D *object_position){
-    #warning "using 6m as ground level"
-    double launchAlt = 6.0; //the James Oval is about 6m above sea level
-    double heightAboveTarget = std::max(pos->fix.alt - launchAlt, 0.0);
-
+    double heightAboveTarget = std::max(pos->fix.alt - pos->fix.groundalt, 0.0);
+    
+    if (std::isnan(heightAboveTarget)) {
+        //Todo: ??
+        static bool has_warned = false;
+        if (!has_warned) {
+            Log(LOG_DEBUG, "No usable altitude; falling back to 4m!");
+            has_warned = true;
+        }
+        heightAboveTarget = 4;
+    }
+    
+    //Comment this out to use dynamic altitude.
     #warning "using 4m as height above target"
     heightAboveTarget = 4;    //hard-coded for lab test
-
+    
     //Calibration factor Original: 2587.5 seemed too low from experimental testing
     //0.9m high 
     double L = 3687.5 * m_camwidth/2592.0;
@@ -220,7 +229,7 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     object_position->x = lateralPosition;
     object_position->z = heightAboveTarget;
 
-    Log(LOG_INFO, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
+    Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
         heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
 }
 
@@ -259,7 +268,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
         m_pidy.SetProcessValue((object_position->y/objectDistance) * distanceError);
         //m_pidz.SetProcessValue(  //throttle controller not used
 
-        Log(LOG_INFO, "PIDX: %.2f, PIDY: %.2f", -phi, -object_position->y);
+        Log(LOG_DEBUG, "PIDX: %.2f, PIDY: %.2f", -phi, -object_position->y);
 
         trackw = m_pidw.Compute();
         trackx = m_pidx.Compute();

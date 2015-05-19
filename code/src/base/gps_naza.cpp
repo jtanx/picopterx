@@ -85,6 +85,12 @@ void GPSNaza::GPSLoop() {
                         d.fix.speed = m_decoder->getSpeed();
                         d.fix.heading = m_decoder->getCog();
                         d.fix.alt = m_decoder->getGpsAlt();
+                        
+                        if (m_decoder->getNumSat() > 4 && (std::isnan(d.fix.groundalt) || d.fix.alt < d.fix.groundalt)) {
+                            d.fix.groundalt = d.fix.alt;
+                            Log(LOG_INFO, "Using %.2fm as the ground altitude.", d.fix.groundalt);
+                        }
+                        
                         m_data = d;
                         
                         m_log.Write(": (%.6f, %.6f) [%.2f at %.2f] (%.2f m)",

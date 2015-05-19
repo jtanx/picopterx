@@ -20,7 +20,7 @@ const int GPS::WAIT_PERIOD;
  */
 GPS::GPS(Options *opts)
 : m_fix_timeout(FIX_TIMEOUT_DEFAULT)
-, m_data{{{NAN,NAN,NAN,NAN,NAN},{NAN,NAN,NAN,NAN,NAN}, NAN}}
+, m_data{{{NAN,NAN,NAN,NAN,NAN,NAN},{NAN,NAN,NAN,NAN,NAN,NAN}, NAN}}
 , m_last_fix(999)
 , m_quit(false)
 {
