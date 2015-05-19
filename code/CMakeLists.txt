@@ -64,6 +64,21 @@ if (NOT DISABLE_NONFREE)
 	include_directories (${XSENS_FOLDER})
 endif (NOT DISABLE_NONFREE)
 
+#Optional libraries (tcmalloc; from google perftools)
+CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
+CHECK_LIBRARY_EXISTS(profiler malloc "" HAVE_LIBPROFILER)
+
+if (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
+	#We want to link tcmalloc and the profiler to *everything*
+	macro (add_executable _name)
+		# invoke built-in add_executable
+		_add_executable(${ARGV})
+		if (TARGET ${_name})
+			target_link_libraries(${_name} LINK_PRIVATE tcmalloc profiler)
+		endif()
+	endmacro()
+endif (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
+
 #Include rapidjson
 include_directories (${PI_THIRD_PARTY}/rapidjson)
 
