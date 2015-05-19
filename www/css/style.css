@@ -354,6 +354,10 @@ a.cbtn:hover, a.cbtn:active, a.cbtn:focus {
     padding-left:		4px;
 }
 
+#camera-secondary-img {
+    height: 350px;
+}
+
 /***************************** ORIENTATIONAL */
 
 @media screen and (orientation:portrait) {
@@ -372,10 +376,6 @@ a.cbtn:hover, a.cbtn:active, a.cbtn:focus {
 	#camera-main {
 		height:				100%;
 	}
-	
-	#camera-main-img {
-		width:				calc(100% - 10px);
-	}
 }
 
 @media screen and (orientation:landscape) {	
@@ -383,14 +383,6 @@ a.cbtn:hover, a.cbtn:active, a.cbtn:focus {
 	#camera-main {
 		height:				100%;
 		width:				100%;
-	}
-	
-	#camera-main-img {
-		height:				350px;
-	}
-	
-	#settings-camera {
-		display:			none;
 	}
 	
 	#main-vertical {

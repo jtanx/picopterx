@@ -38,137 +38,141 @@ function sliderify(selector, startmin, startmax, rangemin, rangemax) {
 }
   
 function cameraMode() {
-	if (!cameraEnabled) {
-		$("#map-canvas").hide();
-		$("#camera-main").show();
-		
-		url = "http://" + document.domain + ":5000/?action=stream";
-		$("#camera-main").html("<img id='camera-main-img' src='" + url + "'/>");
-		
-		$("#settings-camera").toggleClass('orange-toggle');
-	} else {
-		$("#camera-main").hide();
-		$("#map-canvas").show();
-		$("#camera-main").html();
-		
-		$("#settings-camera").toggleClass('orange-toggle');
-	}
-	
-	cameraEnabled = !cameraEnabled;
+  var url = "http://" + document.domain + ":5000/?action=stream";
+  if (!cameraEnabled) {
+    $("#map-canvas").hide();
+    $("#camera-main").show();
+    
+    $("#camera-main").html("<img id='camera-main-img' class='vstretch' src='" + url + "'/>");
+    $("#camera-secondary").html("");
+    
+    
+    $("#settings-camera").toggleClass('orange-toggle');
+  } else {
+    $("#camera-main").html("");
+    $("#camera-secondary").html("<img id='camera-secondary-img' src='" + url + "'/>");
+    $("#camera-main").hide();
+    $("#map-canvas").show();
+    $("#camera-main").html();
+    
+    $("#settings-camera").toggleClass('orange-toggle');
+  }
+  
+  cameraEnabled = !cameraEnabled;
 }
 
 function setTab(tab) {
-	tabs = ["manual-holder", "auto-holder", "tracking-holder", "status-holder", "calibration-holder", "settings-holder"];
-	
-	$.each(tabs, function(i, val) {
-		if (val == tab) {
-			$("#" + val).show();
-		} else {
-			$("#" + val).hide();
-		}
-	});
+  tabs = ["manual-holder", "auto-holder", "tracking-holder", "status-holder", "calibration-holder", "settings-holder"];
+  
+  $.each(tabs, function(i, val) {
+    if (val == tab) {
+      $("#" + val).show();
+    } else {
+      $("#" + val).hide();
+    }
+  });
 }
 
 function manualMode() {
-	if (!canEdit) {
-		
-		setTab("manual-holder");
-		
-		showMarkers(markers);
-		hideMarkers(bounds);
-		hideRectangle();
-	}
+  if (!canEdit) {
+    
+    setTab("manual-holder");
+    
+    showMarkers(markers);
+    hideMarkers(bounds);
+    hideRectangle();
+  }
 }
 
 function autoMode() {
-	if (!canEdit) {
-		setTab("auto-holder");
-		hideMarkers(markers);
-		showMarkers(bounds);
-		showRectangle();
+  if (!canEdit) {
+    setTab("auto-holder");
+    hideMarkers(markers);
+    showMarkers(bounds);
+    showRectangle();
 
-	}
+  }
 }
 
 function trackingMode() {
-	if (!canEdit) {
-		setTab("tracking-holder");
-		hideMarkers(markers);
-		hideMarkers(bounds);
-		hideRectangle();
-	}
+  if (!canEdit) {
+    setTab("tracking-holder");
+    hideMarkers(markers);
+    hideMarkers(bounds);
+    hideRectangle();
+  }
 }
 
 function statusMode() {
-	if (!canEdit) {
-		setTab("status-holder");
-	}
+  if (!canEdit) {
+    setTab("status-holder");
+  }
 }
 
 function calibrationMode() {
-	if (!canEdit) {
-		setTab("calibration-holder");
-	}
+  if (!canEdit) {
+    setTab("calibration-holder");
+  }
 }
 
 function settingsMode() {
-	if (!canEdit) {
-		setTab("settings-holder");
-	}
+  if (!canEdit) {
+    setTab("settings-holder");
+  }
 }
 
 function togglePath() {
-	if (!pathEnabled) {
-		addPath();
-		$("#settings-path").toggleClass('orange-toggle');
-	} else {
-		removePath();
-		$("#settings-path").toggleClass('orange-toggle');
-	}
-	
-	pathEnabled = !pathEnabled;
+  if (!pathEnabled) {
+    addPath();
+    $("#settings-path").toggleClass('orange-toggle');
+  } else {
+    removePath();
+    $("#settings-path").toggleClass('orange-toggle');
+  }
+  
+  pathEnabled = !pathEnabled;
 }
 
 function toggleEdit(data) {
-	$("#manual-edit").toggleClass('btn-pressed');
-	$("#auto-edit").toggleClass('btn-pressed');
-	
+  $("#manual-edit").toggleClass('btn-pressed');
+  $("#auto-edit").toggleClass('btn-pressed');
+  
   $("#mainwindow").toggleClass('orange-toggle');
-	
-	$("button[class*='nav-']").not('.nav-a').toggleClass('btn-disabled');
-	$("button[id*='begin']").toggleClass('btn-disabled');
-	
-	canEdit = !canEdit;
-	
-	if (canEdit) {
-		$("#information").html('<span id="blinkbox" style="background-color: #FB8500;">&nbsp;&nbsp;&nbsp;&nbsp;</span> Edit mode engaged. Use the map.');
-		$("#blinkbox").blink({delay:1000});
-		
-		$.each( data, function( index, value ){
-			value.dragging.enable();
-		});
-	} else {
-		$("#blinkbox").unblink();
-		$("#information").html('');
-		
-		$.each( data, function( index, value ){
-			value.dragging.disable();
-		});
-		
-		ajaxSend('updateWaypoints', data);
-	}
+  
+  $("button[class*='nav-']").not('.nav-a').toggleClass('btn-disabled');
+  $("button[id*='begin']").toggleClass('btn-disabled');
+  
+  canEdit = !canEdit;
+  
+  if (canEdit) {
+    $("#information").html('<span id="blinkbox" style="background-color: #FB8500;">&nbsp;&nbsp;&nbsp;&nbsp;</span> Edit mode engaged. Use the map.');
+    $("#blinkbox").blink({delay:1000});
+    
+    $.each( data, function( index, value ){
+      value.dragging.enable();
+    });
+  } else {
+    $("#blinkbox").unblink();
+    $("#information").html('');
+    
+    $.each( data, function( index, value ){
+      value.dragging.disable();
+    });
+    
+    ajaxSend('updateWaypoints', data);
+  }
 }
 
 function toggleMarkersEdit() {
-	toggleEdit(markers);
-	canEditMarkers = !canEditMarkers;
-	
-	toggleMarkerRed(markers);
+  toggleEdit(markers);
+  canEditMarkers = !canEditMarkers;
+  
+  toggleMarkerRed(markers);
 }
 
 function toggleBoundsEdit() {
-	toggleEdit(bounds);
-	canEditBounds = !canEditBounds;
+  toggleEdit(bounds);
+  canEditBounds = !canEditBounds;
 
-	toggleMarkerRed(bounds);
+  toggleMarkerRed(bounds);
 }

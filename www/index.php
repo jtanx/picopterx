@@ -17,9 +17,9 @@
 	<body>
 		<!-- Body -->
 		<div id="main-row" class="row vstretch">
-			<div id="mainwindow" class="col-md-7">
+			<div id="mainwindow" class="col-md-7 vstretch">
 				<div id="map-canvas" class="vstretch"></div>
-				<!--<div id="camera-main" style="display:none;"></div>-->
+				<div id="camera-main" style="display:none;"></div>
 			</div>
 			<div id="sidepanel" class="col-md-5">
 				<div id="sidepanel-top" class="row">

@@ -26,6 +26,7 @@
 					<div id="menu-button-holder" class="col-md-3 col-sm-2 col-xs-4">
 						<button type="button" class="cbtn nav-a" onclick="allStop()">All Stop</button>
 						<a href="index.php" class="cbtn nav-d" onclick="">Go back</a>
+						<button type="button" class="cbtn nav-d" onclick="window.close()">Close</button>
 					</div>
 					
 					<!-- Sidepanel - information box on the right -->
