@@ -40,6 +40,10 @@ static Value* GetValue(Value *d, const char *key) {
 Options::Options(const char *file, const char *json_string) {
     Document *d = new Document();
     
+    if (json_string) {
+        d->Parse<0>(json_string);
+    }
+    
     if (file) {
         FILE *fp = fopen(file, "rb");
         if (fp) {
@@ -47,11 +51,9 @@ Options::Options(const char *file, const char *json_string) {
                 char buffer[BUFSIZ];
                 FileReadStream is(fp, buffer, sizeof(buffer));
                 d->ParseStream<0, UTF8<>, FileReadStream>(is);
-            } else {
-                d->Parse<0>(json_string);
             }
-            fclose(fp);
             
+            fclose(fp);
             m_file = std::string(file);
         }
     }
