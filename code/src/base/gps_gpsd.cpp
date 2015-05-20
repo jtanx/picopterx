@@ -100,6 +100,16 @@ void GPSGPSD::GPSLoop() {
                         d.err.heading = data->fix.epd;
                     }
                 }
+                if (data->satellites_used > 4 && data->set & ALTITUDE_SET) {
+                    d.fix.alt = data->fix.altitude;
+                    if (data->set & VERR_SET) {
+                        d.err.alt = data->fix.epv;
+                    }
+                    if (std::isnan(d.fix.groundalt) || d.fix.alt < d.fix.groundalt) {
+                        d.fix.groundalt = d.fix.alt;
+                        Log(LOG_INFO, "Using %.2fm as the ground altitude.", d.fix.groundalt);
+                    }
+                }
                 if (data->set & SPEEDERR_SET) {
                     d.err.speed = data->fix.eps;
                 }

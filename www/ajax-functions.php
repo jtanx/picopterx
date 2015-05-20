@@ -1,8 +1,11 @@
 <?php
+	include('ajax-default-options.php');
+	
 	$b = Array(false => 'false', true => 'true');
 
 //	print "Received '" . $_POST['action'] . "'<p>";
 	
+	//Yeah, because we care about CSRF...
 	$action  = $_POST["action"];
 	$source = $_POST;
 	if (!isset($action)) {
@@ -47,6 +50,35 @@
 				print $ans . "\n";
 				break;
 				
+			case "requestSettings":
+				//A serialised string wrapped in a protocol buffer!~
+				//Probably not a very good way to use thrift, but whatever.
+				$current = json_decode($client->requestSettings());
+				$output = $defaultOptions;
+				//Loop through each option family, e.g. 'CAMERA_STREAM'
+				foreach ($current as $k => $v) {
+					//Loop through each option, e.g. 'PROCESS_WIDTH'
+					foreach ($v as $ko => $kv) {
+						$output[$k][$ko] = $kv;
+					}
+				}
+				print json_encode($output) . "\n";
+				break;
+				
+			case "updateSettings":
+				$opts = json_decode("{}");
+				$ret = false;
+				
+				if (isset($source["data"])) {
+					$iopts = filterOptions(json_decode($source["data"]));
+					if ($iopts) {
+						$ret = $client->updateSettings(json_encode($iopts));
+					}
+				}
+				
+				print $b[$ret] . "\n";
+				break;
+			
 			case "allStop":
 				$ans = $client->allStop();
 				print "allStop " . $b[$ans];
@@ -56,7 +88,7 @@
 				if (isset($source["data"])) {
 					$waypoints = array();
 					
-					foreach ( $source["data"] as $i) {
+					foreach ($source["data"] as $i) {
 						$wp = new \picopter\coordDeg();
 						$wp->lat = $i[0];
 						$wp->lon = $i[1];

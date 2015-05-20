@@ -132,3 +132,44 @@ TEST_F(OptionsTest, TestSaveUnset) {
     opts.Set("tfm", "vfr");
     ASSERT_THROW(opts.Save(), std::invalid_argument);
 }
+
+TEST_F(OptionsTest, TestLoadFromString) {
+    Options opts("{\"picopter\" : {\"tpp\" : 414, \"tzp\" : \"alpha\"}}", true);
+    ASSERT_EQ(414, opts.GetInt("tpp"));
+    ASSERT_STREQ("alpha", opts.GetString("tzp"));
+}
+
+TEST_F(OptionsTest, TestLoadFromStringWrong) {
+    Options opts("{\"picopter\" : {\"tpp\" : 414, \"tzp\" : \"alpha\"}}", false);
+    ASSERT_EQ(0, opts.GetInt("tpp",0));
+    ASSERT_STREQ("", opts.GetString("tzp",""));
+}
+
+TEST_F(OptionsTest, TestMerge) {
+    Options opts("data/opts_data.txt");
+    ASSERT_EQ(0, opts.GetInt("tpp", 0));
+    ASSERT_STREQ("", opts.GetString("tzp", ""));
+    ASSERT_TRUE(opts.Merge("{\"picopter\" : {\"tpp\" : 414, \"tzp\" : \"alpha\"}}"));
+    ASSERT_EQ(414, opts.GetInt("tpp"));
+    ASSERT_STREQ("alpha", opts.GetString("tzp"));
+}
+
+TEST_F(OptionsTest, TestSerialisation) {
+    Options opts("data/opts_data.txt");
+    std::string ser = opts.Serialise();
+    Options par(ser.c_str(), true);
+    
+    ASSERT_STREQ("string_test\u00eeaaa", par.GetString("b"));
+    ASSERT_DOUBLE_EQ(1.2433, par.GetReal("c"));
+    ASSERT_EQ(20, par.GetInt("d"));
+    ASSERT_TRUE(par.GetBool("e"));
+    
+    par.SetFamily("GPS");
+    ASSERT_FALSE(par.GetBool("sane"));
+    par.SetFamily("IMU");
+    ASSERT_DOUBLE_EQ(204.44, par.GetReal("yaw"));
+    ASSERT_DOUBLE_EQ(-17.78, par.GetReal("pitch"));
+    ASSERT_DOUBLE_EQ(1093.33, par.GetReal("elevation"));
+    par.SetFamily("");
+    ASSERT_TRUE(par.GetBool("empty"));
+}   

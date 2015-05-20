@@ -1,7 +1,7 @@
 L.NumberedDivIcon = L.Icon.extend({
 	options: {
     // EDIT THIS TO POINT TO THE FILE AT http://www.charliecroom.com/marker_hole.png (or your own marker)
-    iconUrl: '/css/markers/marker_hole.png',
+    iconUrl: 'css/markers/marker_hole.png',
     number: '',
     shadowUrl: null,
     iconSize: new L.Point(25, 41),
@@ -35,7 +35,7 @@ L.NumberedDivIcon = L.Icon.extend({
 L.NumberedDivIconRed = L.Icon.extend({
 	options: {
     // EDIT THIS TO POINT TO THE FILE AT http://www.charliecroom.com/marker_hole.png (or your own marker)
-    iconUrl: '/css/markers/marker_hole_red.png',
+    iconUrl: 'css/markers/marker_hole_red.png',
     number: '',
     shadowUrl: null,
     iconSize: new L.Point(25, 41),

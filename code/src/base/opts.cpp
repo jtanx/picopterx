@@ -31,20 +31,29 @@ static Value* GetValue(Value *d, const char *key) {
 
 /**
  * Constructor.
- * Initialised empty, optionally loading from a file.
- * @param file The location of a file containing options, or NULL if not present.
+ * Initialised empty, optionally loading from a file or serialised string.
+ * @param file The location of a file containing options, or nullptr if not present. 
+ * @param json_string The serialised JSON string to load, or nullptr if not present.
+ *                    Will take precedence over the contents of the specified
+ *                    file, if any. 
  */
-Options::Options(const char *file) {
+Options::Options(const char *file, const char *json_string) {
     Document *d = new Document();
+    
+    if (json_string) {
+        d->Parse<0>(json_string);
+    }
     
     if (file) {
         FILE *fp = fopen(file, "rb");
         if (fp) {
-            char buffer[BUFSIZ];
-            FileReadStream is(fp, buffer, sizeof(buffer));
-            d->ParseStream<0, UTF8<>, FileReadStream>(is);
-            fclose(fp);
+            if (!json_string) {
+                char buffer[BUFSIZ];
+                FileReadStream is(fp, buffer, sizeof(buffer));
+                d->ParseStream<0, UTF8<>, FileReadStream>(is);
+            }
             
+            fclose(fp);
             m_file = std::string(file);
         }
     }
@@ -65,10 +74,19 @@ Options::Options(const char *file) {
 }
 
 /**
- * Constructs an options class with no initial file.
- * This is the same as calling Options::Options(NULL).
+ * Constructs an options class from the specified file or serialised string.
+ * @param data The file location or serialised string.
+ * @param is_serialised Determines if 'data' is a file location or if it is
+ *                      serialised JSON data. 
  */
-Options::Options() : Options(NULL) {}
+Options::Options(const char *data, bool is_serialised)
+: Options(is_serialised ? nullptr : data, is_serialised ? data : nullptr) {}
+
+/**
+ * Constructs an options class with no initial file.
+ * This is the same as calling Options::Options(nullptr, nullptr);
+ */
+Options::Options() : Options(nullptr, nullptr) {}
 
 /**
  * Destructor. Deletes the rapidjson instance.
@@ -79,7 +97,7 @@ Options::~Options() {
 
 /**
  * Sets the family under which to store and retrieve settings from.
- * @param family The name of the family. If NULL, it will default to 
+ * @param family The name of the family. If nullptr, it will default to 
  *               Options::FAMILY_DEFAULT.
  */
 void Options::SetFamily(const char *family) {
@@ -167,6 +185,10 @@ double Options::GetReal(const char *key, double otherwise) {
         if (vpt && vpt->IsDouble()) {
             double ret = vpt->GetDouble();
         	LogSimple(LOG_INFO, "%s: %f", key, ret);
+            return ret;
+        } else if (vpt && vpt->IsInt()) {
+            int ret = vpt->GetInt();
+            LogSimple(LOG_INFO, "%s: %d", key, ret);
             return ret;
         }
     }
@@ -278,6 +300,76 @@ bool Options::Remove(const char *key) {
         return fi->RemoveMember(key);
     }
     return false;
+}
+
+/**
+ * Merge one set of options into this one.
+ * All settings in the input take precedence over anything currently stored. 
+ * @param json_string The serialised JSON string to merge from.
+ * @return true iff successfully merged.  
+ */
+bool Options::Merge(const char *json_string) {
+    if (json_string) {
+        Document d;
+        d.Parse<0>(json_string);
+        if (!d.HasParseError() && d.IsObject()) {
+            //Loop through each family
+            for (Value::ConstMemberIterator it = d.MemberBegin();
+                 it != d.MemberEnd(); it++)
+            {
+                //Do we have a family of options? (e.g. an object)
+                if (it->value.IsObject()) {
+                    SetFamily(it->name.GetString());
+                    //Loop through each option
+                    for (Value::ConstMemberIterator optit = it->value.MemberBegin();
+                         optit != it->value.MemberEnd(); optit++)
+                    {
+                        const char *optkey = optit->name.GetString();
+                        switch (optit->value.GetType()) {
+                            case kFalseType: case kTrueType:
+                                Set(optkey, optit->value.GetBool());
+                            case kNumberType:
+                                if (optit->value.IsInt()) {
+                                    Set(optkey, optit->value.GetInt());
+                                } else if (optit->value.IsNumber()) {
+                                    Set(optkey, optit->value.GetDouble());
+                                } else if (optit->value.IsBool()) {
+                                    Set(optkey, optit->value.GetBool());
+                                }
+                            break;
+                            case kStringType:
+                                Set(optkey, optit->value.GetString());
+                            break;
+                            case kNullType: //Ignore
+                            break;
+                            default:
+                                Log(LOG_WARNING, "Ignoring unknown option %s of type %d",
+                                    optkey, optit->value.GetType());
+                        }
+                    }
+                } else {
+                    Log(LOG_WARNING, "Ignoring unknown family %s of type %d",
+                        it->name.GetString(), it->value.GetType());
+                }
+            }
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Serialises the options into a UTF-8 encoded JSON string.
+ * @return The serialised option data.
+ */
+std::string Options::Serialise() {
+    GenericStringBuffer<UTF8<>> buffer;
+    PrettyWriter<GenericStringBuffer<UTF8<>>> pw(buffer);
+    Document *d = static_cast<Document*>(m_doc);
+    
+    d->Accept(pw);
+    return std::string(buffer.GetString());
 }
 
 /**

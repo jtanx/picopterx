@@ -162,3 +162,74 @@ function toggleLearningThreshold() {
   toggleLearningThreshold.show = !toggleLearningThreshold.show;
   ajaxSend('showLearningThreshold', toggleLearningThreshold.show ? 1 : 0);
 }
+
+function requestSettings() {
+  return ajaxSend('requestSettings').success(function (data) {
+    var ret = $.parseJSON(data);
+    var form = $("#settings-space");
+    form.empty();
+    
+    for (var key in ret) {
+      var family = $("<h2/>", {text : key});
+      var familyData = ret[key];
+      form.append(family);
+      var table = $("<div/>", {"class" : "family-group"});
+      var count = 0;
+      var row = null;
+      
+      for (var opt in familyData) {
+        if (!(count++ % 4)) {
+          if (row) {
+            table.append(row);
+          }
+          row = $("<div/>", {"class" : "family-row row"});
+        }
+        
+        var optid = key + "." + opt;
+        var group = $("<div/>", {class : "form-group col-md-3"}).append(
+                      $("<label/>", {"for" : optid, "text" : opt})).append(
+                      $("<input/>", {"id" : optid, "type" : "text", "class" : "form-control", "value" : familyData[opt]}));
+        row.append(group);
+      }
+      
+      if (row) {
+        table.append(row);
+      }
+      form.append(table);
+    }
+  });
+}
+
+function updateSettings() {
+  $("#settings-editor :input").prop("disabled", true);
+  
+  var sub = {};
+  $("#settings-editor :input[type=text]").each(function () {
+    //This will break if we have a family name with a . in it.
+    var brk = $(this).attr('id').split(".");
+    var val = $(this).val();
+    var family = brk[0], opt = brk[1];
+    
+    if (!(family in sub)) {
+      sub[family] = {};
+    }
+    
+    if (val === 'true') {
+      sub[family][opt] = true;
+    } else if (val === 'false') {
+      sub[family][opt] = false;
+    } else if (val === '') {
+      //pass
+    } else if (!isNaN(val)) {
+      sub[family][opt] = parseFloat(val);
+    } else {
+      sub[family][opt] = val;
+    }
+  });
+  
+  return ajaxSend('updateSettings', JSON.stringify(sub)).complete(function () {
+    requestSettings().complete(function () {
+      $("#settings-editor :input").prop("disabled", false);
+    });
+  })
+}

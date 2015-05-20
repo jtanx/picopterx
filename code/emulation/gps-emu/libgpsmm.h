@@ -67,13 +67,16 @@ struct gps_data_t {
         double eps;
         double track;
         double epd;
+        double altitude;
+        double epv;
     } fix;
     int set;
+    double satellites_used;
 };
 
 class gpsmm {
     public:
-        gpsmm(const char *host, const char *port) : m_dat{{},LATLON_SET} {
+        gpsmm(const char *host, const char *port) : m_dat{{},LATLON_SET,6} {
             srand(time(NULL));
         };
         virtual ~gpsmm() {};

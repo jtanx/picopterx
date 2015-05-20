@@ -14,7 +14,8 @@ namespace picopter {
     class Options {
         public:
             Options();
-            Options(const char *file);
+            Options(const char *data, bool is_serialised=false);
+            Options(const char *file, const char *json_string);
             virtual ~Options();
             
             void SetFamily(const char *family);
@@ -31,6 +32,8 @@ namespace picopter {
             
             bool Remove(const char *key);
             
+            bool Merge(const char *json_string);
+            std::string Serialise();
             void Save();
             void Save(const char *file);
             void Save(FILE *fp);

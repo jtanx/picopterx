@@ -1,0 +1,17 @@
+{
+    "GLOBAL" : {
+        "OBSERVATION_MODE" : true
+    },
+    "CAMERA_STREAM": {
+        "INPUT_WIDTH": 320,
+        "INPUT_HEIGHT": 240,
+        "PROCESS_WIDTH": 320
+    },
+    "OBJECT_TRACKER": {
+        "TRACK_Kp": 0.22,
+        "TRACK_TauI": 3.9,
+	"TRACK_TauD" : 0.0,
+        "TRACK_SPEED_LIMIT_X": 60,
+        "TRACK_SPEED_LIMIT_Y": 45
+    }
+}

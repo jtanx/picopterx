@@ -69,6 +69,7 @@ FlightController::FlightController(Options *opts)
 , m_task{nullptr}
 {
     GPSNaza *gps;
+    //GPSGPSD *gps;
     m_buzzer = new Buzzer();
     
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
@@ -135,6 +136,20 @@ bool FlightController::WaitForAuth() {
         sleep_for(wait);
     }
     return !stop;
+}
+
+/**
+ * Allow for the reloading of settings for *non-essential* items.
+ * Settings will not be reloaded on-the-fly for things like the GPS, 
+ * flight board, etc. Which are mission-critical.  
+ * @param opts The options to reload from.  
+ * @return true iff all reloaded components successfully reloaded. 
+ */
+bool FlightController::ReloadSettings(Options *opts) {
+    //FFS OpenCV can't do jack shit right...
+    //delete m_camera;
+    //InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
+    return static_cast<bool>(m_camera);
 }
 
 /**

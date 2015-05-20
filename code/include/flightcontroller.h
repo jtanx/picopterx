@@ -79,6 +79,7 @@ namespace picopter {
             bool CheckForStop();
             bool Sleep(int ms);
             bool WaitForAuth();
+            bool ReloadSettings(Options *opts);
             bool RunTask(TaskIdentifier tid, FlightTask *task, void *opts);
             bool InferBearing(double *ret, int move_time=5000);
             

@@ -20,6 +20,7 @@
 			<div id="mainwindow" class="col-md-7 vstretch">
 				<div id="map-canvas" class="vstretch"></div>
 				<div id="camera-main" style="display:none;"></div>
+				<div id="opts-main" class="vstretch" style="display:none;"></div>
 			</div>
 			<div id="sidepanel" class="col-md-5">
 				<div id="sidepanel-top" class="row">
@@ -44,8 +45,9 @@
 								<span class="h3">Settings</span>
 							</div>
 							
-							<button id="settings-camera" class="cbtn roundbtn" onclick="cameraMode();">Toggle Camera</button>
+							<button id="settings-camera" class="cbtn roundbtn" onclick="toggleCamera();">Toggle Camera</button>
 							<button id="settings-path" class="cbtn roundbtn" onclick="togglePath()">Toggle Flight Path</button>
+							<button id="settings-opts" class="cbtn roundbtn" onclick="toggleOpts()">Toggle Options</button>
 						</div>
 						
 						<div id="status-holder" style="display: none">

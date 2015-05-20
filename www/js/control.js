@@ -5,7 +5,6 @@
 var canEdit = false;
 var canEditMarkers = false;
 var canEditBounds = false;
-var cameraEnabled = false;
 var pathEnabled = true;
 
 /**
@@ -36,29 +35,48 @@ function sliderify(selector, startmin, startmax, rangemin, rangemax) {
   }).Link('upper').to('-inline-<div class="slidertooltip"></div>', sliderToolTip)
   .Link('lower').to('-inline-<div class="slidertooltip"></div>', sliderToolTip);
 }
-  
-function cameraMode() {
-  var url = "http://" + document.domain + ":5000/?action=stream";
-  if (!cameraEnabled) {
-    $("#map-canvas").hide();
-    $("#camera-main").show();
-    
-    $("#camera-main").html("<img id='camera-main-img' class='vstretch' src='" + url + "'/>");
-    $("#camera-secondary").html("");
-    
-    
-    $("#settings-camera").toggleClass('orange-toggle');
+
+/**
+ * Toggles what is displayed in the main viewport, depending on the given selector. 
+ */
+function toggleMain(selector, contents) {
+  if (selector && !$(selector).is(":visible")) {
+    $("#mainwindow > div").not(selector).hide();
+    $(selector).show().append(contents);
   } else {
-    $("#camera-main").html("");
-    $("#camera-secondary").html("<img id='camera-secondary-img' src='" + url + "'/>");
-    $("#camera-main").hide();
+    $("#mainwindow > div").not("#map-canvas").hide();
     $("#map-canvas").show();
-    $("#camera-main").html();
-    
-    $("#settings-camera").toggleClass('orange-toggle');
+    $(selector).empty();
   }
   
-  cameraEnabled = !cameraEnabled;
+  if (!$("#camera-main").is(":visible")) {
+    var url = "http://" + document.domain + ":5000/?action=stream";
+    $("#camera-secondary").show();
+    $("#camera-secondary").html("<img id='camera-secondary-img' src='" + url + "'/>");
+  } else {
+    $("#camera-secondary").hide();
+    $("#camera-secondary").empty();
+  }
+}
+
+/**
+ * Toggles the display of the camera in the main viewport. 
+ */
+function toggleCamera() {
+  var url = "http://" + document.domain + ":5000/?action=stream";
+
+  toggleMain("#camera-main", $("<img/>", {id: "camera-main-img", "class":"vstretch", src:url}));
+  $("#settings-camera").toggleClass('orange-toggle');
+  $("#settings-opts").removeClass('orange-toggle');
+}
+
+/**
+ * Toggles the display of the settings editor in the main viewport. 
+ */
+function toggleOpts() {
+  toggleMain("#opts-main", $("<iframe/>", {src : "set-options.php", style : "width:100%;height:100%;"}));
+  $("#settings-opts").toggleClass('orange-toggle');
+  $("#settings-camera").removeClass('orange-toggle');
 }
 
 function setTab(tab) {
@@ -159,7 +177,7 @@ function toggleEdit(data) {
       value.dragging.disable();
     });
     
-    ajaxSend('updateWaypoints', data);
+    ajaxSend('updateWaypoints', packageCoordinates(data));
   }
 }
 
