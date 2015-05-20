@@ -173,22 +173,22 @@ function requestSettings() {
       var family = $("<h2/>", {text : key});
       var familyData = ret[key];
       form.append(family);
-      var table = $("<table/>");
+      var table = $("<div/>", {"class" : "family-group"});
       var count = 0;
       var row = null;
       
       for (var opt in familyData) {
-        if (!(count++ % 5)) {
+        if (!(count++ % 4)) {
           if (row) {
             table.append(row);
           }
-          row = $("<tr/>");
+          row = $("<div/>", {"class" : "family-row row"});
         }
         
         var optid = key + "." + opt;
-        var group = $("<td/>").append($("<div/>", {class : "form-group"}).append(
+        var group = $("<div/>", {class : "form-group col-md-3"}).append(
                       $("<label/>", {"for" : optid, "text" : opt})).append(
-                      $("<input/>", {"id" : optid, "type" : "text", "class" : "form-control", "value" : familyData[opt]})));
+                      $("<input/>", {"id" : optid, "type" : "text", "class" : "form-control", "value" : familyData[opt]}));
         row.append(group);
       }
       

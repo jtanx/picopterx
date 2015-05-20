@@ -72,4 +72,12 @@ $(document).ready(function () {
   startGeoLocator();
   cameraInit();
   statusWorker();
+  
+  //Switch back to map view if still on the settings page and the user navigates away.
+  $("#menu-button-holder button").click(function () {
+    if ($("#opts-main").is(":visible")) {
+      toggleMain("#opts-main");
+      $("#settings-opts").removeClass('orange-toggle');
+    }
+  });
 });

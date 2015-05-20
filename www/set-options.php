@@ -18,12 +18,14 @@
 		<!-- Body -->
 		<div id="main-row" class="vstretch light">
 			<h1 class="page-header">Settings editor
-				<a href="index.php">
-					<span class="glyphicon glyphicon-home"></span>
+				<a href="set-options.php" target="_blank">
+					<span class="glyphicon glyphicon-share-alt"></span>
 				</a></h1>
 			<form id="settings-editor" class="" action="#">
 				<div id="settings-space"></div>
-				<button type="submit" class="btn btn-default">Submit</button>
+				<div class="form-group">
+					<button type="submit" class="btn btn-default">Submit</button>
+				</div>
 			</form>
 		</div>
 		<script src="js/external/jquery-2.1.1.min.js"></script>
