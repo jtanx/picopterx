@@ -115,6 +115,12 @@ CameraStream::~CameraStream() {
     if (m_worker_thread.valid()) {
         m_worker_thread.wait();
     }
+    
+    if (m_demo) {
+        //Gtk is crap so this doesn't actually do much.
+        cv::destroyWindow("Thresholded image");
+        cv::destroyWindow("Camera stream");
+    }
 }
 
 bool CameraStream::Start() {

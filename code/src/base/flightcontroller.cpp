@@ -146,9 +146,12 @@ bool FlightController::WaitForAuth() {
  * @return true iff all reloaded components successfully reloaded. 
  */
 bool FlightController::ReloadSettings(Options *opts) {
-    //FFS OpenCV can't do jack shit right...
-    //delete m_camera;
-    //InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
+    delete m_camera;
+    InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
+    if (m_camera) {
+        m_camera->Start();
+        m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);
+    }
     return static_cast<bool>(m_camera);
 }
 
