@@ -33,7 +33,7 @@ std::unique_ptr<picopter::FlightController> g_fc(nullptr);
 class webInterfaceHandler : virtual public webInterfaceIf
 {
 private:
-	Options *m_opts;
+    Options *m_opts;
     const std::unique_ptr<picopter::FlightController> &m_fc;
     std::deque<navigation::Coord2D> m_pts;
 public:
@@ -281,12 +281,12 @@ int main(int argc, char **argv)
     
     //Signal handlers
     struct sigaction signal_handler;	
-	signal_handler.sa_handler = terminate;
-	sigemptyset(&signal_handler.sa_mask);
-	signal_handler.sa_flags = 0;
-	
-	sigaction(SIGTERM, &signal_handler, NULL);
-	sigaction(SIGINT,  &signal_handler, NULL);
+    signal_handler.sa_handler = terminate;
+    sigemptyset(&signal_handler.sa_mask);
+    signal_handler.sa_flags = 0;
+    
+    sigaction(SIGTERM, &signal_handler, NULL);
+    sigaction(SIGINT,  &signal_handler, NULL);
     
     int port = 9090;
     
@@ -303,9 +303,9 @@ int main(int argc, char **argv)
     shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
     shared_ptr<ThreadManager> threadManager(ThreadManager::newSimpleThreadManager(1));
-	shared_ptr<PosixThreadFactory> threadFactory(new PosixThreadFactory());
-	threadManager->threadFactory(threadFactory);
-	threadManager->start();
+    shared_ptr<PosixThreadFactory> threadFactory(new PosixThreadFactory());
+    threadManager->threadFactory(threadFactory);
+    threadManager->start();
     
     g_server.reset(new TThreadPoolServer(processor,serverTransport,transportFactory,protocolFactory,threadManager));
     try {
