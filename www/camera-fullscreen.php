@@ -18,7 +18,7 @@
 		<!-- Body -->
 		<div id="main-row" class="row vstretch">
 			<div id="mainwindow" class="col-md-7 vstretch">
-				<img id="camera-secondary" class="vstretch" src="http://localhost:5000/?action=stream">
+				<img id="camera-secondary" class="vstretch" src="#">
 			</div>
 			<div id="sidepanel" class="col-md-5">
 				<div id="sidepanel-top" class="row">
@@ -63,6 +63,12 @@
 		<script src="js/external/bootstrap.min.js"></script>
 		<script src="js/external/jquery.nouislider.all.min.js"></script>
 		<script src="js/ajax.js"></script>
+		<script>
+			$(document).ready(function () {
+				var url = "http://" + document.domain + ":5000/?action=stream";
+				$("#camera-secondary").attr("src", url);
+			});
+		</script>
 		<!--<script src="js/camera.js"></script>-->	
 	</body>
 </html>
