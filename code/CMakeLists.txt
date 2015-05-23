@@ -49,22 +49,6 @@ include_directories (${LIBGPS_INCLUDE_DIRS})
 link_directories (${LIBGPS_LIBRARY_DIRS})
 set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
 
-#Set XSens stuff
-if (NOT DISABLE_NONFREE)
-	set (XSENS_FOLDER "${CMAKE_BINARY_DIR}/third_party/Xsens")
-	set (XSENS_REPO "https://github.com/jtanx/Xsens")
-	
-	if (NOT EXISTS "${XSENS_FOLDER}")
-		execute_process (COMMAND git clone ${XSENS_REPO} "${XSENS_FOLDER}"
-						 RESULT_VARIABLE retval)
-		if (NOT "${retval}" STREQUAL "0")
-			message (FATAL_ERROR "${Red}Could not clone the Xsens repository.${ColourReset}")
-		endif ()
-	endif ()
-	add_subdirectory (${XSENS_FOLDER})
-	include_directories (${XSENS_FOLDER})
-endif (NOT DISABLE_NONFREE)
-
 #Optional libraries (tcmalloc; from google perftools)
 CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
 CHECK_LIBRARY_EXISTS(profiler malloc "" HAVE_LIBPROFILER)

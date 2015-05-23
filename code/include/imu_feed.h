@@ -8,9 +8,6 @@
 
 #include "navigation.h"
 
-//Forward declaration of Cmt3 from XSens
-namespace xsens {class Cmt3;}
-
 namespace picopter {
     /* Forward declaration of the options class */
     class Options;
@@ -31,8 +28,6 @@ namespace picopter {
             void GetLatest(IMUData *d);
             
         private:
-            /** Path to the IMU device; e.g. /dev/ttyUSB0 **/
-            static const char *IMU_DEVICE;
             /** Read timeout from the IMU in ms **/
             static const int IMU_TIMEOUT = 500;
             IMUData m_data;
@@ -40,8 +35,6 @@ namespace picopter {
             std::atomic<bool> m_quit;
             std::mutex m_mutex;
             std::thread m_worker;
-            
-            xsens::Cmt3 *m_device;
             
             /** Copy constructor (disabled) **/
             IMU(const IMU &other);

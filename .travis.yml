@@ -22,6 +22,6 @@ script:
   - $CXX --version
   - $CC --version
   - cd code/
-  - ./configure -DDISABLE_NONFREE=YES -Dtest=ON
+  - ./configure -DBUILD_OPTIONALS=YES -Dtest=ON
   - make
   - make test ARGS="-V"
