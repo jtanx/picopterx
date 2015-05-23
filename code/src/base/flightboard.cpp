@@ -22,12 +22,6 @@ using picopter::FlightData;
 FlightBoard::FlightBoard(Options *opts)
 : m_currentData{}
 {
-#ifdef IS_ON_PI
-    m_fp = fopen("/dev/servoblaster", "wb");
-    if (m_fp == NULL) {
-        throw std::invalid_argument("Could not connect to servoblaster");
-    }
-#endif
 	Stop();
 }
 
@@ -41,9 +35,6 @@ FlightBoard::FlightBoard() : FlightBoard(NULL) {}
  */
 FlightBoard::~FlightBoard() {
     Stop();
-#ifdef IS_ON_PI
-    fclose(m_fp);
-#endif
 }
 
 /**
@@ -85,49 +76,7 @@ void FlightBoard::SetData(FlightData *d) {
  * @param value The pulse width, in steps
  */
 void FlightBoard::SetChannel(int channel, int value) {
-#ifdef IS_ON_PI
-//	Log(LOG_WARNING, "%d", value);
-    fprintf(m_fp, "%d=%d\n", channel, value);
-#else
-    /*
-    const char *d;
-    int pct;
-    
-    switch(channel) {
-        case AILERON_CHANNEL:
-            d = "Aileron";
-            pct = INV_AILERON_SCALE(value);
-        break;
-        case ELEVATOR_CHANNEL:
-            d = "Elevator";
-            pct = -INV_ELEVATOR_SCALE(value);
-        break;
-        case RUDDER_CHANNEL:
-            d = "Rudder";
-            pct = INV_RUDDER_SCALE(value);
-        break;
-        case GIMBAL_CHANNEL:
-            d = "Gimbal";
-            pct = INV_GIMBAL_SCALE(value);
-        break;
-        default:
-            Fatal("Unknown channel number");
-            return;
-    }
-   
-    Log(LOG_INFO, "FlightBoard: %s at %d%%", d, pct);
-    */
-#endif
-}
 
-/**
- * Flushes the output to the ServoBlaster device file and forces any
- * pending commands to run.
- */
-void FlightBoard::FlushData() {
-#ifdef IS_ON_PI
-    fflush(m_fp);
-#endif
 }
 
 /**
@@ -135,9 +84,6 @@ void FlightBoard::FlushData() {
  * @param speed The aileron speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetAileron(int speed) {
-    m_currentData.aileron = picopter::clamp(speed, -100, 100);
-    SetChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
-    FlushData();
 }
 
 /**
@@ -145,10 +91,7 @@ void FlightBoard::SetAileron(int speed) {
  * @param speed The elevator speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetElevator(int speed) {
-    //Elevator speed is inverted.
-    m_currentData.elevator = picopter::clamp(-speed, -100, 100);
-    SetChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(m_currentData.elevator));
-    FlushData();
+
 }
 
 /**
@@ -156,9 +99,6 @@ void FlightBoard::SetElevator(int speed) {
  * @param speed The rudder speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetRudder(int speed) {
-    m_currentData.rudder = picopter::clamp(speed, -100, 100);
-    SetChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
-    FlushData();
 }
 
 /**
@@ -166,18 +106,10 @@ void FlightBoard::SetRudder(int speed) {
  * @param pos The gimbal angle, in degrees (0 to 90)
  */
 void FlightBoard::SetGimbal(int pos) {
-    m_currentData.gimbal = picopter::clamp(pos, 0, 90);
-    SetChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
-    FlushData();
 }
 
 /**
  * Actuates all channels using current flight data.
  */
 void FlightBoard::Actuate() {
-    SetChannel(AILERON_CHANNEL, AILERON_SCALE(m_currentData.aileron));
-    SetChannel(ELEVATOR_CHANNEL, ELEVATOR_SCALE(-m_currentData.elevator));
-    SetChannel(RUDDER_CHANNEL, RUDDER_SCALE(m_currentData.rudder));
-    SetChannel(GIMBAL_CHANNEL, GIMBAL_SCALE(m_currentData.gimbal));
-    FlushData();
 }

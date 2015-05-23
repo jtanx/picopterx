@@ -44,9 +44,7 @@ namespace picopter {
         private:
             /** Holds current flight data **/
             FlightData m_currentData;
-            /** File handle to ServoBlaster **/
-            FILE *m_fp;
-            
+
             /** Copy constructor (disabled) **/
             FlightBoard(const FlightBoard &other);
             /** Assignment operator (disabled) **/
