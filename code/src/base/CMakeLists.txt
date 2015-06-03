@@ -17,6 +17,7 @@ set (SOURCE
 	 NazaDecoderLib.cpp
 	 camera_stream.cpp
 	 mavcommsserial.cpp
+	 mavcommstcp.cpp
 )
 set (HEADERS
 	 flightboard-private.h

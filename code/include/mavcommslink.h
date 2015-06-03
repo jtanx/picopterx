@@ -32,8 +32,8 @@ namespace picopter {
     };
 
     /**
-     * Establishes a MAVLink communication via serial connection. 
-     * @todo Consider removing mutexes (already locked in FlightBoard) 
+     * Establishes a MAVLink communication via serial connection.
+     * This class is not thread-safe; the user must ensure this.
      */
     class MAVCommsSerial : public MAVCommsLink {
         public:
@@ -42,7 +42,6 @@ namespace picopter {
             bool ReadMessage(mavlink_message_t *ret) override;
             bool WriteMessage(const mavlink_message_t *src) override;
         private:
-            std::mutex m_mutex;
             std::string m_device;
             int m_baudrate, m_fd;
             mavlink_status_t m_last_status;
@@ -54,15 +53,21 @@ namespace picopter {
     };
 
     /**
-     * Establishes a MAVLink communication via TCP/IP. 
+     * Establishes a MAVLink communication via TCP/IP.
+     * The class is not thread-safe; the user must ensure this.
      */
     class MAVCommsTCP : public MAVCommsLink {
         public:
-            MAVCommsTCP(const char *address);
+            MAVCommsTCP(const char *address, uint16_t port);
             virtual ~MAVCommsTCP() override;
             bool ReadMessage(mavlink_message_t *ret) override;
             bool WriteMessage(const mavlink_message_t *src) override;
         private:
+            std::string m_address;
+            uint16_t m_port;
+            int m_fd;
+            mavlink_status_t m_last_status;
+            
             /** Copy constructor (disabled) **/
             MAVCommsTCP(const MAVCommsTCP &other);
             /** Assignment operator (disabled) **/

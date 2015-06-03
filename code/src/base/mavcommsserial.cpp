@@ -119,7 +119,6 @@ MAVCommsSerial::~MAVCommsSerial() {
  * @return true iff a message was read.
  */
 bool MAVCommsSerial::ReadMessage(mavlink_message_t *ret) {
-    std::lock_guard<std::mutex> lock(m_mutex);
     mavlink_status_t status;
     bool received;
     uint8_t cp;
@@ -143,7 +142,6 @@ bool MAVCommsSerial::ReadMessage(mavlink_message_t *ret) {
  * @return true iff the whole message was written.
  */
 bool MAVCommsSerial::WriteMessage(const mavlink_message_t *src) {
-    std::lock_guard<std::mutex> lock(m_mutex);
     uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
     uint16_t length = mavlink_msg_to_send_buffer(buffer, src);
     size_t ret = write(m_fd, buffer, length);
