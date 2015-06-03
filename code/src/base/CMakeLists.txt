@@ -16,6 +16,7 @@ set (SOURCE
 	 PID.cpp
 	 NazaDecoderLib.cpp
 	 camera_stream.cpp
+	 mavcommsserial.cpp
 )
 set (HEADERS
 	 flightboard-private.h
@@ -36,6 +37,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/PID.h
 	 ${PI_INCLUDE}/NazaDecoderLib.h
 	 ${PI_INCLUDE}/camera_stream.h
+	 ${PI_INCLUDE}/mavcommslink.h
 )
 
 #Compile as a static library
