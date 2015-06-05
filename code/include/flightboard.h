@@ -9,6 +9,8 @@
 namespace picopter {
     /* Forward declaration of the options class */
     class Options;
+    /* Forward declaration of the MAVCommsLink class */
+    class MAVCommsLink;
     
     /**
      * Contains information about the actuation of the hexacopter
@@ -44,7 +46,17 @@ namespace picopter {
         private:
             /** Holds current flight data **/
             FlightData m_currentData;
+            /** The MAVLink data connection **/
+            MAVCommsLink *m_link;
+            /** The shutdown signal **/
+            std::atomic<bool> m_shutdown;
+            /** Worker mutex **/
+            std::mutex m_worker_mutex;
+            /** Message receiving thread **/
+            std::thread m_input_thread;
 
+            /** Loop to receive and dispatch MAVLink  messages **/
+            void InputLoop();
             /** Copy constructor (disabled) **/
             FlightBoard(const FlightBoard &other);
             /** Assignment operator (disabled) **/

@@ -9,19 +9,22 @@
 #include "common.h"
 #include "flightboard.h"
 #include "flightboard-private.h"
+#include "mavcommslink.h"
 
 using picopter::FlightBoard;
 using picopter::FlightData;
 
 /**
- * Constructor; initiates a connection to ServoBlaster.
- * Assumes that ServoBlaster has already been started and initialised.
+ * Constructor; initiates a connection to the flight computer.
  * @param opts A pointer to options, if any (NULL for defaults)
- * @throws std::invalid_argument if it can't connect to ServoBlaster.
+ * @throws std::invalid_argument if it can't connect to the flight computer.
  */
 FlightBoard::FlightBoard(Options *opts)
 : m_currentData{}
+, m_shutdown{false}
 {
+    m_link = new MAVCommsTCP("127.0.0.1", 5760);
+    m_input_thread = std::thread(&FlightBoard::InputLoop, this);
 	Stop();
 }
 
@@ -35,6 +38,31 @@ FlightBoard::FlightBoard() : FlightBoard(NULL) {}
  */
 FlightBoard::~FlightBoard() {
     Stop();
+    m_shutdown = true;
+    m_input_thread.join();
+}
+
+void FlightBoard::InputLoop() {
+    mavlink_message_t msg;
+    mavlink_heartbeat_t heartbeat;
+
+    while (!m_shutdown) {
+        if (m_link->ReadMessage(&msg)) {
+            switch (msg.msgid) {
+                case MAVLINK_MSG_ID_HEARTBEAT: {
+                    printf("Heartbeat!\n");
+                    mavlink_msg_heartbeat_decode(&msg, &heartbeat);
+                } break;
+                case MAVLINK_MSG_ID_GPS_RAW_INT: {
+                    mavlink_gps_raw_int_t gps;
+                    printf("GPS!\n");
+                    mavlink_msg_gps_raw_int_decode(&msg, &gps);
+                    printf("Lat: %.2f, Lon: %.2f, Alt: %.2fm\n",
+                        gps.lat * 1e-7, gps.lon * 1e-7, gps.alt / 1000.0);
+                } break;
+            }
+        }
+    }
 }
 
 /**

@@ -66,7 +66,7 @@ bool MAVCommsTCP::ReadMessage(mavlink_message_t *ret) {
 
     received = mavlink_parse_char(MAVLINK_COMM_1, cp, ret, &status);
     if (m_last_status.packet_rx_drop_count != status.packet_rx_drop_count) {
-        Log(LOG_DEBUG, "Dropped packets, count: %d", status.packet_rx_drop_count);
+        //Log(LOG_DEBUG, "Dropped packets, count: %d", status.packet_rx_drop_count);
     }
     m_last_status = status;
     return received;
