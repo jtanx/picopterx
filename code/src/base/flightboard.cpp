@@ -23,7 +23,8 @@ FlightBoard::FlightBoard(Options *opts)
 : m_currentData{}
 , m_shutdown{false}
 {
-    m_link = new MAVCommsTCP("127.0.0.1", 5760);
+    //m_link = new MAVCommsTCP("127.0.0.1", 5760);
+    m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
     m_input_thread = std::thread(&FlightBoard::InputLoop, this);
 	Stop();
 }
@@ -59,6 +60,9 @@ void FlightBoard::InputLoop() {
                     mavlink_msg_gps_raw_int_decode(&msg, &gps);
                     printf("Lat: %.2f, Lon: %.2f, Alt: %.2fm\n",
                         gps.lat * 1e-7, gps.lon * 1e-7, gps.alt / 1000.0);
+                } break;
+                default: {
+                    printf("MSGID: %d\n", msg.msgid);
                 } break;
             }
         }

@@ -49,7 +49,10 @@ MAVCommsSerial::MAVCommsSerial(const char *device, int baudrate)
         throw std::invalid_argument("Cannot open specified port.");
     } else if (!isatty(m_fd)) {
         throw std::invalid_argument("Not a serial port.");
-    } else if (tcgetattr(m_fd, &config) == -1) {
+    }
+
+    //fcntl(m_fd, F_SETFL, 0);
+    if (tcgetattr(m_fd, &config) == -1) {
         throw std::invalid_argument("Could not get configuration information.");
     }
 
