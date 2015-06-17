@@ -22,10 +22,14 @@ using picopter::FlightData;
 FlightBoard::FlightBoard(Options *opts)
 : m_currentData{}
 , m_shutdown{false}
+, m_system_id(0)
+, m_component_id(0)
+, m_flightboard_id(128) //Arbitrary value 0-255
 {
-    //m_link = new MAVCommsTCP("127.0.0.1", 5760);
-    m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
+    m_link = new MAVCommsTCP("127.0.0.1", 5760);
+   // m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
     m_input_thread = std::thread(&FlightBoard::InputLoop, this);
+
 	Stop();
 }
 
@@ -41,11 +45,13 @@ FlightBoard::~FlightBoard() {
     Stop();
     m_shutdown = true;
     m_input_thread.join();
+    delete m_link;
 }
 
 void FlightBoard::InputLoop() {
     mavlink_message_t msg;
     mavlink_heartbeat_t heartbeat;
+    bool initted = false;
 
     while (!m_shutdown) {
         if (m_link->ReadMessage(&msg)) {
@@ -53,6 +59,19 @@ void FlightBoard::InputLoop() {
                 case MAVLINK_MSG_ID_HEARTBEAT: {
                     printf("Heartbeat!\n");
                     mavlink_msg_heartbeat_decode(&msg, &heartbeat);
+                    if (!initted) {
+                        mavlink_param_request_list_t req = {msg.sysid, msg.compid};
+                        mavlink_message_t smsg;
+
+                        initted = true;
+                        m_system_id = msg.sysid;
+                        m_component_id = msg.compid;
+                        Log(LOG_DEBUG, "Got sysid: %d, compid: %d", msg.sysid, msg.compid);
+                        mavlink_msg_param_request_list_encode(
+                            m_system_id, m_flightboard_id, &smsg, &req);
+                        Log(LOG_DEBUG, "Sending parameter list request");
+                        m_link->WriteMessage(&smsg);
+                    }
                 } break;
                 case MAVLINK_MSG_ID_GPS_RAW_INT: {
                     mavlink_gps_raw_int_t gps;
@@ -60,6 +79,11 @@ void FlightBoard::InputLoop() {
                     mavlink_msg_gps_raw_int_decode(&msg, &gps);
                     printf("Lat: %.2f, Lon: %.2f, Alt: %.2fm\n",
                         gps.lat * 1e-7, gps.lon * 1e-7, gps.alt / 1000.0);
+                } break;
+                case MAVLINK_MSG_ID_PARAM_VALUE: {
+                    mavlink_param_value_t param;
+                    mavlink_msg_param_value_decode(&msg, &param);
+                    Log(LOG_DEBUG, "%.16s", param.param_id);
                 } break;
                 default: {
                     printf("MSGID: %d\n", msg.msgid);

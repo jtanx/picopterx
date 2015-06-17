@@ -54,6 +54,12 @@ namespace picopter {
             std::mutex m_worker_mutex;
             /** Message receiving thread **/
             std::thread m_input_thread;
+            /** The system ID of the flight board we connect to **/
+            int m_system_id;
+            /** The component ID of the flight board we connect to **/
+            int m_component_id;
+            /** Our component ID that identifies us **/
+            int m_flightboard_id;
 
             /** Loop to receive and dispatch MAVLink  messages **/
             void InputLoop();
