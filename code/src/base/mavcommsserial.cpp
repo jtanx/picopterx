@@ -40,7 +40,7 @@ MAVCommsSerial::MAVCommsSerial(const char *device, int baudrate)
 : m_device(device)
 , m_baudrate(baudrate)
 , m_fd(-1)
-, m_last_status{0}
+, m_packet_drop_count(0)
 {
     struct termios config;
 
@@ -132,10 +132,10 @@ bool MAVCommsSerial::ReadMessage(mavlink_message_t *ret) {
     }
 
     received = mavlink_parse_char(MAVLINK_COMM_0, cp, ret, &status);
-    if (m_last_status.packet_rx_drop_count != status.packet_rx_drop_count) {
-        Log(LOG_DEBUG, "Dropped packets, count: %d", status.packet_rx_drop_count);
+    if (status.msg_received == MAVLINK_FRAMING_BAD_CRC) {
+        m_packet_drop_count++;
+        Log(LOG_DEBUG, "Dropped packets (CRC fail), count: %d", m_packet_drop_count);
     }
-    m_last_status.packet_rx_drop_count += status.packet_rx_drop_count;
     return received;
 }
 

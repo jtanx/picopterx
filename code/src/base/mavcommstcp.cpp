@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include <sys/time.h>
+
 using namespace picopter;
 
 /**
@@ -22,7 +24,7 @@ MAVCommsTCP::MAVCommsTCP(const char *address, uint16_t port)
 : m_address(address)
 , m_port(port)
 , m_fd(-1)
-, m_last_status{0}
+, m_packet_drop_count(0)
 {
     struct sockaddr_in addr = {0};
 
@@ -55,20 +57,28 @@ MAVCommsTCP::~MAVCommsTCP() {
  * @return true iff a message was read.
  */
 bool MAVCommsTCP::ReadMessage(mavlink_message_t *ret) {
+    struct timeval timeout = {1,0}; //1 second timeout
     mavlink_status_t status;
     bool received;
     uint8_t cp;
-
-    if (read(m_fd, &cp, 1) < 1) {
+    fd_set read_set;
+    
+    FD_ZERO(&read_set);
+    FD_SET(m_fd, &read_set);
+    
+    if (select(m_fd+1, &read_set, NULL, NULL, &timeout) <= 0) {
+        Log(LOG_WARNING, "Select error ocurred.");
+        return false;
+    } else if (read(m_fd, &cp, 1) < 1) {
         Log(LOG_DEBUG, "Could not read from stream: %s", strerror(errno));
         return false;
     }
 
     received = mavlink_parse_char(MAVLINK_COMM_0, cp, ret, &status);
-    if (m_last_status.packet_rx_drop_count != status.packet_rx_drop_count) {
-        //Log(LOG_DEBUG, "Dropped packets, count: %d", status.packet_rx_drop_count);
+    if (status.msg_received == MAVLINK_FRAMING_BAD_CRC) {
+        m_packet_drop_count++;
+        Log(LOG_DEBUG, "Dropped packets (CRC fail), count: %d", m_packet_drop_count);
     }
-    m_last_status.packet_rx_drop_count += status.packet_rx_drop_count;
     return received;
 }
 

@@ -44,7 +44,7 @@ namespace picopter {
         private:
             std::string m_device;
             int m_baudrate, m_fd;
-            mavlink_status_t m_last_status;
+            int m_packet_drop_count;
 
             /** Copy constructor (disabled) **/
             MAVCommsSerial(const MAVCommsSerial &other);
@@ -66,7 +66,7 @@ namespace picopter {
             std::string m_address;
             uint16_t m_port;
             int m_fd;
-            mavlink_status_t m_last_status;
+            int m_packet_drop_count;
             
             /** Copy constructor (disabled) **/
             MAVCommsTCP(const MAVCommsTCP &other);
