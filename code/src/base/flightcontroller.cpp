@@ -120,7 +120,7 @@ void FlightController::Stop() {
  * Check whether a stop should occur or not.
  */
 bool FlightController::CheckForStop() {
-    return m_stop.load(std::memory_order_relaxed) || !gpio::IsAutoMode();
+    return m_stop.load(std::memory_order_relaxed) || !m_fb->IsAutoMode();
 }
 
 /**
@@ -132,7 +132,7 @@ bool FlightController::WaitForAuth() {
     static const milliseconds wait(SLEEP_PERIOD);
     bool stop;
     
-    while (!(stop = m_stop.load(std::memory_order_relaxed)) && !gpio::IsAutoMode()){
+    while (!(stop = m_stop.load(std::memory_order_relaxed)) && !m_fb->IsAutoMode()){
         sleep_for(wait);
     }
     return !stop;

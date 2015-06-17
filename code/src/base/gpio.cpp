@@ -30,16 +30,6 @@ void gpio::Init() {
 }
 
 /**
- * Determines if autonomous mode has been enabled by the user.
- * Assumes that gpio::init has already been called.
- * Probably not thread-safe.
- * @return true iff the user has enabled the switch for autonomous mode
- */
-bool gpio::IsAutoMode() {
-    return digitalRead(gpio::MODE_PIN);
-}
-
-/**
  * Turns the buzzer on or off.
  * Assumes that gpio::init has already been called.
  * Probably not thread-safe.

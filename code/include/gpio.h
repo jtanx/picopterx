@@ -17,7 +17,6 @@ namespace picopter {
         const int BUZZER_PIN = 2;
 
         void Init();
-        bool IsAutoMode();
         void SetBuzzer(bool value);
     }
 }

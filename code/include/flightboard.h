@@ -35,6 +35,7 @@ namespace picopter {
             FlightBoard();
             FlightBoard(Options *opts);
             virtual ~FlightBoard();
+            bool IsAutoMode();
             void Stop();
             void GetData(FlightData *d);
             void SetData(FlightData *d);
@@ -60,6 +61,8 @@ namespace picopter {
             int m_component_id;
             /** Our component ID that identifies us **/
             int m_flightboard_id;
+            /** Are we in auto (Guided) mode? **/
+            std::atomic<bool> m_is_auto_mode;
 
             /** Loop to receive and dispatch MAVLink  messages **/
             void InputLoop();
