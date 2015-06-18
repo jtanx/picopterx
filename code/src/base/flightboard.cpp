@@ -28,7 +28,8 @@ FlightBoard::FlightBoard(Options *opts)
 , m_flightboard_id(128) //Arbitrary value 0-255
 , m_is_auto_mode{false}
 {
-    m_link = new MAVCommsTCP("127.0.0.1", 5760);
+    m_link = new MAVCommsSerial("/dev/ttyACM0", 115200);
+    //m_link = new MAVCommsTCP("127.0.0.1", 5760);
     //m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
     m_input_thread = std::thread(&FlightBoard::InputLoop, this);
 
@@ -92,7 +93,7 @@ void FlightBoard::InputLoop() {
                     mavlink_msg_sys_status_decode(&msg, &status);
                     printf("BATTERY: %.2fV, Draw: %.2fA, Remain: %3d%%\n",
                         status.voltage_battery*1e-3,
-                        status.current_battery*1e-4,
+                        status.current_battery*1e-2,
                         status.battery_remaining);
                 } break;
                 case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: {

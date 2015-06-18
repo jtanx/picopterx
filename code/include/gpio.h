@@ -11,8 +11,6 @@ namespace picopter {
      * Controls the GPIO pins on the RPi, including PWM functionality.
      */
     namespace gpio {
-        /** The GPIO pin of the switch for auto mode (wiringPi numbering) **/
-        const int MODE_PIN = 5;
         /** The GPIO pin of the buzzer (wiringPi numbering) **/
         const int BUZZER_PIN = 2;
 

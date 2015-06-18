@@ -22,7 +22,6 @@ void gpio::Init() {
     
     if (!g_gpio_initted) {
         wiringPiSetup();
-        pinMode(gpio::MODE_PIN, INPUT);
         pinMode(gpio::BUZZER_PIN, OUTPUT);
         
         g_gpio_initted = true;
