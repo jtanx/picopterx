@@ -10,11 +10,9 @@ set (SOURCE
 	 flightboard.cpp
 	 gps.cpp
 	 gps_gpsd.cpp
-	 gps_naza.cpp
 	 imu.cpp
 	 flightcontroller.cpp
 	 PID.cpp
-	 NazaDecoderLib.cpp
 	 camera_stream.cpp
 	 mavcommsserial.cpp
 	 mavcommstcp.cpp
@@ -32,11 +30,9 @@ set (HEADERS
 	 ${PI_INCLUDE}/navigation.h
 	 ${PI_INCLUDE}/gps_feed.h
 	 ${PI_INCLUDE}/gps_gpsd.h
-	 ${PI_INCLUDE}/gps_naza.h
 	 ${PI_INCLUDE}/imu_feed.h
 	 ${PI_INCLUDE}/flightcontroller.h
 	 ${PI_INCLUDE}/PID.h
-	 ${PI_INCLUDE}/NazaDecoderLib.h
 	 ${PI_INCLUDE}/camera_stream.h
 	 ${PI_INCLUDE}/mavcommslink.h
 )

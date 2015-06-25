@@ -68,8 +68,7 @@ FlightController::FlightController(Options *opts)
 , m_task_id{TASK_NONE}
 , m_task{nullptr}
 {
-    GPSNaza *gps;
-    //GPSGPSD *gps;
+    GPSGPSD *gps;
     m_buzzer = new Buzzer();
     
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
