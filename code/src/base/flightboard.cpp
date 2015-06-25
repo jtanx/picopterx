@@ -14,6 +14,11 @@
 
 using picopter::FlightBoard;
 using picopter::FlightData;
+using std::this_thread::sleep_for;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+using std::chrono::steady_clock;
+using std::chrono::duration_cast;
 
 /**
  * Constructor; initiates a connection to the flight computer.
@@ -21,17 +26,26 @@ using picopter::FlightData;
  * @throws std::invalid_argument if it can't connect to the flight computer.
  */
 FlightBoard::FlightBoard(Options *opts)
-: m_currentData{}
+: m_heartbeat_timeout(HEARTBEAT_TIMEOUT_DEFAULT)
+, m_last_heartbeat(999)
+, m_currentData{}
 , m_shutdown{false}
 , m_system_id(0)
 , m_component_id(0)
 , m_flightboard_id(128) //Arbitrary value 0-255
 , m_is_auto_mode{false}
 {
+    if (opts) {
+        opts->SetFamily("FLIGHTBOARD");
+        m_heartbeat_timeout = opts->GetInt("HEARTBEAT_TIMEOUT", HEARTBEAT_TIMEOUT_DEFAULT);
+    }
+    //Some increment past the timeout
+    m_last_heartbeat = m_heartbeat_timeout + 10;
     m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
     //m_link = new MAVCommsTCP("127.0.0.1", 5760);
     //m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
     m_input_thread = std::thread(&FlightBoard::InputLoop, this);
+    m_output_thread = std::thread(&FlightBoard::OutputLoop, this);
 
 	Stop();
 }
@@ -52,19 +66,21 @@ FlightBoard::~FlightBoard() {
 }
 
 void FlightBoard::InputLoop() {
+    auto last_heartbeat = steady_clock::now() - seconds(m_heartbeat_timeout);
     mavlink_message_t msg;
     mavlink_heartbeat_t heartbeat;
     bool initted = false;
 
     while (!m_shutdown) {
         if (m_link->ReadMessage(&msg)) {
+            LogSimple(LOG_DEBUG, "MSGID: %d\n", msg.msgid);
             switch (msg.msgid) {
                 case MAVLINK_MSG_ID_HEARTBEAT: {
-                    printf("Heartbeat!\n");
+                    last_heartbeat = steady_clock::now();
                     mavlink_msg_heartbeat_decode(&msg, &heartbeat);
                     
                     m_is_auto_mode = static_cast<bool>(heartbeat.custom_mode == GUIDED);
-                    printf("Mode: %d, %d\n", heartbeat.custom_mode, (int)m_is_auto_mode);
+                    //LogSimple(LOG_DEBUG, "Heatbeat! Mode: %d, %d", heartbeat.custom_mode, (int)m_is_auto_mode);
                     
                     if (!initted) {
                         mavlink_message_t smsg;
@@ -72,36 +88,30 @@ void FlightBoard::InputLoop() {
                         initted = true;
                         m_system_id = msg.sysid;
                         m_component_id = msg.compid;
-                        Log(LOG_DEBUG, "Got sysid: %d, compid: %d", msg.sysid, msg.compid);
+                        //Log(LOG_DEBUG, "Got sysid: %d, compid: %d", msg.sysid, msg.compid);
                         
-                        mavlink_msg_param_request_list_pack(
-                            m_system_id, m_flightboard_id, &msg,
-                            msg.sysid, msg.compid);
-                        Log(LOG_DEBUG, "Sending parameter list request");
-                        m_link->WriteMessage(&smsg);
-                        
-                        //2 Hz update rate
+                        //10 Hz update rate
                         mavlink_msg_request_data_stream_pack(
                             m_system_id, m_flightboard_id, &smsg,
-                            msg.sysid, msg.compid, MAV_DATA_STREAM_ALL, 2, 1);
-                        Log(LOG_DEBUG, "Sending data request");
+                            msg.sysid, msg.compid, MAV_DATA_STREAM_ALL, 10, 1);
+                        //Log(LOG_DEBUG, "Sending data request");
                         m_link->WriteMessage(&smsg);
                     }
                 } break;
                 case MAVLINK_MSG_ID_SYS_STATUS: {
                     mavlink_sys_status_t status;
                     mavlink_msg_sys_status_decode(&msg, &status);
-                    printf("BATTERY: %.2fV, Draw: %.2fA, Remain: %3d%%\n",
-                        status.voltage_battery*1e-3,
-                        status.current_battery*1e-2,
-                        status.battery_remaining);
+                    //LogSimple(LOG_DEBUG, "BATTERY: %.2fV, Draw: %.2fA, Remain: %3d%%",
+                    //    status.voltage_battery*1e-3,
+                    //    status.current_battery*1e-2,
+                    //    status.battery_remaining);
                 } break;
                 case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: {
                     mavlink_global_position_int_t pos;
                     mavlink_msg_global_position_int_decode(&msg, &pos);
-                    printf("Lat: %.2f, Lon: %.2f, RelAlt: %.2f, Brng: %.2f, (%.1f,%.1f,%.1f)\n",
-                    pos.lat*1e-7, pos.lon*1e-7, pos.relative_alt*1e-3, pos.hdg*1e-2,
-                    pos.vx*1e-2,pos.vy*1e-2,pos.vz*1e-2);
+                    //LogSimple(LOG_DEBUG, "Lat: %.2f, Lon: %.2f, RelAlt: %.2f, Brng: %.2f, (%.1f,%.1f,%.1f)",
+                    //pos.lat*1e-7, pos.lon*1e-7, pos.relative_alt*1e-3, pos.hdg*1e-2,
+                    //pos.vx*1e-2,pos.vy*1e-2,pos.vz*1e-2);
                 } break;
                 /*case MAVLINK_MSG_ID_GPS_RAW_INT: {
                     mavlink_gps_raw_int_t gps;
@@ -113,20 +123,39 @@ void FlightBoard::InputLoop() {
                 case MAVLINK_MSG_ID_ATTITUDE: {
                     mavlink_attitude_t att;
                     mavlink_msg_attitude_decode(&msg, &att);
-                    printf("Roll: %.2f, Pitch: %.2f, Yaw: %.2f\n",
-                        RAD2DEG(att.roll), RAD2DEG(att.pitch), RAD2DEG(att.yaw));
+                    //LogSimple(LOG_DEBUG, "Roll: %.2f, Pitch: %.2f, Yaw: %.2f",
+                    //    RAD2DEG(att.roll), RAD2DEG(att.pitch), RAD2DEG(att.yaw));
                 } break;
                 case MAVLINK_MSG_ID_PARAM_VALUE: {
                     mavlink_param_value_t param;
                     mavlink_msg_param_value_decode(&msg, &param);
-                    Log(LOG_DEBUG, "%.16s", param.param_id);
+                    //LogSimple(LOG_DEBUG, "%.16s", param.param_id);
                 } break;
                 default: {
-                    printf("MSGID: %d\n", msg.msgid);
+                    //LogSimple(LOG_DEBUG, "MSGID: %d\n", msg.msgid);
                 } break;
             }
-            fflush(stdout);
         }
+        m_last_heartbeat = duration_cast<seconds>(steady_clock::now()-last_heartbeat).count();
+    }
+}
+
+void FlightBoard::OutputLoop() {
+    mavlink_message_t msg;
+    mavlink_set_position_target_local_ned_t sp = {0};
+    sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY &
+                   MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_RATE;
+    sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
+
+    while (!m_shutdown) {
+        if (m_is_auto_mode) {
+            //Log(LOG_DEBUG, "SENDING");
+            mavlink_msg_set_position_target_local_ned_encode(m_system_id, m_flightboard_id, &msg, &sp);
+            m_link->WriteMessage(&msg);
+        } else {
+            //Log(LOG_DEBUG, "SLEEPING");
+        }
+        sleep_for(milliseconds(100));
     }
 }
 

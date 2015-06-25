@@ -45,6 +45,13 @@ namespace picopter {
             void SetGimbal(int pos);
             
         private:
+            /** The GPS fix timeout (in s) **/
+            static const int HEARTBEAT_TIMEOUT_DEFAULT = 2;
+
+            /** The hearbeat timeout **/
+            int m_heartbeat_timeout;
+            /** The time since the last heartbeat **/
+            int m_last_heartbeat;
             /** Holds current flight data **/
             FlightData m_currentData;
             /** The MAVLink data connection **/
@@ -55,6 +62,8 @@ namespace picopter {
             std::mutex m_worker_mutex;
             /** Message receiving thread **/
             std::thread m_input_thread;
+            /** Message sending thread **/
+            std::thread m_output_thread;
             /** The system ID of the flight board we connect to **/
             int m_system_id;
             /** The component ID of the flight board we connect to **/
@@ -66,6 +75,8 @@ namespace picopter {
 
             /** Loop to receive and dispatch MAVLink  messages **/
             void InputLoop();
+            /** Loop to send the setpoint via MAVLink **/
+            void OutputLoop();
             /** Copy constructor (disabled) **/
             FlightBoard(const FlightBoard &other);
             /** Assignment operator (disabled) **/

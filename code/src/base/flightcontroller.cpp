@@ -75,7 +75,7 @@ FlightController::FlightController(Options *opts)
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
     InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
     InitialiseItem("IMU", m_imu, opts, m_buzzer, false, 1);
-    InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
+    //InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
     
     m_gps = gps;
     if (m_camera) {
