@@ -28,7 +28,7 @@ FlightBoard::FlightBoard(Options *opts)
 , m_flightboard_id(128) //Arbitrary value 0-255
 , m_is_auto_mode{false}
 {
-    m_link = new MAVCommsSerial("/dev/ttyACM0", 115200);
+    m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
     //m_link = new MAVCommsTCP("127.0.0.1", 5760);
     //m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
     m_input_thread = std::thread(&FlightBoard::InputLoop, this);
@@ -63,8 +63,8 @@ void FlightBoard::InputLoop() {
                     printf("Heartbeat!\n");
                     mavlink_msg_heartbeat_decode(&msg, &heartbeat);
                     
-                    m_is_auto_mode = static_cast<bool>(heartbeat.base_mode & MAV_MODE_FLAG_GUIDED_ENABLED);
-                    printf("Mode: %d\n", heartbeat.base_mode);
+                    m_is_auto_mode = static_cast<bool>(heartbeat.custom_mode == GUIDED);
+                    printf("Mode: %d, %d\n", heartbeat.custom_mode, (int)m_is_auto_mode);
                     
                     if (!initted) {
                         mavlink_message_t smsg;
@@ -125,6 +125,7 @@ void FlightBoard::InputLoop() {
                     printf("MSGID: %d\n", msg.msgid);
                 } break;
             }
+            fflush(stdout);
         }
     }
 }

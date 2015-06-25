@@ -102,7 +102,7 @@ MAVCommsSerial::MAVCommsSerial(const char *device, int baudrate)
 
     if (cfsetispeed(&config, baudrate) == 1 || cfsetospeed(&config, baudrate) == -1) {
         throw std::invalid_argument("Could not set port baudrate.");
-    } else if (tcsetattr(m_fd, TCSAFLUSH, &config) == -1) {
+    } else if (tcflush(m_fd, TCIFLUSH) == -1 || tcsetattr(m_fd, TCSANOW, &config) == -1) {
         throw std::invalid_argument("Could not set port configuration.");
     }
 }
