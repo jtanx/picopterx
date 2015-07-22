@@ -82,6 +82,12 @@ public:
         return false;
     }
     
+    bool beginUserMappingThread()
+    {
+        Log(LOG_DEBUG, "USER MAPPING");
+        return false;
+    }
+    
     bool beginObjectTrackingThread(const int32_t method)
     {
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {

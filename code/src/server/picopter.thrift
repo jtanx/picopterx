@@ -28,6 +28,8 @@ service webInterface {
 	bool		beginLawnmowerThread();
 	bool		beginUserTrackingThread();
 	bool		beginObjectTrackingThread(1: i32 method);
+    bool		beginUserMappingThread();
+
 
 	i32			setCameraMode(1: i32 mode);
 	i32			requestCameraMode();

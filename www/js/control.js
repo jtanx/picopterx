@@ -80,7 +80,7 @@ function toggleOpts() {
 }
 
 function setTab(tab) {
-  tabs = ["manual-holder", "auto-holder", "tracking-holder", "status-holder", "calibration-holder", "settings-holder"];
+  tabs = ["manual-holder", "auto-holder", "tracking-holder", "status-holder", "calibration-holder", "mapping-holder", "settings-holder"];
   
   $.each(tabs, function(i, val) {
     if (val == tab) {
@@ -131,6 +131,12 @@ function calibrationMode() {
   if (!canEdit) {
     setTab("calibration-holder");
   }
+}
+
+function mappingMode() {
+    if (!canEdit) {
+        setTab("mapping-holder");
+    }
 }
 
 function settingsMode() {
