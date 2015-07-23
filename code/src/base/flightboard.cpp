@@ -62,6 +62,7 @@ FlightBoard::~FlightBoard() {
     Stop();
     m_shutdown = true;
     m_input_thread.join();
+    m_output_thread.join();
     delete m_link;
 }
 
@@ -143,7 +144,7 @@ void FlightBoard::InputLoop() {
             lock.unlock();
         }
         m_last_heartbeat = duration_cast<seconds>(steady_clock::now()-last_heartbeat).count();
-        if (m_last_heartbeat >= m_heartbeat_timeout) {
+        if (m_is_auto_mode && m_last_heartbeat >= m_heartbeat_timeout) {
             Log(LOG_WARNING, "Heartbeat timeout (%d s); disabling auto mode!",
                 m_last_heartbeat);
             m_is_auto_mode = false;

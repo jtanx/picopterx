@@ -16,3 +16,4 @@ tags
 
 third_party/Xsens
 src/server/gen-*
+._*

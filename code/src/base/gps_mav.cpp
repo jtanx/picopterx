@@ -65,7 +65,7 @@ void GPSMAV::GPSInput(const mavlink_message_t *msg) {
             d.fix.lat = pos.lat*1e-7;
             d.fix.lon = pos.lon*1e-7;
             d.fix.alt = pos.alt*1e-3;
-            d.fix.groundalt = pos.relative_alt*1e-3;
+            d.fix.groundalt = d.fix.alt - pos.relative_alt*1e-3;
             if (pos.hdg != UINT16_MAX) {
                 d.fix.heading = pos.hdg*1e-2;
             }
