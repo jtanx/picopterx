@@ -6,8 +6,10 @@
 #include "common.h"
 #include "imu_feed.h"
 
+using picopter::FlightBoard;
 using picopter::IMU;
 using picopter::IMUData;
+using namespace std::placeholders;
 
 /**
  * Constructor.
@@ -15,17 +17,18 @@ using picopter::IMUData;
  * @param opts A pointer to options, if any (NULL for defaults)
  * @throws std::invalid_argument if IMU intialisation fails (e.g. disconnected)
  */
-IMU::IMU(Options *opts)
+IMU::IMU(FlightBoard *fb, Options *opts)
 : m_data{NAN,NAN,NAN}
 , m_quit(false)
 { 
-    m_worker = std::thread(&IMU::IMULoop, this);
+    fb->RegisterHandler(MAVLINK_MSG_ID_ATTITUDE,
+        std::bind(&IMU::ParseInput, this, _1));
 }
 
 /**
  * Constructor. Constructs IMU with default options.
  */
-IMU::IMU() : IMU(NULL) {}
+IMU::IMU(FlightBoard *fb) : IMU(fb, NULL) {}
 
 /**
  * Destructor. Stops the worker thread and closes the connection to the IMU.
@@ -42,17 +45,19 @@ IMU::~IMU() {
 void IMU::GetLatest(IMUData *d) {
     std::lock_guard<std::mutex> lock(m_mutex);
     *d = m_data;
-    d->roll = d->roll;
-    d->pitch = d->pitch;
-    d->yaw = d->yaw;
 }
 
 /**
  * Worker thread.
  * Receives data from the IMU and updates the latest information as necessary.
  */
-void IMU::IMULoop() {
-    while (!m_quit) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+void IMU::ParseInput(const mavlink_message_t *msg) {
+    mavlink_attitude_t att;
+    mavlink_msg_attitude_decode(msg, &att);
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_data.roll = RAD2DEG(att.roll);
+        m_data.pitch = RAD2DEG(att.pitch);
+        m_data.yaw = RAD2DEG(att.yaw);
     }
 }

@@ -6,6 +6,9 @@
 #ifndef _PICOPTERX_FLIGHTBOARD_H
 #define _PICOPTERX_FLIGHTBOARD_H
 
+/* For MAVProxy includes and other related baggage */
+#include "mavcommslink.h"
+
 namespace picopter {
     /* Forward declaration of the options class */
     class Options;
@@ -32,18 +35,30 @@ namespace picopter {
      */
     class FlightBoard {
         public:
+            typedef std::function<void(const mavlink_message_t*)> EventHandler;
+
             FlightBoard();
             FlightBoard(Options *opts);
             virtual ~FlightBoard();
+            
             bool IsAutoMode();
             void Stop();
+
+            //void SetLocalPosition(Coord4D pt);
+            //void SetGlobalPosition(Coord4D pt);
+            //void SetSpeed(Coord4D sp);
+            //void SetAccel(Coord3D acc);
+
             void GetData(FlightData *d);
             void SetData(FlightData *d);
             void SetAileron(int speed);
             void SetElevator(int speed);
             void SetRudder(int speed);
             void SetGimbal(int pos);
-            
+
+            int RegisterHandler(int msgid, EventHandler handler);
+            void DeregisterHandler(int handlerid);
+            void SendMessage(mavlink_message_t *msg);
         private:
             /** The GPS fix timeout (in s) **/
             static const int HEARTBEAT_TIMEOUT_DEFAULT = 2;
@@ -72,6 +87,8 @@ namespace picopter {
             int m_flightboard_id;
             /** Are we in auto (Guided) mode? **/
             std::atomic<bool> m_is_auto_mode;
+            /** The event handler table **/
+            EventHandler m_handler_table[256];
 
             /** Loop to receive and dispatch MAVLink  messages **/
             void InputLoop();
@@ -81,10 +98,6 @@ namespace picopter {
             FlightBoard(const FlightBoard &other);
             /** Assignment operator (disabled) **/
             FlightBoard& operator= (const FlightBoard &other);
-            
-            void Actuate();
-            void FlushData();
-            void SetChannel(int channel, int value);
     };
 }
 

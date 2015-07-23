@@ -10,7 +10,6 @@
 #include "flightboard.h"
 #include "flightboard-private.h"
 #include "navigation.h"
-#include "mavcommslink.h"
 
 using picopter::FlightBoard;
 using picopter::FlightData;
@@ -34,6 +33,7 @@ FlightBoard::FlightBoard(Options *opts)
 , m_component_id(0)
 , m_flightboard_id(128) //Arbitrary value 0-255
 , m_is_auto_mode{false}
+, m_handler_table{0}
 {
     if (opts) {
         opts->SetFamily("FLIGHTBOARD");
@@ -69,26 +69,24 @@ void FlightBoard::InputLoop() {
     auto last_heartbeat = steady_clock::now() - seconds(m_heartbeat_timeout);
     mavlink_message_t msg;
     mavlink_heartbeat_t heartbeat;
-    bool initted = false;
-
+    std::unique_lock<std::mutex> lock(m_worker_mutex, std::defer_lock);
+    
     while (!m_shutdown) {
         if (m_link->ReadMessage(&msg)) {
-            LogSimple(LOG_DEBUG, "MSGID: %d\n", msg.msgid);
             switch (msg.msgid) {
                 case MAVLINK_MSG_ID_HEARTBEAT: {
-                    last_heartbeat = steady_clock::now();
                     mavlink_msg_heartbeat_decode(&msg, &heartbeat);
                     
                     m_is_auto_mode = static_cast<bool>(heartbeat.custom_mode == GUIDED);
                     //LogSimple(LOG_DEBUG, "Heatbeat! Mode: %d, %d", heartbeat.custom_mode, (int)m_is_auto_mode);
                     
-                    if (!initted) {
+                    if (m_last_heartbeat >= m_heartbeat_timeout) {
                         mavlink_message_t smsg;
 
-                        initted = true;
                         m_system_id = msg.sysid;
                         m_component_id = msg.compid;
-                        //Log(LOG_DEBUG, "Got sysid: %d, compid: %d", msg.sysid, msg.compid);
+                        Log(LOG_INFO, "Initialisation: sysid: %d, compid: %d",
+                            msg.sysid, msg.compid);
                         
                         //10 Hz update rate
                         mavlink_msg_request_data_stream_pack(
@@ -97,6 +95,7 @@ void FlightBoard::InputLoop() {
                         //Log(LOG_DEBUG, "Sending data request");
                         m_link->WriteMessage(&smsg);
                     }
+                    last_heartbeat = steady_clock::now();
                 } break;
                 case MAVLINK_MSG_ID_SYS_STATUS: {
                     mavlink_sys_status_t status;
@@ -135,8 +134,24 @@ void FlightBoard::InputLoop() {
                     //LogSimple(LOG_DEBUG, "MSGID: %d\n", msg.msgid);
                 } break;
             }
+            
+            //Call the event handler, if any.
+            lock.lock();
+            if (m_handler_table[msg.msgid]) {
+                m_handler_table[msg.msgid](&msg);
+            }
+            lock.unlock();
         }
         m_last_heartbeat = duration_cast<seconds>(steady_clock::now()-last_heartbeat).count();
+        if (m_last_heartbeat >= m_heartbeat_timeout) {
+            Log(LOG_WARNING, "Heartbeat timeout (%d s); disabling auto mode!",
+                m_last_heartbeat);
+            m_is_auto_mode = false;
+        }
+        //Handle the message if there's a registered message handler
+        if (msg.msgid >= 0 && msg.msgid < 255 && m_handler_table[msg.msgid]) {
+            m_handler_table[msg.msgid](&msg);
+        }
     }
 }
 
@@ -145,11 +160,14 @@ void FlightBoard::OutputLoop() {
     mavlink_set_position_target_local_ned_t sp = {0};
     sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY &
                    MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_RATE;
-    sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
+    sp.coordinate_frame = MAV_FRAME_BODY_NED;
 
     while (!m_shutdown) {
         if (m_is_auto_mode) {
             //Log(LOG_DEBUG, "SENDING");
+            sp.vx = m_currentData.elevator / 100.0;
+            sp.vy = m_currentData.aileron / 100.0;
+            sp.yaw_rate = m_currentData.rudder * M_PI/100.0; //Max speed is 0.5Hz
             mavlink_msg_set_position_target_local_ned_encode(m_system_id, m_flightboard_id, &msg, &sp);
             m_link->WriteMessage(&msg);
         } else {
@@ -176,7 +194,42 @@ bool FlightBoard::IsAutoMode() {
 void FlightBoard::Stop() {
     FlightData fd_zero = {0};
     m_currentData = fd_zero;
-    Actuate();
+}
+
+/**
+ * Registers an event handler, which will be called when a message with
+ * the given message id is received. The current implementation will only allow
+ * up to one function to respond to a specific message at any one time. If a
+ * callback function already exists for the given msgid, it will be replaced.
+ * A more versatile implementation would maintain some sort of list per msgid
+ * to allow for more than one function to be called at any one time. Or, if
+ * more than one function really must be called, then a callback function that
+ * then itself delegates to these functions can be used instead.
+ *  
+ * @param [in] msgid The message id to respond to.
+ * @param [in] handler The event handler to call.
+ * @return -1 on error, or the unique handler id. At present this is just equal
+ *         to msgid. 
+ */
+int FlightBoard::RegisterHandler(int msgid, EventHandler handler) {
+    if (msgid < 0 || msgid > 255) {
+        return -1;
+    } else {
+        std::lock_guard<std::mutex> lock(m_worker_mutex);
+        m_handler_table[msgid] = handler;
+        return msgid;
+    }
+}
+
+/**
+ * Deregisters a message handler.
+ * @param [in] handlerid The unique handler id as returned from RegisterHandler.
+ */
+void FlightBoard::DeregisterHandler(int handlerid) {
+    if (handlerid >= 0 && handlerid <= 255) {
+        std::lock_guard<std::mutex> lock(m_worker_mutex);
+        m_handler_table[handlerid] = nullptr;
+    }
 }
 
 /**
@@ -196,25 +249,15 @@ void FlightBoard::SetData(FlightData *d) {
     m_currentData.elevator = picopter::clamp(d->elevator, -100, 100);
     m_currentData.rudder = picopter::clamp(d->rudder, -100, 100);
     m_currentData.gimbal = picopter::clamp(d->gimbal, 0, 90);
-    
-    Actuate();
 }
 
-/**
- * Tells ServoBlaster to set the pulse width for a given channel.
- * Will not be performed until the data is flushed (call FlushData).
- * @param channel The ServoBlaster channel to alter
- * @param value The pulse width, in steps
- */
-void FlightBoard::SetChannel(int channel, int value) {
-
-}
 
 /**
  * Sets the aileron speed.
  * @param speed The aileron speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetAileron(int speed) {
+    m_currentData.aileron = picopter::clamp(speed, -100, 100);
 }
 
 /**
@@ -222,7 +265,8 @@ void FlightBoard::SetAileron(int speed) {
  * @param speed The elevator speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetElevator(int speed) {
-
+    //Elevator speed is inverted.
+    m_currentData.elevator = picopter::clamp(-speed, -100, 100);
 }
 
 /**
@@ -230,6 +274,7 @@ void FlightBoard::SetElevator(int speed) {
  * @param speed The rudder speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetRudder(int speed) {
+    m_currentData.rudder = picopter::clamp(speed, -100, 100);
 }
 
 /**
@@ -237,10 +282,5 @@ void FlightBoard::SetRudder(int speed) {
  * @param pos The gimbal angle, in degrees (0 to 90)
  */
 void FlightBoard::SetGimbal(int pos) {
-}
-
-/**
- * Actuates all channels using current flight data.
- */
-void FlightBoard::Actuate() {
+    m_currentData.gimbal = picopter::clamp(pos, 0, 90);
 }

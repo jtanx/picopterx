@@ -68,15 +68,15 @@ FlightController::FlightController(Options *opts)
 , m_task_id{TASK_NONE}
 , m_task{nullptr}
 {
-    GPSGPSD *gps;
+    //GPSGPSD *gps;
     m_buzzer = new Buzzer();
     
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
-    InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
-    InitialiseItem("IMU", m_imu, opts, m_buzzer, false, 1);
+    //InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
+    //m_gps = gps;
+    m_imu = new IMU(m_fb, opts);    
+    m_gps = new GPSMAV(m_fb, opts);
     //InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
-    
-    m_gps = gps;
     if (m_camera) {
         m_camera->Start();
         m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);

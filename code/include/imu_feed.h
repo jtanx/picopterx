@@ -7,6 +7,7 @@
 #define _PICOPTERX_IMU_H
 
 #include "navigation.h"
+#include "flightboard.h"
 
 namespace picopter {
     /* Forward declaration of the options class */
@@ -22,8 +23,8 @@ namespace picopter {
      */
     class IMU {
         public:
-            IMU();
-            IMU(Options *opts);
+            IMU(FlightBoard *fb);
+            IMU(FlightBoard *fb, Options *opts);
             virtual ~IMU();
             void GetLatest(IMUData *d);
             
@@ -40,7 +41,7 @@ namespace picopter {
             IMU(const IMU &other);
             /** Assignment operator (disabled) **/
             IMU& operator= (const IMU &other);
-            void IMULoop();
+            void ParseInput(const mavlink_message_t *msg);
     };
 }
 
