@@ -159,20 +159,40 @@ void FlightBoard::InputLoop() {
 
 void FlightBoard::OutputLoop() {
     mavlink_message_t msg;
+    //mavlink_set_attitude_target_t sp = {0};
+    //auto now = steady_clock::now();
     mavlink_set_position_target_local_ned_t sp = {0};
-    sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY &
-                   MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_RATE;
-    sp.coordinate_frame = MAV_FRAME_BODY_NED;
+    sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY;
+    sp.coordinate_frame = MAV_FRAME_BODY_OFFSET_NED;
+    //mavlink_set_actuator_control_target_t sp = {0};
+    mavlink_command_long_t yaw_sp = {0};
+    yaw_sp.command = MAV_CMD_CONDITION_YAW;
 
     while (!m_shutdown) {
         if (m_is_auto_mode) {
             std::lock_guard<std::mutex> lock(m_output_mutex);
             //Log(LOG_DEBUG, "SENDING");
-            sp.vx = m_currentData.elevator / 100.0;
-            sp.vy = m_currentData.aileron / 100.0;
-            sp.yaw_rate = m_currentData.rudder * M_PI/100.0; //Max speed is 0.5Hz
+            sp.vx = (8 * m_currentData.elevator) / 100.0; //Max speed is 8 m/s
+            sp.vy = (8 * m_currentData.aileron) / 100.0;
+            //sp.yaw = m_currentData.rudder * M_PI/100.0; //Max speed is 0.5Hz
+            //sp.yaw_rate = m_currentData.rudder * M_PI/100.0; //Max speed is 0.5Hz
             mavlink_msg_set_position_target_local_ned_encode(m_system_id, m_flightboard_id, &msg, &sp);
+            //sp.time_boot_ms = duration_cast<milliseconds>(steady_clock::now() - now).count();
+            //sp.type_mask = 0b00011111;
+            //sp.body_roll_rate = m_currentData.aileron * M_PI / 400.0; //Max angle is 45deg
+            //sp.body_pitch_rate = m_currentData.elevator * M_PI / 400.0; //Max angle is 45deg
+            //sp.body_yaw_rate = m_currentData.rudder * M_PI/100.0; //Max speed is 0.5Hz
+            //mavlink_msg_set_attitude_target_encode(m_system_id, m_flightboard_id, &msg, &sp);
             m_link->WriteMessage(&msg);
+            
+            if (m_currentData.rudder != 0) {
+                yaw_sp.param1 = std::fabs(m_currentData.rudder * 15/100.0); //Yaw in deg (relative)
+                yaw_sp.param2 = yaw_sp.param1; //Yaw rate in deg/s
+                yaw_sp.param3 = m_currentData.rudder < 0 ? -1 : 1; //Yaw direction (CCW or CW)
+                yaw_sp.param4 = 1; //Relative
+                mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &yaw_sp);
+                m_link->WriteMessage(&msg);
+            }
         } else {
             //Log(LOG_DEBUG, "SLEEPING");
         }
