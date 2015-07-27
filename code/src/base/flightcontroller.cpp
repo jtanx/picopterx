@@ -76,7 +76,7 @@ FlightController::FlightController(Options *opts)
     //m_gps = gps;
     m_imu = new IMU(m_fb, opts);    
     m_gps = new GPSMAV(m_fb, opts);
-    //InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
+    InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
     if (m_camera) {
         m_camera->Start();
         m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);

@@ -59,8 +59,8 @@ namespace picopter {
             void DeregisterHandler(int handlerid);
             void SendMessage(mavlink_message_t *msg);
         private:
-            /** The GPS fix timeout (in s) **/
-            static const int HEARTBEAT_TIMEOUT_DEFAULT = 2;
+            /** The autopilot connection timeout (in s) **/
+            static const int HEARTBEAT_TIMEOUT_DEFAULT = 10;
 
             /** The hearbeat timeout **/
             int m_heartbeat_timeout;

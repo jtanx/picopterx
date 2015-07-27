@@ -47,8 +47,8 @@ GPSMAV::~GPSMAV() {
  * Main worker callback.
  */
 void GPSMAV::GPSInput(const mavlink_message_t *msg) {
-    //Fixme
-    /*auto last_fix = steady_clock::now() - seconds(m_fix_timeout);
+    //Fixme...
+    static auto last_fix = steady_clock::now() - seconds(m_fix_timeout);
     
     m_last_fix = duration_cast<seconds>(steady_clock::now() - last_fix).count();
     if (m_had_fix && !HasFix()) {
@@ -56,7 +56,7 @@ void GPSMAV::GPSInput(const mavlink_message_t *msg) {
             m_last_fix.load());
         m_log.Write(": Lost fix");
         m_had_fix = false;
-    }*/
+    }
 
     if (msg->msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
         mavlink_global_position_int_t pos;
@@ -76,7 +76,7 @@ void GPSMAV::GPSInput(const mavlink_message_t *msg) {
             d.fix.lat, d.err.lat, d.fix.lon, d.err.lon,
             d.fix.speed, d.err.speed, d.fix.heading, d.err.heading);
         
-        //last_fix = steady_clock::now();
+        last_fix = steady_clock::now();
         m_had_fix = true;
     }
 }

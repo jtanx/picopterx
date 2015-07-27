@@ -41,8 +41,12 @@ FlightBoard::FlightBoard(Options *opts)
     }
     //Some increment past the timeout
     m_last_heartbeat = m_heartbeat_timeout + 10;
-    m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
-    //m_link = new MAVCommsTCP("127.0.0.1", 5760);
+    //m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
+    try {
+        m_link = new MAVCommsTCP("127.0.0.1", 5760);
+    } catch (std::invalid_argument e) {
+        m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
+    }
     //m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
     m_input_thread = std::thread(&FlightBoard::InputLoop, this);
     m_output_thread = std::thread(&FlightBoard::OutputLoop, this);
@@ -75,25 +79,28 @@ void FlightBoard::InputLoop() {
                 case MAVLINK_MSG_ID_HEARTBEAT: {
                     mavlink_msg_heartbeat_decode(&msg, &heartbeat);
                     
-                    m_is_auto_mode = static_cast<bool>(heartbeat.custom_mode == GUIDED);
-                    //LogSimple(LOG_DEBUG, "Heatbeat! Mode: %d, %d", heartbeat.custom_mode, (int)m_is_auto_mode);
-                    
-                    if (m_last_heartbeat >= m_heartbeat_timeout) {
-                        mavlink_message_t smsg;
-
-                        m_system_id = msg.sysid;
-                        m_component_id = msg.compid;
-                        Log(LOG_INFO, "Initialisation: sysid: %d, compid: %d",
-                            msg.sysid, msg.compid);
+                    //Skip heartbeats that aren't from the copter
+                    if (heartbeat.type != MAV_TYPE_GCS) {
+                        m_is_auto_mode = static_cast<bool>(heartbeat.custom_mode == GUIDED);
+                        LogSimple(LOG_DEBUG, "Heatbeat! Mode: %d, %d, %d, %d", heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, (int)m_is_auto_mode);
                         
-                        //10 Hz update rate
-                        mavlink_msg_request_data_stream_pack(
-                            m_system_id, m_flightboard_id, &smsg,
-                            msg.sysid, msg.compid, MAV_DATA_STREAM_ALL, 10, 1);
-                        //Log(LOG_DEBUG, "Sending data request");
-                        m_link->WriteMessage(&smsg);
+                        if (m_last_heartbeat >= m_heartbeat_timeout) {
+                            mavlink_message_t smsg;
+
+                            m_system_id = msg.sysid;
+                            m_component_id = msg.compid;
+                            Log(LOG_INFO, "Initialisation: sysid: %d, compid: %d",
+                                msg.sysid, msg.compid);
+                            
+                            //10 Hz update rate
+                            mavlink_msg_request_data_stream_pack(
+                                m_system_id, m_flightboard_id, &smsg,
+                                msg.sysid, msg.compid, MAV_DATA_STREAM_ALL, 10, 1);
+                            //Log(LOG_DEBUG, "Sending data request");
+                            m_link->WriteMessage(&smsg);
+                        }
+                        last_heartbeat = steady_clock::now();
                     }
-                    last_heartbeat = steady_clock::now();
                 } break;
                 case MAVLINK_MSG_ID_SYS_STATUS: {
                     mavlink_sys_status_t status;
