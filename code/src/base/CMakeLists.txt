@@ -10,12 +10,13 @@ set (SOURCE
 	 flightboard.cpp
 	 gps.cpp
 	 gps_gpsd.cpp
-	 gps_naza.cpp
+	 gps_mav.cpp
 	 imu.cpp
 	 flightcontroller.cpp
 	 PID.cpp
-	 NazaDecoderLib.cpp
 	 camera_stream.cpp
+	 mavcommsserial.cpp
+	 mavcommstcp.cpp
 )
 set (HEADERS
 	 flightboard-private.h
@@ -30,12 +31,12 @@ set (HEADERS
 	 ${PI_INCLUDE}/navigation.h
 	 ${PI_INCLUDE}/gps_feed.h
 	 ${PI_INCLUDE}/gps_gpsd.h
-	 ${PI_INCLUDE}/gps_naza.h
+	 ${PI_INCLUDE}/gps_mav.h
 	 ${PI_INCLUDE}/imu_feed.h
 	 ${PI_INCLUDE}/flightcontroller.h
 	 ${PI_INCLUDE}/PID.h
-	 ${PI_INCLUDE}/NazaDecoderLib.h
 	 ${PI_INCLUDE}/camera_stream.h
+	 ${PI_INCLUDE}/mavcommslink.h
 )
 
 #Compile as a static library
@@ -48,10 +49,6 @@ target_link_libraries(picopter_base LINK_PRIVATE ${LIBGPS_LIBRARIES})
 #Link to OpenCV bloat
 target_link_libraries(picopter_base LINK_PRIVATE ${OpenCV_LIBS})
 
-#Link to XSens, if present
-if (NOT DISABLE_NONFREE)
-	target_link_libraries(picopter_base LINK_PRIVATE cmt)
-endif (NOT DISABLE_NONFREE)
 #Link to wiringPi, if present
 if (WIRINGPI_FOUND)
 	target_link_libraries(picopter_base LINK_PRIVATE wiringPi)

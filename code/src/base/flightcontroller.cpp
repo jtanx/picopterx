@@ -68,16 +68,15 @@ FlightController::FlightController(Options *opts)
 , m_task_id{TASK_NONE}
 , m_task{nullptr}
 {
-    GPSNaza *gps;
     //GPSGPSD *gps;
     m_buzzer = new Buzzer();
     
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
-    InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
-    InitialiseItem("IMU", m_imu, opts, m_buzzer, false, 1);
+    //InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
+    //m_gps = gps;
+    m_imu = new IMU(m_fb, opts);    
+    m_gps = new GPSMAV(m_fb, opts);
     InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
-    
-    m_gps = gps;
     if (m_camera) {
         m_camera->Start();
         m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);
@@ -120,7 +119,7 @@ void FlightController::Stop() {
  * Check whether a stop should occur or not.
  */
 bool FlightController::CheckForStop() {
-    return m_stop.load(std::memory_order_relaxed) || !gpio::IsAutoMode();
+    return m_stop.load(std::memory_order_relaxed) || !m_fb->IsAutoMode();
 }
 
 /**
@@ -132,7 +131,7 @@ bool FlightController::WaitForAuth() {
     static const milliseconds wait(SLEEP_PERIOD);
     bool stop;
     
-    while (!(stop = m_stop.load(std::memory_order_relaxed)) && !gpio::IsAutoMode()){
+    while (!(stop = m_stop.load(std::memory_order_relaxed)) && !m_fb->IsAutoMode()){
         sleep_for(wait);
     }
     return !stop;

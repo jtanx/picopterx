@@ -1,0 +1,516 @@
+picopter[2878]: NOTICE: LogInit (base/log.cpp:23) - Data log files will be stored by default to: /home/pi/logs
+picopter[2878]: INFO: FIX_TIMEOUT [default]: 2
+picopter[2878]: DEBUG: picopter::FlightBoard::InputLoop (base/flightboard.cpp:75) - Got sysid: 1, compid: 1
+picopter[2878]: DEBUG: picopter::FlightBoard::InputLoop (base/flightboard.cpp:80) - Sending parameter list request
+picopter[2878]: DEBUG: picopter::FlightBoard::InputLoop (base/flightboard.cpp:87) - Sending data request
+picopter[2878]: INFO: picopter::GPSNaza::GPSLoop (base/gps_naza.cpp:56) - GPS Started!
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+picopter[2878]: INFO: MIN_HUE [default]: 340
+picopter[2878]: INFO: MAX_HUE [default]: 20
+picopter[2878]: INFO: MIN_SAT [default]: 95
+picopter[2878]: INFO: MAX_SAT [default]: 255
+picopter[2878]: INFO: MIN_VAL [default]: 127
+picopter[2878]: INFO: MAX_VAL [default]: 255
+picopter[2878]: INFO: INPUT_WIDTH [default]: 320
+picopter[2878]: INFO: INPUT_HEIGHT [default]: 240
+picopter[2878]: INFO: PROCESS_WIDTH [default]: 160
+picopter[2878]: INFO: STREAM_WIDTH [default]: 320
+picopter[2878]: INFO: BOX_SIZE [default]: 1.500000
+picopter[2878]: INFO: LEARN_SIZE [default]: 50
+picopter[2878]: INFO: LEARN_HUE_WIDTH [default]: 20
+picopter[2878]: INFO: THREAD_SLEEP_TIME [default]: 5
+picopter[2878]: INFO: DILATE_ELEMENT [default]: 8
+picopter[2878]: INFO: ERODE_ELEMENT [default]: 8
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+VIDIOC_QUERYMENU: Invalid argument
+HIGHGUI ERROR: V4L: Property <unknown property string>(5) not supported by device
+picopter[2878]: INFO: PIXEL_THRESHOLD [default]: 30
+picopter[2878]: INFO: DEMO_MODE [default]: false
+picopter[2878]: INFO: picopter::FlightController::FlightController (base/flightcontroller.cpp:86) - Initialised components!
+picopter[2878]: INFO: main (server/picopter.cpp:312) - Server started.
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.18V, Draw: 0.78A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.31, Brng: 205.11, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.16, Yaw: -154.90
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.18V, Draw: 0.78A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.33, Brng: 205.10, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.55, Pitch: 0.16, Yaw: -154.90
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.19V, Draw: 0.80A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.35, Brng: 205.08, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.56, Pitch: 0.16, Yaw: -154.93
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.18V, Draw: 0.79A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.36, Brng: 205.06, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.56, Pitch: 0.18, Yaw: -154.95
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.18V, Draw: 0.79A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.35, Brng: 205.05, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.15V, Draw: 0.87A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.37, Brng: 204.95, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.56, Pitch: 0.14, Yaw: -155.05
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.14V, Draw: 0.91A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.38, Brng: 204.96, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.13, Yaw: -155.05
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.15V, Draw: 0.88A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.36, Brng: 204.94, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.53, Pitch: 0.16, Yaw: -155.07
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.93A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.37, Brng: 204.95, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.15, Yaw: -155.05
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.14V, Draw: 0.94A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.37, Brng: 204.99, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.55, Pitch: 0.16, Yaw: -155.02
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.89A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.36, Brng: 205.01, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.13, Yaw: -154.99
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.92A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.34, Brng: 205.03, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.53, Pitch: 0.09, Yaw: -154.97
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.12V, Draw: 0.92A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.33, Brng: 205.03, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.53, Pitch: 0.11, Yaw: -154.97
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.14V, Draw: 0.89A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.29, Brng: 205.03, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.55, Pitch: 0.17, Yaw: -154.97
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.90A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.27, Brng: 205.06, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.15, Yaw: -154.95
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.90A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.26, Brng: 205.07, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.17, Yaw: -154.93
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.85A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.27, Brng: 205.06, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.14, Yaw: -154.95
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.93A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.27, Brng: 205.00, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.16, Yaw: -155.00
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.14V, Draw: 0.84A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.27, Brng: 204.99, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.55, Pitch: 0.17, Yaw: -155.01
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.12V, Draw: 0.91A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.29, Brng: 205.01, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.57, Pitch: 0.20, Yaw: -155.00
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.89A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.29, Brng: 205.02, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.56, Pitch: 0.17, Yaw: -154.98
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.12V, Draw: 0.89A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.29, Brng: 205.03, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.55, Pitch: 0.18, Yaw: -154.97
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.13V, Draw: 0.89A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.30, Brng: 205.01, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.55, Pitch: 0.20, Yaw: -154.99
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.11V, Draw: 0.93A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.30, Brng: 205.04, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.15, Yaw: -154.97
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.12V, Draw: 0.89A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.30, Brng: 205.05, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.18, Yaw: -154.95
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.11V, Draw: 0.92A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.30, Brng: 205.03, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.53, Pitch: 0.21, Yaw: -154.97
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.12V, Draw: 0.93A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.29, Brng: 205.04, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.51, Pitch: 0.19, Yaw: -154.96
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.11V, Draw: 0.93A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.32, Brng: 205.02, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.52, Pitch: 0.19, Yaw: -154.99
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.10V, Draw: 0.95A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.35, Brng: 205.01, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.54, Pitch: 0.17, Yaw: -155.00
+MSGID: 74
+MSGID: 2
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.12V, Draw: 0.91A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.37, Brng: 205.00, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.55, Pitch: 0.14, Yaw: -155.01
+MSGID: 74
+MSGID: 2
+Heartbeat!
+Mode: 81
+MSGID: 27
+MSGID: 116
+MSGID: 29
+BATTERY: 10.11V, Draw: 0.90A, Remain:  98%
+MSGID: 125
+MSGID: 42
+MSGID: 24
+MSGID: 62
+Lat: 0.00, Lon: 0.00, RelAlt: -0.36, Brng: 205.03, (0.0,0.0,0.0)
+MSGID: 36
+MSGID: 35
+Roll: 1.55, Pitch: 0

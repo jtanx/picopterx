@@ -80,6 +80,13 @@ function beginUserTracking() {
 }
 
 /**
+ *  Begin the Environmental Mapping
+ */
+function beginUserMapping() {
+    ajaxSend('beginUserMapping');
+}
+
+/**
  *  Begin the object tracking function (using camera)
  */
 function beginObjectTracking(method) {

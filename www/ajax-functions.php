@@ -121,6 +121,12 @@
 				$ans = $client->beginUserTrackingThread();
 				print "beginUserTrackingThread " . $b[$ans] . "\n";
 				break;
+                
+            case "beginUserMapping":
+                $ans = $client->beginUserMappingThread();
+                print "beginUserMappingThread " . $b[$ans] . "\n";
+                break;
+                
 				
 			case "beginObjectTracking":
 				if (isset($source["data"])) {

@@ -1,4 +1,7 @@
 [submodule "code/third_party/googletest"]
 	path = code/third_party/googletest
-	url = http://git.chromium.org/external/googletest.git
+	url = https://chromium.googlesource.com/external/googletest.git
 	ignore = dirty
+[submodule "code/third_party/mavlink"]
+	path = code/third_party/mavlink
+	url = https://github.com/mavlink/c_library

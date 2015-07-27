@@ -32,6 +32,7 @@
 						<button type="button" class="cbtn nav-c" onclick="autoMode()">Automatic</button>
 						<button type="button" class="cbtn nav-c" onclick="trackingMode()">Tracking</button>
 						<button type="button" class="cbtn nav-c" onclick="calibrationMode()">Calibration</button>
+                        <button type="button" class="cbtn nav-c" onclick="mappingMode()">Mapping</button>
 						<button type="button" class="cbtn nav-d" onclick="settingsMode()">Settings</button>
 					</div>
 					<!-- Sidepanel - information box on the right -->
@@ -111,12 +112,22 @@
 								</div>
 							</div>
 						</div>
-						
+
+
+<div id="mapping-holder" style="display: none">
+<div class="headline">
+<span class="h3">Mapping Mode</span>
+</div>
+
+<button id="mapping-object" class="cbtn roundbtn" onclick="beginUserMapping()">Mapping</button>
+</div>
+
+
 						<div id="information" class="text"></div>
 						<div id="status" class="text"></div>
 					</div>
 				</div><!-- row -->
-				
+
 				<div id="sidepanel-top-closeout" class="row">
 					<div class="col-md-3 col-sm-2 hidden-xs" style="padding-right: 0;">
 						<div id="tertiary-menu-a">

@@ -22,21 +22,10 @@ void gpio::Init() {
     
     if (!g_gpio_initted) {
         wiringPiSetup();
-        pinMode(gpio::MODE_PIN, INPUT);
         pinMode(gpio::BUZZER_PIN, OUTPUT);
         
         g_gpio_initted = true;
     }
-}
-
-/**
- * Determines if autonomous mode has been enabled by the user.
- * Assumes that gpio::init has already been called.
- * Probably not thread-safe.
- * @return true iff the user has enabled the switch for autonomous mode
- */
-bool gpio::IsAutoMode() {
-    return digitalRead(gpio::MODE_PIN);
 }
 
 /**

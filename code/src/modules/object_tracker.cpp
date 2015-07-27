@@ -206,8 +206,8 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     }
     
     //Comment this out to use dynamic altitude.
-    #warning "using 4m as height above target"
-    heightAboveTarget = 4;    //hard-coded for lab test
+    //#warning "using 4m as height above target"
+    //heightAboveTarget = 4;    //hard-coded for lab test
     
     //Calibration factor Original: 2587.5 seemed too low from experimental testing
     //0.9m high 

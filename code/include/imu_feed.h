@@ -7,9 +7,7 @@
 #define _PICOPTERX_IMU_H
 
 #include "navigation.h"
-
-//Forward declaration of Cmt3 from XSens
-namespace xsens {class Cmt3;}
+#include "flightboard.h"
 
 namespace picopter {
     /* Forward declaration of the options class */
@@ -25,29 +23,24 @@ namespace picopter {
      */
     class IMU {
         public:
-            IMU();
-            IMU(Options *opts);
+            IMU(FlightBoard *fb);
+            IMU(FlightBoard *fb, Options *opts);
             virtual ~IMU();
             void GetLatest(IMUData *d);
             
         private:
-            /** Path to the IMU device; e.g. /dev/ttyUSB0 **/
-            static const char *IMU_DEVICE;
             /** Read timeout from the IMU in ms **/
             static const int IMU_TIMEOUT = 500;
+            /** The IMU data **/
             IMUData m_data;
-            
-            std::atomic<bool> m_quit;
+            /** Read/Write lock on the IMU data **/
             std::mutex m_mutex;
-            std::thread m_worker;
-            
-            xsens::Cmt3 *m_device;
             
             /** Copy constructor (disabled) **/
             IMU(const IMU &other);
             /** Assignment operator (disabled) **/
             IMU& operator= (const IMU &other);
-            void IMULoop();
+            void ParseInput(const mavlink_message_t *msg);
     };
 }
 

@@ -39,6 +39,9 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+#Include the MAVLink headers
+include_directories (${PI_THIRD_PARTY}/mavlink)
+
 #Find prerequisite packages
 find_package (OpenCV REQUIRED)
 include_directories (${OpenCV_INCLUDE_DIR})
@@ -48,22 +51,6 @@ pkg_check_modules (LIBGPS libgps)
 include_directories (${LIBGPS_INCLUDE_DIRS})
 link_directories (${LIBGPS_LIBRARY_DIRS})
 set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
-
-#Set XSens stuff
-if (NOT DISABLE_NONFREE)
-	set (XSENS_FOLDER "${CMAKE_BINARY_DIR}/third_party/Xsens")
-	set (XSENS_REPO "https://github.com/jtanx/Xsens")
-	
-	if (NOT EXISTS "${XSENS_FOLDER}")
-		execute_process (COMMAND git clone ${XSENS_REPO} "${XSENS_FOLDER}"
-						 RESULT_VARIABLE retval)
-		if (NOT "${retval}" STREQUAL "0")
-			message (FATAL_ERROR "${Red}Could not clone the Xsens repository.${ColourReset}")
-		endif ()
-	endif ()
-	add_subdirectory (${XSENS_FOLDER})
-	include_directories (${XSENS_FOLDER})
-endif (NOT DISABLE_NONFREE)
 
 #Optional libraries (tcmalloc; from google perftools)
 CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
@@ -125,16 +112,6 @@ else ()
 	if (NOT WIRINGPI_FOUND)
 		message (FATAL_ERROR "${Red}Building on the RPi without wiringPi${ColourReset}")
 	endif (NOT WIRINGPI_FOUND)
-	
-	message (STATUS "Checking for ServoBlaster...")
-	execute_process (COMMAND /usr/local/sbin/servod --help
-					 OUTPUT_QUIET
-					 RESULT_VARIABLE SERVOBLASTER_ERROR)
-	if (SERVOBLASTER_ERROR)
-		message (FATAL_ERROR "${Red}ServoBlaster check failed! Ensure it is installed.${ColourReset}")
-	else (SERVOBLASTER_ERROR)
-		message (STATUS "ServoBlaster found!")
-	endif (SERVOBLASTER_ERROR)
 endif ()
 
 if (NOT LIBGPS_FOUND)
@@ -149,7 +126,7 @@ endif()
 include_directories (${PI_INCLUDE})
 
 #Set compiler flags
-set (GCC_COMPILE_FLAGS "-std=c++11 -Wall -pedantic -gdwarf-3")
+set (GCC_COMPILE_FLAGS "-std=c++11 -Wall -pedantic -gdwarf-3 -O0")
 set (GCC_LINK_FLAGS "-pthread")
 set (CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COMPILE_FLAGS}")
 set (CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_LINK_FLAGS}")

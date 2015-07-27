@@ -8,7 +8,7 @@
 
 #include "buzzer.h"
 #include "gps_gpsd.h"
-#include "gps_naza.h"
+#include "gps_mav.h"
 #include "imu_feed.h"
 #include "flightboard.h"
 #include "camera_stream.h"
