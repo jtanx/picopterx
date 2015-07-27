@@ -31,7 +31,6 @@ namespace picopter {
 
     /**
      * Controls the actuation of the hexacopter.
-     * This class is not thread-safe.
      */
     class FlightBoard {
         public:
@@ -73,8 +72,8 @@ namespace picopter {
             MAVCommsLink *m_link;
             /** The shutdown signal **/
             std::atomic<bool> m_shutdown;
-            /** Worker mutex **/
-            std::mutex m_worker_mutex;
+            /** Output worker mutex **/
+            std::mutex m_output_mutex;
             /** Message receiving thread **/
             std::thread m_input_thread;
             /** Message sending thread **/

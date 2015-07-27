@@ -33,7 +33,7 @@ FlightBoard::FlightBoard(Options *opts)
 , m_component_id(0)
 , m_flightboard_id(128) //Arbitrary value 0-255
 , m_is_auto_mode{false}
-, m_handler_table{0}
+, m_handler_table{}
 {
     if (opts) {
         opts->SetFamily("FLIGHTBOARD");
@@ -46,8 +46,6 @@ FlightBoard::FlightBoard(Options *opts)
     //m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
     m_input_thread = std::thread(&FlightBoard::InputLoop, this);
     m_output_thread = std::thread(&FlightBoard::OutputLoop, this);
-
-	Stop();
 }
 
 /** 
@@ -70,7 +68,6 @@ void FlightBoard::InputLoop() {
     auto last_heartbeat = steady_clock::now() - seconds(m_heartbeat_timeout);
     mavlink_message_t msg;
     mavlink_heartbeat_t heartbeat;
-    std::unique_lock<std::mutex> lock(m_worker_mutex, std::defer_lock);
     
     while (!m_shutdown) {
         if (m_link->ReadMessage(&msg)) {
@@ -106,52 +103,49 @@ void FlightBoard::InputLoop() {
                     //    status.current_battery*1e-2,
                     //    status.battery_remaining);
                 } break;
-                case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: {
-                    mavlink_global_position_int_t pos;
-                    mavlink_msg_global_position_int_decode(&msg, &pos);
-                    //LogSimple(LOG_DEBUG, "Lat: %.2f, Lon: %.2f, RelAlt: %.2f, Brng: %.2f, (%.1f,%.1f,%.1f)",
-                    //pos.lat*1e-7, pos.lon*1e-7, pos.relative_alt*1e-3, pos.hdg*1e-2,
-                    //pos.vx*1e-2,pos.vy*1e-2,pos.vz*1e-2);
-                } break;
-                /*case MAVLINK_MSG_ID_GPS_RAW_INT: {
-                    mavlink_gps_raw_int_t gps;
-                    printf("GPS!\n");
-                    mavlink_msg_gps_raw_int_decode(&msg, &gps);
-                    printf("Lat: %.2f, Lon: %.2f, Alt: %.2fm\n",
-                        gps.lat * 1e-7, gps.lon * 1e-7, gps.alt / 1000.0);
-                } break;*/
-                case MAVLINK_MSG_ID_ATTITUDE: {
-                    mavlink_attitude_t att;
-                    mavlink_msg_attitude_decode(&msg, &att);
-                    //LogSimple(LOG_DEBUG, "Roll: %.2f, Pitch: %.2f, Yaw: %.2f",
-                    //    RAD2DEG(att.roll), RAD2DEG(att.pitch), RAD2DEG(att.yaw));
-                } break;
-                case MAVLINK_MSG_ID_PARAM_VALUE: {
-                    mavlink_param_value_t param;
-                    mavlink_msg_param_value_decode(&msg, &param);
-                    //LogSimple(LOG_DEBUG, "%.16s", param.param_id);
-                } break;
-                default: {
-                    //LogSimple(LOG_DEBUG, "MSGID: %d\n", msg.msgid);
-                } break;
+                //case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: {
+                //    mavlink_global_position_int_t pos;
+                //    mavlink_msg_global_position_int_decode(&msg, &pos);
+                //    LogSimple(LOG_DEBUG, "Lat: %.2f, Lon: %.2f, RelAlt: %.2f, Brng: %.2f, (%.1f,%.1f,%.1f)",
+                //    pos.lat*1e-7, pos.lon*1e-7, pos.relative_alt*1e-3, pos.hdg*1e-2,
+                //    pos.vx*1e-2,pos.vy*1e-2,pos.vz*1e-2);
+                //} break;
+                //case MAVLINK_MSG_ID_GPS_RAW_INT: {
+                //    mavlink_gps_raw_int_t gps;
+                //    printf("GPS!\n");
+                //    mavlink_msg_gps_raw_int_decode(&msg, &gps);
+                //    printf("Lat: %.2f, Lon: %.2f, Alt: %.2fm\n",
+                //        gps.lat * 1e-7, gps.lon * 1e-7, gps.alt / 1000.0);
+                //} break;
+                //case MAVLINK_MSG_ID_ATTITUDE: {
+                //    mavlink_attitude_t att;
+                //    mavlink_msg_attitude_decode(&msg, &att);
+                //    LogSimple(LOG_DEBUG, "Roll: %.2f, Pitch: %.2f, Yaw: %.2f",
+                //        RAD2DEG(att.roll), RAD2DEG(att.pitch), RAD2DEG(att.yaw));
+                //} break;
+                //case MAVLINK_MSG_ID_PARAM_VALUE: {
+                //    mavlink_param_value_t param;
+                //    mavlink_msg_param_value_decode(&msg, &param);
+                //    LogSimple(LOG_DEBUG, "%.16s", param.param_id);
+                //} break;
+                //default: {
+                //    LogSimple(LOG_DEBUG, "MSGID: %d\n", msg.msgid);
+                //} break;
             }
             
             //Call the event handler, if any.
-            lock.lock();
-            if (m_handler_table[msg.msgid]) {
-                m_handler_table[msg.msgid](&msg);
+            if (msg.msgid >= 0 && msg.msgid < 255) {
+                EventHandler e = m_handler_table[msg.msgid];
+                if (e) {
+                    e(&msg);
+                }
             }
-            lock.unlock();
         }
         m_last_heartbeat = duration_cast<seconds>(steady_clock::now()-last_heartbeat).count();
         if (m_is_auto_mode && m_last_heartbeat >= m_heartbeat_timeout) {
             Log(LOG_WARNING, "Heartbeat timeout (%d s); disabling auto mode!",
                 m_last_heartbeat);
             m_is_auto_mode = false;
-        }
-        //Handle the message if there's a registered message handler
-        if (msg.msgid >= 0 && msg.msgid < 255 && m_handler_table[msg.msgid]) {
-            m_handler_table[msg.msgid](&msg);
         }
     }
 }
@@ -165,6 +159,7 @@ void FlightBoard::OutputLoop() {
 
     while (!m_shutdown) {
         if (m_is_auto_mode) {
+            std::lock_guard<std::mutex> lock(m_output_mutex);
             //Log(LOG_DEBUG, "SENDING");
             sp.vx = m_currentData.elevator / 100.0;
             sp.vy = m_currentData.aileron / 100.0;
@@ -193,6 +188,7 @@ bool FlightBoard::IsAutoMode() {
  * Sets all speeds and the gimbal angle to 0.
  */
 void FlightBoard::Stop() {
+    std::lock_guard<std::mutex> lock(m_output_mutex);
     FlightData fd_zero = {0};
     m_currentData = fd_zero;
 }
@@ -216,7 +212,6 @@ int FlightBoard::RegisterHandler(int msgid, EventHandler handler) {
     if (msgid < 0 || msgid > 255) {
         return -1;
     } else {
-        std::lock_guard<std::mutex> lock(m_worker_mutex);
         m_handler_table[msgid] = handler;
         return msgid;
     }
@@ -228,7 +223,6 @@ int FlightBoard::RegisterHandler(int msgid, EventHandler handler) {
  */
 void FlightBoard::DeregisterHandler(int handlerid) {
     if (handlerid >= 0 && handlerid <= 255) {
-        std::lock_guard<std::mutex> lock(m_worker_mutex);
         m_handler_table[handlerid] = nullptr;
     }
 }
@@ -238,6 +232,7 @@ void FlightBoard::DeregisterHandler(int handlerid) {
  * @param d A pointer to the output location.
  */
 void FlightBoard::GetData(FlightData *d) {
+    std::lock_guard<std::mutex> lock(m_output_mutex);
     *d = m_currentData;
 }
 
@@ -246,6 +241,7 @@ void FlightBoard::GetData(FlightData *d) {
  * @param d Specifies the flight data for how the hexacopter should be actuated.
  */
 void FlightBoard::SetData(FlightData *d) {
+    std::lock_guard<std::mutex> lock(m_output_mutex);
     m_currentData.aileron = picopter::clamp(d->aileron, -100, 100);
     m_currentData.elevator = picopter::clamp(d->elevator, -100, 100);
     m_currentData.rudder = picopter::clamp(d->rudder, -100, 100);
@@ -258,6 +254,7 @@ void FlightBoard::SetData(FlightData *d) {
  * @param speed The aileron speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetAileron(int speed) {
+    std::lock_guard<std::mutex> lock(m_output_mutex);
     m_currentData.aileron = picopter::clamp(speed, -100, 100);
 }
 
@@ -266,6 +263,7 @@ void FlightBoard::SetAileron(int speed) {
  * @param speed The elevator speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetElevator(int speed) {
+    std::lock_guard<std::mutex> lock(m_output_mutex);
     //Elevator speed is inverted.
     m_currentData.elevator = picopter::clamp(-speed, -100, 100);
 }
@@ -275,6 +273,7 @@ void FlightBoard::SetElevator(int speed) {
  * @param speed The rudder speed, as a percentage (-100% to 100%)
  */
 void FlightBoard::SetRudder(int speed) {
+    std::lock_guard<std::mutex> lock(m_output_mutex);
     m_currentData.rudder = picopter::clamp(speed, -100, 100);
 }
 
@@ -283,5 +282,6 @@ void FlightBoard::SetRudder(int speed) {
  * @param pos The gimbal angle, in degrees (0 to 90)
  */
 void FlightBoard::SetGimbal(int pos) {
+    std::lock_guard<std::mutex> lock(m_output_mutex);
     m_currentData.gimbal = picopter::clamp(pos, 0, 90);
 }

@@ -19,7 +19,6 @@ using namespace std::placeholders;
  */
 IMU::IMU(FlightBoard *fb, Options *opts)
 : m_data{NAN,NAN,NAN}
-, m_quit(false)
 { 
     fb->RegisterHandler(MAVLINK_MSG_ID_ATTITUDE,
         std::bind(&IMU::ParseInput, this, _1));
@@ -34,8 +33,6 @@ IMU::IMU(FlightBoard *fb) : IMU(fb, NULL) {}
  * Destructor. Stops the worker thread and closes the connection to the IMU.
  */
 IMU::~IMU() {
-    m_quit = true;
-    m_worker.join();
 }
 
 /**

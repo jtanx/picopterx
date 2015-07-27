@@ -29,6 +29,7 @@ GPSMAV::GPSMAV(FlightBoard *fb, Options *opts)
         std::bind(&GPSMAV::GPSInput, this, _1));
     fb->RegisterHandler(MAVLINK_MSG_ID_GPS_RAW_INT,
         std::bind(&GPSMAV::GPSInput, this, _1));
+    Log(LOG_INFO, "GPS Started!");
 }
 
 /**
@@ -46,38 +47,36 @@ GPSMAV::~GPSMAV() {
  * Main worker callback.
  */
 void GPSMAV::GPSInput(const mavlink_message_t *msg) {
-    auto last_fix = steady_clock::now() - seconds(m_fix_timeout);
+    //Fixme
+    /*auto last_fix = steady_clock::now() - seconds(m_fix_timeout);
     
-    Log(LOG_INFO, "GPS Started!");
-    while (!m_quit) {
-        m_last_fix = duration_cast<seconds>(steady_clock::now() - last_fix).count();
-        if (m_had_fix && !HasFix()) {
-            Log(LOG_WARNING, "Lost the GPS fix. Last fix: %d seconds ago.",
-                m_last_fix.load());
-            m_log.Write(": Lost fix");
-            m_had_fix = false;
+    m_last_fix = duration_cast<seconds>(steady_clock::now() - last_fix).count();
+    if (m_had_fix && !HasFix()) {
+        Log(LOG_WARNING, "Lost the GPS fix. Last fix: %d seconds ago.",
+            m_last_fix.load());
+        m_log.Write(": Lost fix");
+        m_had_fix = false;
+    }*/
+
+    if (msg->msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
+        mavlink_global_position_int_t pos;
+        mavlink_msg_global_position_int_decode(msg, &pos);
+        GPSData d = m_data;
+        d.fix.lat = pos.lat*1e-7;
+        d.fix.lon = pos.lon*1e-7;
+        d.fix.alt = pos.alt*1e-3;
+        d.fix.groundalt = d.fix.alt - pos.relative_alt*1e-3;
+        if (pos.hdg != UINT16_MAX) {
+            d.fix.heading = pos.hdg*1e-2;
         }
 
-        if (msg->msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
-            mavlink_global_position_int_t pos;
-            mavlink_msg_global_position_int_decode(msg, &pos);
-            GPSData d = m_data;
-            d.fix.lat = pos.lat*1e-7;
-            d.fix.lon = pos.lon*1e-7;
-            d.fix.alt = pos.alt*1e-3;
-            d.fix.groundalt = d.fix.alt - pos.relative_alt*1e-3;
-            if (pos.hdg != UINT16_MAX) {
-                d.fix.heading = pos.hdg*1e-2;
-            }
-
-            m_data = d;
-            
-            m_log.Write(": (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f]",
-                d.fix.lat, d.err.lat, d.fix.lon, d.err.lon,
-                d.fix.speed, d.err.speed, d.fix.heading, d.err.heading);
-            
-            last_fix = steady_clock::now();
-            m_had_fix = true;
-        }
+        m_data = d;
+        
+        m_log.Write(": (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f]",
+            d.fix.lat, d.err.lat, d.fix.lon, d.err.lon,
+            d.fix.speed, d.err.speed, d.fix.heading, d.err.heading);
+        
+        //last_fix = steady_clock::now();
+        m_had_fix = true;
     }
 }

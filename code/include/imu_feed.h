@@ -31,11 +31,10 @@ namespace picopter {
         private:
             /** Read timeout from the IMU in ms **/
             static const int IMU_TIMEOUT = 500;
+            /** The IMU data **/
             IMUData m_data;
-            
-            std::atomic<bool> m_quit;
+            /** Read/Write lock on the IMU data **/
             std::mutex m_mutex;
-            std::thread m_worker;
             
             /** Copy constructor (disabled) **/
             IMU(const IMU &other);
