@@ -6,20 +6,22 @@
 #ifndef _PICOPTERX_WAYPOINTS_H
 #define _PICOPTERX_WAYPOINTS_H
 
+/* For the Options class */
+#include "opts.h"
 #include "flightcontroller.h"
 #include "PID.h"
 
-namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
-    
+namespace picopter {    
     /**
      * The method to be used to navigate to the waypoints
      */
     typedef enum WaypointMethod {
-        WAYPOINT_SIMPLE
+        /** Follow the waypoints directly. **/
+        WAYPOINT_NORMAL,
+        /** The waypoints list consists of two waypoints, specifying the corners for a lawnmower search pattern. **/
+        WAYPOINT_LAWNMOWER
     } WaypointMethod;
-    
+
     /**
      * Class for moving the hexacopter through waypoints.
      */
@@ -35,11 +37,8 @@ namespace picopter {
             WaypointMethod m_method;
             int m_update_interval;
             double m_waypoint_radius;
-            double m_waypoint_control;
             int m_waypoint_idle;
-            PID m_pid1;
-            
-            void SimpleCalculation(navigation::Coord2D c, navigation::Coord2D d);
+
             /** Copy constructor (disabled) **/
             Waypoints(const Waypoints &other);
             /** Assignment operator (disabled) **/

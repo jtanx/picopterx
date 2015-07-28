@@ -10,9 +10,13 @@
 #include "flightboard.h"
 #include "flightboard-private.h"
 #include "navigation.h"
+#include "gps_mav.h"
+#include "imu_feed.h"
 
 using picopter::FlightBoard;
 using picopter::FlightData;
+using picopter::GPS;
+using picopter::IMU;
 using std::this_thread::sleep_for;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
@@ -29,6 +33,7 @@ FlightBoard::FlightBoard(Options *opts)
 , m_last_heartbeat(999)
 , m_currentData{}
 , m_shutdown{false}
+, m_waypoints_mode{false}
 , m_system_id(0)
 , m_component_id(0)
 , m_flightboard_id(128) //Arbitrary value 0-255
@@ -47,6 +52,10 @@ FlightBoard::FlightBoard(Options *opts)
     } catch (std::invalid_argument e) {
         m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
     }
+    
+    m_gps = new GPSMAV(this, opts);
+    m_imu = new IMU(this, opts);
+    
     //m_link = new MAVCommsSerial("/dev/virtualcom0", 57600);
     m_input_thread = std::thread(&FlightBoard::InputLoop, this);
     m_output_thread = std::thread(&FlightBoard::OutputLoop, this);
@@ -65,7 +74,17 @@ FlightBoard::~FlightBoard() {
     m_shutdown = true;
     m_input_thread.join();
     m_output_thread.join();
+    delete m_gps;
+    delete m_imu;
     delete m_link;
+}
+
+GPS* FlightBoard::GetGPSInstance() {
+    return m_gps;
+}
+
+IMU* FlightBoard::GetIMUInstance() {
+    return m_imu;
 }
 
 void FlightBoard::InputLoop() {
@@ -110,6 +129,9 @@ void FlightBoard::InputLoop() {
                     //    status.current_battery*1e-2,
                     //    status.battery_remaining);
                 } break;
+                //case MAVLINK_MSG_ID_MISSION_ITEM_REACHED: {
+                //    Log(LOG_DEBUG, "MID REACHED!!!!!");
+                //} break;
                 //case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: {
                 //    mavlink_global_position_int_t pos;
                 //    mavlink_msg_global_position_int_decode(&msg, &pos);
@@ -127,6 +149,8 @@ void FlightBoard::InputLoop() {
                 //case MAVLINK_MSG_ID_ATTITUDE: {
                 //    mavlink_attitude_t att;
                 //    mavlink_msg_attitude_decode(&msg, &att);
+                //    m_current_yaw = att.yaw;
+                //    LogSimple(LOG_DEBUG, "YAW: %.2f", RAD2DEG(att.yaw));
                 //    LogSimple(LOG_DEBUG, "Roll: %.2f, Pitch: %.2f, Yaw: %.2f",
                 //        RAD2DEG(att.roll), RAD2DEG(att.pitch), RAD2DEG(att.yaw));
                 //} break;
@@ -169,25 +193,22 @@ void FlightBoard::OutputLoop() {
     yaw_sp.command = MAV_CMD_CONDITION_YAW;
 
     while (!m_shutdown) {
-        if (m_is_auto_mode) {
+        if (!m_waypoints_mode && m_is_auto_mode) {
             std::lock_guard<std::mutex> lock(m_output_mutex);
             //Log(LOG_DEBUG, "SENDING");
-            sp.vx = (8 * m_currentData.elevator) / 100.0; //Max speed is 8 m/s
-            sp.vy = (8 * m_currentData.aileron) / 100.0;
-            //sp.yaw = m_currentData.rudder * M_PI/100.0; //Max speed is 0.5Hz
-            //sp.yaw_rate = m_currentData.rudder * M_PI/100.0; //Max speed is 0.5Hz
+            float yaw = m_imu->GetLatestYaw();
+            float px = std::cos(yaw);
+            float py = std::sin(yaw);
+            sp.vx = (8 * (m_currentData.elevator * px - m_currentData.aileron * py)) / 100.0; //Max speed is 8 m/s along one axis
+            sp.vy = (8 * (m_currentData.aileron * px + m_currentData.elevator * py)) / 100.0;
             mavlink_msg_set_position_target_local_ned_encode(m_system_id, m_flightboard_id, &msg, &sp);
-            //sp.time_boot_ms = duration_cast<milliseconds>(steady_clock::now() - now).count();
-            //sp.type_mask = 0b00011111;
-            //sp.body_roll_rate = m_currentData.aileron * M_PI / 400.0; //Max angle is 45deg
-            //sp.body_pitch_rate = m_currentData.elevator * M_PI / 400.0; //Max angle is 45deg
-            //sp.body_yaw_rate = m_currentData.rudder * M_PI/100.0; //Max speed is 0.5Hz
-            //mavlink_msg_set_attitude_target_encode(m_system_id, m_flightboard_id, &msg, &sp);
+            //Log(LOG_DEBUG, "px: %.2f, py: %.2f, A: %d, E: %d, R: %d, vx: %.2f, vy: %.2f", px, py, m_currentData.aileron, m_currentData.elevator, m_currentData.rudder, sp.vx, sp.vy);
             m_link->WriteMessage(&msg);
             
             if (m_currentData.rudder != 0) {
-                yaw_sp.param1 = std::fabs(m_currentData.rudder * 15/100.0); //Yaw in deg (relative)
-                yaw_sp.param2 = yaw_sp.param1; //Yaw rate in deg/s
+                //Log(LOG_DEBUG, "MOVING RUDDER");
+                yaw_sp.param1 = 0.5;//std::fabs(m_currentData.rudder * 15/100.0); //Yaw in deg (relative)
+                yaw_sp.param2 = std::fabs(m_currentData.rudder * 30/100.0); //Yaw rate in deg/s
                 yaw_sp.param3 = m_currentData.rudder < 0 ? -1 : 1; //Yaw direction (CCW or CW)
                 yaw_sp.param4 = 1; //Relative
                 mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &yaw_sp);
@@ -198,6 +219,34 @@ void FlightBoard::OutputLoop() {
         }
         sleep_for(milliseconds(100));
     }
+}
+
+bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, float lat, float lon, float alt, bool relative_alt) {
+    mavlink_mission_item_t mi = {0};
+    mavlink_message_t msg;
+    std::lock_guard<std::mutex> lock(m_output_mutex);
+    
+    mi.seq = seq;
+    mi.frame = MAV_FRAME_GLOBAL_RELATIVE_ALT;
+    mi.command = MAV_CMD_NAV_WAYPOINT;
+    mi.current = 2; //ArduCopter magic number for 'guided mode' waypoint
+    mi.param1 = 0; //Hold time in s; we do this ourselves
+    mi.param2 = radius; //Acceptance radius in m
+    mi.param3 = 0; //Pass through the waypoint; ignored by ArduPilot
+    mi.param4 = 0; //Desired yaw angle on completion; ignored by ArduPilot
+    mi.x = lat;
+    mi.y = lon;
+    mi.z = (relative_alt ? (m_gps->GetLatestRelAlt() + alt) : alt);
+    
+    if (std::isnan(mi.z) || mi.z <= 0) {
+        Log(LOG_WARNING, "Waypoint %d: Invalid altitude (%.2f m)", seq, mi.z);
+        return false;        
+    }
+    
+    m_waypoints_mode = true;
+    mavlink_msg_mission_item_encode(m_system_id, m_flightboard_id, &msg, &mi);
+    m_link->WriteMessage(&msg);
+    return true;
 }
 
 /**
@@ -218,6 +267,7 @@ void FlightBoard::Stop() {
     std::lock_guard<std::mutex> lock(m_output_mutex);
     FlightData fd_zero = {0};
     m_currentData = fd_zero;
+    m_waypoints_mode = false;
 }
 
 /**
@@ -292,7 +342,7 @@ void FlightBoard::SetAileron(int speed) {
 void FlightBoard::SetElevator(int speed) {
     std::lock_guard<std::mutex> lock(m_output_mutex);
     //Elevator speed is inverted.
-    m_currentData.elevator = picopter::clamp(-speed, -100, 100);
+    m_currentData.elevator = picopter::clamp(speed, -100, 100);
 }
 
 /**

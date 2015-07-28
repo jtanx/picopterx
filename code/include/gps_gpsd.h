@@ -6,14 +6,13 @@
 #ifndef _PICOPTERX_GPS_GPSD_H
 #define _PICOPTERX_GPS_GPSD_H
 
+/* For the Options class */
+#include "opts.h"
 #include "gps_feed.h"
 
 class gpsmm;
 
 namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
-    
     /**
      * Class that interacts with the GPS.
      */

@@ -16,9 +16,7 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
 , m_method(method)
 , m_update_interval(100)
 , m_waypoint_radius(1.2)
-, m_waypoint_control(12)
 , m_waypoint_idle(3000)
-, m_pid1(0,0,0,0)
 {
     Options empty;
     if (opts == NULL) {
@@ -26,26 +24,9 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
     }
     
     opts->SetFamily("WAYPOINTS");
-    switch (method) {
-        case WAYPOINT_SIMPLE: {
-            double kp = opts->GetReal("SIMPLE_Kpxy", 1);
-            double tr = opts->GetReal("SIMPLE_Trxy", 6);
-            double td = opts->GetReal("SIMPLE_Tdxy", 0);
-            m_update_interval = opts->GetInt("SIMPLE_UPDATE_INTERVAL", m_update_interval);
-            m_waypoint_radius = opts->GetReal("SIMPLE_WAYPOINT_RADIUS", m_waypoint_radius);
-            m_waypoint_control = opts->GetReal("SIMPLE_WAYPOINT_CONTROL_RANGE", m_waypoint_control);
-            m_waypoint_idle = opts->GetInt("SIMPLE_WAYPOINT_IDLE_TIME", m_waypoint_idle);
-            
-            //Interval MUST be set before tunings.
-            m_pid1.SetInterval(m_update_interval / 1000.0);
-            m_pid1.SetTunings(kp, tr, td);
-            m_pid1.SetInputLimits(-m_waypoint_control, 0);
-            m_pid1.SetOutputLimits(0, opts->GetReal("SIMPLE_SPEED_LIMIT", 40));
-            m_pid1.SetSetPoint(0);
-        } break;
-        default:
-            throw std::invalid_argument("Unknown waypoint method");
-    }
+    m_update_interval = opts->GetInt("UPDATE_INTERVAL", m_update_interval);
+    m_waypoint_radius = opts->GetReal("WAYPOINT_RADIUS", m_waypoint_radius);
+    m_waypoint_idle = opts->GetInt("WAYPOINT_IDLE_TIME", m_waypoint_idle);
 }
 
 Waypoints::Waypoints(std::deque<Coord2D> pts, WaypointMethod method)
@@ -56,6 +37,11 @@ Waypoints::~Waypoints() {
 }
 
 void Waypoints::Run(FlightController *fc, void *opts) {
+    GPSData d;
+    Coord2D next_point;
+    int req_seq = 0, at_seq = 0;
+    double wp_distance;
+    
     Log(LOG_INFO, "Waypoints movement initiated; awaiting authorisation...");
     SetCurrentState(fc, STATE_AWAITING_AUTH);
     
@@ -73,27 +59,8 @@ void Waypoints::Run(FlightController *fc, void *opts) {
         return;
     }
     
-    GPSData d;
-    double copter_bearing;
-    fc->gps->GetLatest(&d);
-    
-    if (std::isnan(d.fix.bearing)) {
-        Log(LOG_WARNING, "No compass bearing present; falling back to bearing inferral.");
-        if (!fc->InferBearing(&copter_bearing)) {
-            Log(LOG_INFO, "Exiting waypoints navigation; no usable bearing.");
-            return;
-        }
-    } else {
-        Log(LOG_INFO, "Bearing determined from compass: %.2f", d.fix.bearing);
-        copter_bearing = d.fix.bearing;
-    }
-    
     SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
-    Coord2D next_point = m_pts.front();
-    m_pts.pop_front(); //ffs
     while (!fc->CheckForStop()) {
-        double wp_distance, wp_bearing;
-        
         if (!fc->gps->HasFix()) {
             Log(LOG_WARNING, "GPS Fix was lost! Falling back to manual mode.");
             fc->buzzer->Play(1000,100,100);
@@ -101,50 +68,31 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             return;
         }
         
-        fc->gps->GetLatest(&d);
-        if (!std::isnan(d.fix.bearing)) {
-            copter_bearing = d.fix.bearing;
-        }
-        wp_distance = CoordDistance(d.fix, next_point);
-        wp_bearing = CoordBearing(d.fix, next_point);
-        
-        //Log(LOG_INFO, "%.2f m away at a bearing of %.2f deg", wp_distance, wp_bearing);
-        if (wp_distance < m_waypoint_radius) {
-            Log(LOG_INFO, "At waypoint, idling...");
-            fc->fb->Stop();
-            
-            SetCurrentState(fc, STATE_WAYPOINTS_IDLING);
-            fc->Sleep(m_waypoint_idle);
-            
-            //Reset the controller
-            m_pid1.Reset();
-            if (m_pts.empty()) {
-                Log(LOG_INFO, "Completed waypoint navigation.");
-                break;
-            } else {
-                Log(LOG_INFO, "Moving to next waypoint.");
-                SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
-                next_point = m_pts.front();
-                m_pts.pop_front();
+        if (at_seq < req_seq) {
+            fc->gps->GetLatest(&d);
+            wp_distance = CoordDistance(d.fix, next_point);
+
+            if (wp_distance < m_waypoint_radius) {
+                Log(LOG_INFO, "At waypoint, idling...");
+                fc->buzzer->Play(1000, 1000, 100);
+                at_seq++;
+                SetCurrentState(fc, STATE_WAYPOINTS_IDLING);
+                fc->Sleep(m_waypoint_idle);
             }
+        } else if (m_pts.empty()) {
+            Log(LOG_INFO, "Completed waypoint navigation.");
+            fc->buzzer->Play(2000, 2000, 100);
+            break;
         } else {
-            FlightData d = {0};
-            double speed;
-            //Log(LOG_INFO, "%.2f", wp_distance);
-            m_pid1.SetProcessValue(-wp_distance);
-            speed = m_pid1.Compute();
-            Log(LOG_INFO, "%.2f, %.2f", speed, wp_distance);
-            
-            d.aileron = speed * sin(DEG2RAD(wp_bearing - copter_bearing));
-            d.elevator = speed * cos(DEG2RAD(wp_bearing - copter_bearing));
-            //Log(LOG_INFO, "%d, %d", d.aileron, d.elevator);
-            
-            fc->fb->SetData(&d);
+            Log(LOG_INFO, "Moving to next waypoint.");
+            fc->buzzer->Play(1000, 600, 100);
+            next_point = m_pts.front();
+            m_pts.pop_front();
+            SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
+            fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
+                m_waypoint_idle / 1000.0f, next_point.lat, next_point.lon, 0, true);
         }
-        auto now = std::chrono::steady_clock::now();
         fc->Sleep(m_update_interval);
-        auto diff = std::chrono::steady_clock::now() - now;
-        Log(LOG_WARNING, "%d ms", (int)std::chrono::duration_cast<std::chrono::milliseconds>(diff).count());
     }
     
     SetCurrentState(fc, STATE_WAYPOINTS_FINISHED);

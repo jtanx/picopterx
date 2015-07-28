@@ -6,14 +6,13 @@
 #ifndef _PICOPTERX_GPS_H
 #define _PICOPTERX_GPS_H
 
+/* For the Options class */
+#include "opts.h"
 #include "navigation.h"
 
 class gpsmm;
 
 namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
-    
     typedef struct GPSFix {
         /** The latitude, in radians. Uncertainty in metres. **/
         double lat;
@@ -61,6 +60,7 @@ namespace picopter {
             GPS(Options *opts);
             virtual ~GPS();
             virtual void GetLatest(GPSData *d);
+            virtual double GetLatestRelAlt();
             
             int TimeSinceLastFix();
             bool HasFix();
@@ -72,7 +72,8 @@ namespace picopter {
             static const int WAIT_PERIOD = 200;
             
             int m_fix_timeout;
-            std::atomic<GPSData> m_data;
+            std::mutex m_worker_mutex;
+            GPSData m_data;
             std::atomic<int> m_last_fix;
             std::atomic<bool> m_quit;
         private:

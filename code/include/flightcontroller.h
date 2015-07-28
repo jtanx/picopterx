@@ -6,6 +6,8 @@
 #ifndef _PICOPTERX_FLIGHTCONTROLLER_H
 #define _PICOPTERX_FLIGHTCONTROLLER_H
 
+/* For the Options class */
+#include "opts.h"
 #include "buzzer.h"
 #include "gps_gpsd.h"
 #include "gps_mav.h"
@@ -14,8 +16,6 @@
 #include "camera_stream.h"
 
 namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
     /* Forward declaration of the flight task class */
     class FlightTask;
     
@@ -82,7 +82,7 @@ namespace picopter {
             bool ReloadSettings(Options *opts);
             bool RunTask(TaskIdentifier tid, FlightTask *task, void *opts);
             bool InferBearing(double *ret, int move_time=5000);
-            
+
             friend std::ostream& operator<<(std::ostream &stream, FlightController &fc);
             
             /** A pointer to the flight board controller instance. **/

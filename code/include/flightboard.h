@@ -6,14 +6,16 @@
 #ifndef _PICOPTERX_FLIGHTBOARD_H
 #define _PICOPTERX_FLIGHTBOARD_H
 
+/* For the Options class */
+#include "opts.h"
 /* For MAVProxy includes and other related baggage */
 #include "mavcommslink.h"
 
 namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
-    /* Forward declaration of the MAVCommsLink class */
-    class MAVCommsLink;
+    /* Forward declaration of the GPS class */
+    class GPS;
+    /* Forward declaration of the IMU class */
+    class IMU;
     
     /**
      * Contains information about the actuation of the hexacopter
@@ -40,6 +42,9 @@ namespace picopter {
             FlightBoard(Options *opts);
             virtual ~FlightBoard();
             
+            GPS* GetGPSInstance();
+            IMU* GetIMUInstance();
+            
             bool IsAutoMode();
             void Stop();
 
@@ -47,7 +52,8 @@ namespace picopter {
             //void SetGlobalPosition(Coord4D pt);
             //void SetSpeed(Coord4D sp);
             //void SetAccel(Coord3D acc);
-
+            bool SetGuidedWaypoint(int seq, float radius, float wait, float lat, float lon, float alt, bool relative_alt);
+            
             void GetData(FlightData *d);
             void SetData(FlightData *d);
             void SetAileron(int speed);
@@ -66,12 +72,18 @@ namespace picopter {
             int m_heartbeat_timeout;
             /** The time since the last heartbeat **/
             int m_last_heartbeat;
+            /** Our GPS instance (separate class to handle GPS data parsing) **/
+            GPS *m_gps;
+            /** Our IMU instance (separate class to handle IMU data parsing) **/
+            IMU *m_imu;
             /** Holds current flight data **/
             FlightData m_currentData;
             /** The MAVLink data connection **/
             MAVCommsLink *m_link;
             /** The shutdown signal **/
             std::atomic<bool> m_shutdown;
+            /** Whether or not we are setting waypoints **/
+            std::atomic<bool> m_waypoints_mode;
             /** Output worker mutex **/
             std::mutex m_output_mutex;
             /** Message receiving thread **/
@@ -84,6 +96,8 @@ namespace picopter {
             int m_component_id;
             /** Our component ID that identifies us **/
             int m_flightboard_id;
+            /** The current yaw of the copter **/
+            std::atomic<double> m_current_yaw;
             /** Are we in auto (Guided) mode? **/
             std::atomic<bool> m_is_auto_mode;
             /** The event handler table **/

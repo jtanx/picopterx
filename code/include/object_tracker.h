@@ -6,14 +6,13 @@
 #ifndef _PICOPTERX_OBJECT_TRACKER_H
 #define _PICOPTERX_OBJECT_TRACKER_H
 
+/* For the Options class */
+#include "opts.h"
 #include "flightcontroller.h"
 #include "navigation.h"
 #include "PID.h"
 
 namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
-
     /**
      * Class for moving the hexacopter through waypoints.
      */

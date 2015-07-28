@@ -6,13 +6,12 @@
 #ifndef _PICOPTERX_IMU_H
 #define _PICOPTERX_IMU_H
 
+/* For the Options class */
+#include "opts.h"
 #include "navigation.h"
 #include "flightboard.h"
 
 namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
-    
     /**
      * Contains a unit of information from the IMU.
      */
@@ -27,7 +26,9 @@ namespace picopter {
             IMU(FlightBoard *fb, Options *opts);
             virtual ~IMU();
             void GetLatest(IMUData *d);
-            
+            double GetLatestRoll();
+            double GetLatestPitch();
+            double GetLatestYaw();
         private:
             /** Read timeout from the IMU in ms **/
             static const int IMU_TIMEOUT = 500;

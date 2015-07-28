@@ -50,7 +50,7 @@ public:
             // ALREADY RUNNING
             return false;
         } else {
-            Waypoints *wpts = new Waypoints(m_pts, WAYPOINT_SIMPLE);
+            Waypoints *wpts = new Waypoints(m_opts, m_pts, WAYPOINT_NORMAL);
             
             if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
                 delete wpts;

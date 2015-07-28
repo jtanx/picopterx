@@ -6,13 +6,12 @@
 #ifndef _PICOPTERX_GPS_MAVLINK_H
 #define _PICOPTERX_GPS_MAVLINK_H
 
+/* For the Options class */
+#include "opts.h"
 #include "gps_feed.h"
 #include "flightboard.h"
 
 namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
-    
     /**
      * Class that interacts with the GPS.
      */

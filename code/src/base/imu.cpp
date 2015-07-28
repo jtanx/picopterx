@@ -44,6 +44,21 @@ void IMU::GetLatest(IMUData *d) {
     *d = m_data;
 }
 
+double IMU::GetLatestRoll() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_data.roll;
+}
+
+double IMU::GetLatestPitch() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_data.pitch;
+}
+
+double IMU::GetLatestYaw() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_data.yaw;
+}
+
 /**
  * Worker thread.
  * Receives data from the IMU and updates the latest information as necessary.

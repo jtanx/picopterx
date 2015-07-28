@@ -74,8 +74,8 @@ FlightController::FlightController(Options *opts)
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
     //InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
     //m_gps = gps;
-    m_imu = new IMU(m_fb, opts);    
-    m_gps = new GPSMAV(m_fb, opts);
+    m_imu = m_fb->GetIMUInstance();    
+    m_gps = m_fb->GetGPSInstance();
     InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
     if (m_camera) {
         m_camera->Start();
@@ -102,8 +102,8 @@ FlightController::~FlightController() {
     }
     delete m_task;
     delete m_fb;
-    delete m_imu;
-    delete m_gps;
+    //delete m_imu; //Part of the FlightBoard now
+    //delete m_gps; //Part of the FlightBoard now
     delete m_buzzer;
 }
 

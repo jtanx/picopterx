@@ -61,7 +61,9 @@ void GPSMAV::GPSInput(const mavlink_message_t *msg) {
     if (msg->msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
         mavlink_global_position_int_t pos;
         mavlink_msg_global_position_int_decode(msg, &pos);
-        GPSData d = m_data;
+        std::unique_lock<std::mutex> lock(m_worker_mutex);
+        
+        GPSData &d = m_data;
         d.fix.lat = pos.lat*1e-7;
         d.fix.lon = pos.lon*1e-7;
         d.fix.alt = pos.alt*1e-3;
@@ -69,9 +71,8 @@ void GPSMAV::GPSInput(const mavlink_message_t *msg) {
         if (pos.hdg != UINT16_MAX) {
             d.fix.heading = pos.hdg*1e-2;
         }
+        lock.unlock();
 
-        m_data = d;
-        
         m_log.Write(": (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f]",
             d.fix.lat, d.err.lat, d.fix.lon, d.err.lon,
             d.fix.speed, d.err.speed, d.fix.heading, d.err.heading);

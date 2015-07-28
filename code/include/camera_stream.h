@@ -12,6 +12,8 @@
 #ifndef _PICOPTERX_CAMERA_STREAM_H
 #define _PICOPTERX_CAMERA_STREAM_H
 
+/* For the Options class */
+#include "opts.h"
 #include "common.h"
 #include "navigation.h"
 #include <opencv2/opencv.hpp>
@@ -24,9 +26,6 @@
 #define CAMERA_OK 0
  
 namespace picopter {
-    /* Forward declaration of the options class */
-    class Options;
-
     typedef struct {
         int x;
         int y;

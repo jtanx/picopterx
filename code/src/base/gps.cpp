@@ -20,7 +20,7 @@ const int GPS::WAIT_PERIOD;
  */
 GPS::GPS(Options *opts)
 : m_fix_timeout(FIX_TIMEOUT_DEFAULT)
-, m_data{{{NAN,NAN,NAN,NAN,NAN,NAN},{NAN,NAN,NAN,NAN,NAN,NAN}, NAN}}
+, m_data{{NAN,NAN,NAN,NAN,NAN,NAN},{NAN,NAN,NAN,NAN,NAN,NAN}, NAN}
 , m_last_fix(999)
 , m_quit(false)
 {
@@ -81,5 +81,15 @@ bool GPS::WaitForFix(int timeout) {
  *          parameter, then that value is filled with NaN.
  */
 void GPS::GetLatest(GPSData *d) {
+    std::lock_guard<std::mutex> lock(m_worker_mutex);
     *d = m_data;
+}
+
+/**
+ * Returns the current altitude, relative to the ground, if any.
+ * @return The current relative altitude or NaN if currently unavailable.
+ */
+double GPS::GetLatestRelAlt() {
+    std::lock_guard<std::mutex> lock(m_worker_mutex);
+    return m_data.fix.alt - m_data.fix.groundalt;
 }

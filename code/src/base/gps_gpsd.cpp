@@ -38,13 +38,6 @@ GPSGPSD::GPSGPSD(Options *opts)
         opts->SetFamily("GPS");
         m_cycle_timeout = opts->GetInt("CYCLE_TIMEOUT", CYCLE_TIMEOUT_DEFAULT);
     }
-    
-    //GPSData d = m_data.load();
-    //Log(LOG_INFO, "GPSData: Fix {%f, %f}, Unc {%f, %f}, time %f",
-    //    d.fix.lat, d.fix.lon, d.err.lat, d.err.lon, d.timestamp);
-    
-    //Log(LOG_INFO, "IS GPSData LOCK FREE? %d", m_data.is_lock_free());
-    //Log(LOG_INFO, "IS m_last_fix LOCK FREE? %d", m_last_fix.is_lock_free());
 }
 
 /**
@@ -87,7 +80,8 @@ void GPSGPSD::GPSLoop() {
                 }
                 sleep_for(milliseconds(200));
             } else if ((data->set & LATLON_SET) && (data->set & SPEED_SET)) {
-                GPSData d = m_data;
+                std::unique_lock<std::mutex> lock(m_worker_mutex);
+                GPSData &d = m_data;
                 //GPSData d2 = d;
                 d.fix.lat = data->fix.latitude;
                 d.fix.lon = data->fix.longitude;
@@ -120,7 +114,7 @@ void GPSGPSD::GPSLoop() {
                 if (data->set & TIME_SET) {
                     d.timestamp = data->fix.time;
                 }
-                m_data = d;
+                lock.unlock();
                 
                 m_log.Write(": (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f]",
                     d.fix.lat, d.err.lat, d.fix.lon, d.err.lon,
