@@ -25,7 +25,7 @@ function cameraInit() {
 /**
  * Worker thread to continuously poll the server for its status.
  */
-function statusWorker() {
+function statusWorker(copter_yaw) {
   if ( typeof userMarker !== 'undefined' ) {
     lat = userMarker.getLatLng().lat;
     lon = userMarker.getLatLng().lng;
@@ -50,6 +50,7 @@ function statusWorker() {
       $("#status").html(data.status);
       
       $("#bearing").html("Facing " + Math.round(data.bearing) + "&deg;");
+      copter_yaw.setHeading(data.bearing); //WE HAVE BEARING, HEADING AND YAW!
       
       var latlng = L.latLng(data.lat, data.lon);
       copterMarker.setLatLng(latlng).update();
@@ -60,7 +61,7 @@ function statusWorker() {
       $("#status").html("ERROR: No connection to flight control program.");
     },
     complete: function() {
-      setTimeout(statusWorker, 2000);
+      setTimeout(statusWorker, 2000, copter_yaw);
     }
   });
 }
@@ -71,7 +72,9 @@ function statusWorker() {
 $(document).ready(function () {
   startGeoLocator();
   cameraInit();
-  statusWorker();
+  
+  var copter_yaw = $.flightIndicator('#copter_yaw', 'heading', {heading:150, showBox:true});
+  statusWorker(copter_yaw);
   
   //Switch back to map view if still on the settings page and the user navigates away.
   $("#menu-button-holder button").click(function () {
@@ -80,4 +83,5 @@ $(document).ready(function () {
       $("#settings-opts").removeClass('orange-toggle');
     }
   });
+  
 });

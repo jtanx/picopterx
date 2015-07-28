@@ -202,12 +202,22 @@ public:
 
     double requestBearing()
     {
-        GPSData d;
-        m_fc->gps->GetLatest(&d);
-        if (!std::isnan(d.fix.bearing)) {
-            return d.fix.bearing;
+        if (m_fc->imu) {
+            double bearing = m_fc->imu->GetLatestYaw();
+            if (std::isnan(bearing)) {
+                bearing = 0;
+            } else if (bearing < 0) {
+                bearing += 360;
+            }
+            return bearing;
+        } else {
+            GPSData d;
+            m_fc->gps->GetLatest(&d);
+            if (!std::isnan(d.fix.bearing)) {
+                return d.fix.bearing;
+            }
+            return 0;
         }
-        return 0;
     }
 
     void requestNextWaypoint(coordDeg& _return)

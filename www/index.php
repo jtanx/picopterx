@@ -12,6 +12,7 @@
 		<link rel="stylesheet" type="text/css" href="css/style.css">
 		<link rel="stylesheet" href="css/leaflet.css" />
 		<link rel="stylesheet" href="css/leaflet-numbered-markers.css" />
+		<link rel="stylesheet" href="css/flightindicators.min.css" />
 		
 	</head>
 	<body>
@@ -57,6 +58,7 @@
 							</div>
 							
 							<div id="bearing" class="text"></div>
+							<div class="indicator" id="copter_yaw"></div>
 							<div id="response" class="text"></div>
 						</div>
 						
@@ -168,6 +170,7 @@
 		<script src="js/external/jquery-blink.js"></script>
 		<script src="js/external/bootstrap.min.js"></script>
 		<script src="js/external/jquery.nouislider.all.min.js"></script>
+		<script src="js/external/jquery.flightindicators.min.js"></script>
 		<script src="js/external/leaflet.js"></script>
 		<script src="js/leaflet-numbered-markers.js"></script>
 		<script src="js/map.js"></script>

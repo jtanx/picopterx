@@ -140,7 +140,7 @@ namespace picopter {
          * Calculates the initial bearing (forward azimuth).
          * @param from The first coordinate, in radians.
          * @param to The second coordinate, in radians.
-         * @param The bearing, in radians (-pi < x < pi; CW positive from N)
+         * @param The bearing, in degrees, 0 < ret < 360
          */
         template <typename Coord1, typename Coord2>
         double CoordBearing(Coord1 from, Coord2 to) {
