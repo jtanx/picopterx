@@ -196,7 +196,7 @@ void FlightBoard::OutputLoop() {
         if (!m_waypoints_mode && m_is_auto_mode) {
             std::lock_guard<std::mutex> lock(m_output_mutex);
             //Log(LOG_DEBUG, "SENDING");
-            float yaw = m_imu->GetLatestYaw();
+            float yaw = DEG2RAD(m_imu->GetLatestYaw());
             float px = std::cos(yaw);
             float py = std::sin(yaw);
             sp.vx = (8 * (m_currentData.elevator * px - m_currentData.aileron * py)) / 100.0; //Max speed is 8 m/s along one axis
