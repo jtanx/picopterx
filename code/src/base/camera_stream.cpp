@@ -262,6 +262,7 @@ void CameraStream::SetArrow(Point2D vec) {
 }
 
 void CameraStream::ProcessImages() {
+    static const std::vector<int> saveparams = {CV_IMWRITE_JPEG_QUALITY, 90};
     auto start_time = steady_clock::now();
     int frame_duration;
     frame_counter = 0;
@@ -275,8 +276,18 @@ void CameraStream::ProcessImages() {
          *----------------------*/
          
          cv::Mat image;
-         m_capture >> image;
 
+         if (m_save_photo) {
+            m_capture.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
+            m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
+            m_capture >> image;
+            cv::imwrite(m_save_filename, image, saveparams);
+            m_capture.set(CV_CAP_PROP_FRAME_WIDTH, INPUT_WIDTH);
+            m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, INPUT_HEIGHT);
+         }
+         
+         m_capture >> image;
+         
         /*----------------------*
          *     Process image    *
          *----------------------*/

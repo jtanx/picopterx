@@ -89,6 +89,12 @@ public:
     
     bool beginUserMappingThread()
     {
+        static int counter = 0;
+        std::string path = std::string(PICOPTER_HOME_LOCATION "/save_") + std::to_string(counter++) + std::string(".jpg");
+        
+        if (m_fc->cam) {
+            m_fc->cam->TakePhoto(path);
+        }
         Log(LOG_DEBUG, "USER MAPPING");
         return false;
     }
