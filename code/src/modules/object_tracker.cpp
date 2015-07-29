@@ -24,7 +24,8 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
 , m_pidx(0,0,0,0.03)
 , m_pidy(0,0,0,0.03)
 , m_track_method{method}
-, SEARCH_GIMBAL_LIMIT(60)   
+, m_finished{false}
+, SEARCH_GIMBAL_LIMIT(60)
 {
     Options clear;
     if (!opts) {
@@ -188,6 +189,15 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     fc->cam->SetArrow({0,0});
     Log(LOG_INFO, "Object detection ended.");
     fc->fb->Stop();
+    m_finished = true;
+}
+
+/**
+ * Indicates whether or not the task has completed running.
+ * @return true iff the task has completed running.
+ */
+bool ObjectTracker::Finished() {
+    return m_finished;
 }
 
 //create the body coordinate vector for the object in the image

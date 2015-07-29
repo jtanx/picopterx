@@ -66,7 +66,6 @@ FlightController::FlightController(Options *opts)
 , m_stop{false}
 , m_state{STATE_STOPPED}
 , m_task_id{TASK_NONE}
-, m_task{nullptr}
 {
     //GPSGPSD *gps;
     m_buzzer = new Buzzer();
@@ -100,7 +99,6 @@ FlightController::~FlightController() {
         Stop();
         m_task_thread.wait();
     }
-    delete m_task;
     delete m_fb;
     //delete m_imu; //Part of the FlightBoard now
     //delete m_gps; //Part of the FlightBoard now
@@ -247,7 +245,7 @@ bool FlightController::InferBearing(double *ret, int move_time) {
  * @param opts The task-specific options to be passed to its handler.
  * @return true iff the task was started.
  */
-bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts) {
+bool FlightController::RunTask(TaskIdentifier tid, std::shared_ptr<FlightTask> task, void *opts) {
     std::lock_guard<std::mutex> lock(m_task_mutex);
     TaskIdentifier old_tid = m_task_id.load(std::memory_order_relaxed);
     
@@ -267,10 +265,9 @@ bool FlightController::RunTask(TaskIdentifier tid, FlightTask *task, void *opts)
     m_task_id.store(tid, std::memory_order_relaxed);
     m_stop.store(false, std::memory_order_relaxed);
     m_task = task;
-    m_task_thread = std::async(std::launch::async, [this, task, opts, tid] {
-        task->Run(this, opts);
-        delete m_task;
-        m_task = nullptr;
+    m_task_thread = std::async(std::launch::async, [this, opts, tid] {
+        m_task->Run(this, opts);
+        m_task.reset();
         
         m_fb->Stop();
         Log(LOG_INFO, "Task with id %d ended.", tid);

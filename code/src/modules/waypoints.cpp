@@ -11,12 +11,19 @@
 using namespace picopter;
 using namespace picopter::navigation;
 
+/**
+ * Constructor. Creates a new waypoint maneuvering module.
+ * @param [in] opts  A pointer to options, if any (NULL for defaults)
+ * @param [in] pts The set of waypoints to move to.
+ * @param [in] method The method for moving through the specified waypoints.
+ */
 Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod method)
 : m_pts(pts)
 , m_method(method)
 , m_update_interval(100)
 , m_waypoint_radius(1.2)
 , m_waypoint_idle(3000)
+, m_finished{false}
 {
     Options empty;
     if (opts == NULL) {
@@ -29,13 +36,25 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
     m_waypoint_idle = opts->GetInt("WAYPOINT_IDLE_TIME", m_waypoint_idle);
 }
 
+/** 
+ * Constructor. Constructs with default settings.
+ */
 Waypoints::Waypoints(std::deque<Coord2D> pts, WaypointMethod method)
 : Waypoints(NULL, pts, method) {}
 
+/**
+ * Destructor.
+ */
 Waypoints::~Waypoints() {
     
 }
 
+/**
+ * Runs the waypoint following code. Should only be called once, and only by
+ * the FlightController class.
+ * @param fc The flight controller that initiated this call.
+ * @param opts Any user-specified options (unused).
+ */
 void Waypoints::Run(FlightController *fc, void *opts) {
     GPSData d;
     Coord2D next_point;
@@ -97,4 +116,13 @@ void Waypoints::Run(FlightController *fc, void *opts) {
     
     SetCurrentState(fc, STATE_WAYPOINTS_FINISHED);
     fc->fb->Stop();
+    m_finished = true;
+}
+
+/**
+ * Indicates whether or not the task has completed running.
+ * @return true iff the task has completed running.
+ */
+bool Waypoints::Finished() {
+    return m_finished;
 }

@@ -30,11 +30,13 @@ namespace picopter {
             TrackMethod GetTrackMethod();
             void SetTrackMethod(TrackMethod method);
             void Run(FlightController *fc, void *opts) override;
+            bool Finished() override;
         private:
             bool m_observation_mode;
             int m_camwidth, m_camheight;
             PID m_pidw, m_pidx, m_pidy;//, m_pidz;
             std::atomic<TrackMethod> m_track_method;
+            std::atomic<bool> m_finished;
             
             //int TRACK_TOL, 
             int SEARCH_GIMBAL_LIMIT;

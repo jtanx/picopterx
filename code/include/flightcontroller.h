@@ -80,7 +80,7 @@ namespace picopter {
             bool Sleep(int ms);
             bool WaitForAuth();
             bool ReloadSettings(Options *opts);
-            bool RunTask(TaskIdentifier tid, FlightTask *task, void *opts);
+            bool RunTask(TaskIdentifier tid, std::shared_ptr<FlightTask> task, void *opts);
             bool InferBearing(double *ret, int move_time=5000);
 
             friend std::ostream& operator<<(std::ostream &stream, FlightController &fc);
@@ -120,7 +120,7 @@ namespace picopter {
             /** The mutex used to control the currently run task. **/
             std::mutex m_task_mutex;
             /** The current task **/
-            FlightTask *m_task;
+            std::shared_ptr<FlightTask> m_task;
             
             /** Update the current state **/
             ControllerState SetCurrentState(ControllerState state);
@@ -147,6 +147,11 @@ namespace picopter {
              * @param opts Task-specific options.
              */
             virtual void Run(FlightController *fc, void *opts) = 0;
+            /**
+             * Indicates whether or not the task has finished running.
+             * @return true iff the task has finished running.
+             */
+            virtual bool Finished() = 0;
         protected:
             /**
              * Sets the current state of the parent flight controller.

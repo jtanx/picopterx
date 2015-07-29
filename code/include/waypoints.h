@@ -11,7 +11,7 @@
 #include "flightcontroller.h"
 #include "PID.h"
 
-namespace picopter {    
+namespace picopter {
     /**
      * The method to be used to navigate to the waypoints
      */
@@ -32,12 +32,14 @@ namespace picopter {
             virtual ~Waypoints() override;
             
             void Run(FlightController *fc, void *opts) override;
+            bool Finished() override;
         private:
             std::deque<navigation::Coord2D> m_pts;
             WaypointMethod m_method;
             int m_update_interval;
             double m_waypoint_radius;
             int m_waypoint_idle;
+            std::atomic<bool> m_finished;
 
             /** Copy constructor (disabled) **/
             Waypoints(const Waypoints &other);

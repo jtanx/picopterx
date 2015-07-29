@@ -67,7 +67,7 @@ FlightBoard::FlightBoard(Options *opts)
 FlightBoard::FlightBoard() : FlightBoard(NULL) {}
 
 /**
- * Destructor. Closes the connection to ServoBlaster.
+ * Destructor.
  */
 FlightBoard::~FlightBoard() {
     Stop();

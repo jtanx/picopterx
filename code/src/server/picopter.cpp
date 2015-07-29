@@ -36,6 +36,7 @@ private:
     Options *m_opts;
     const std::unique_ptr<picopter::FlightController> &m_fc;
     std::deque<navigation::Coord2D> m_pts;
+    std::shared_ptr<FlightTask> m_user_tracker;
 public:
     webInterfaceHandler(Options *opts, std::unique_ptr<picopter::FlightController> &fc)
     : m_opts(opts) 
@@ -50,10 +51,9 @@ public:
             // ALREADY RUNNING
             return false;
         } else {
-            Waypoints *wpts = new Waypoints(m_opts, m_pts, WAYPOINT_NORMAL);
+            std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(m_opts, m_pts, WAYPOINT_NORMAL);
             
             if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
-                delete wpts;
                 return false;
             }
         }
@@ -76,6 +76,11 @@ public:
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
             return false;
+        } else {
+            m_user_tracker = std::make_shared<UserTracker>(m_opts);
+            if (!m_fc->RunTask(TASK_USER_TRACKING, m_user_tracker, NULL)) {
+                return false;
+            }
         }
         // Your implementation goes here
         //printf("beginUserTrackingThread\n");
@@ -95,13 +100,12 @@ public:
             return false;
         } else if (m_fc->cam != NULL) {
             int width = m_fc->cam->GetInputWidth(), height = m_fc->cam->GetInputHeight();
-            ObjectTracker *trk = new ObjectTracker(m_opts, width, height);
+            std::shared_ptr<FlightTask> trk = std::make_shared<ObjectTracker>(m_opts, width, height);
             if (method == 1) {
-                trk->SetTrackMethod(ObjectTracker::TRACK_ROTATE);
+                static_cast<ObjectTracker*>(trk.get())->SetTrackMethod(ObjectTracker::TRACK_ROTATE);
             }
             
             if (!m_fc->RunTask(TASK_OBJECT_TRACKING, trk, NULL)) {
-                delete trk;
                 return false;
             }
         } else {
@@ -228,8 +232,20 @@ public:
 
     bool updateUserPosition(const coordDeg& wpt)
     {
-        // Your implementation goes here
-        //printf("updateUserPosition\n");
+        std::shared_ptr<FlightTask> trk(m_user_tracker);
+        if (trk) {
+            if (trk->Finished()) {
+                //Task is finished, remove our reference to it
+                m_user_tracker.reset();
+            } else {
+                navigation::Coord2D uwpt;
+                uwpt.lat = wpt.lat;
+                uwpt.lon = wpt.lon;
+                
+                static_cast<UserTracker*>(trk.get())->UpdateUserPosition(uwpt);
+                return true;
+            }
+        }
         return false;
     }
 

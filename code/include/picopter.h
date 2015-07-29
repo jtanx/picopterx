@@ -20,6 +20,7 @@
 
 #include "waypoints.h"
 #include "object_tracker.h"
+#include "user_tracker.h"
 
 
 #endif // _PICOPTERX_PICOPTER_H
