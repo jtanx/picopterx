@@ -3,14 +3,14 @@
 
 	error_reporting(E_ALL);
 
-	require_once '/home/pi/lib/thrift-0.9.0/lib/php/lib/Thrift/ClassLoader/ThriftClassLoader.php';
+	require_once '/home/pi/software/thrift-0.9.2/lib/php/lib/Thrift/ClassLoader/ThriftClassLoader.php';
 
 	use Thrift\ClassLoader\ThriftClassLoader;
 
 	$GEN_DIR = '/home/pi/picopterx/code/src/server/gen-php';
 	
 	$loader = new ThriftClassLoader();
-	$loader->registerNamespace('Thrift', '/home/pi/lib/thrift-0.9.0/lib/php/lib');
+	$loader->registerNamespace('Thrift', '/home/pi/software/thrift-0.9.2/lib/php/lib');
 	$loader->registerDefinition('picopter', $GEN_DIR);
 	$loader->register();
 
