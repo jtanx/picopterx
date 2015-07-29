@@ -40,7 +40,9 @@ namespace picopter {
         /** Searching for an object to track **/
         STATE_TRACKING_SEARCHING,
         /** Tracking a found object **/
-        STATE_TRACKING_LOCKED
+        STATE_TRACKING_LOCKED,
+        /** Tracking a user **/
+        STATE_TRACKING_USER
     } ControllerState;
     
     /**

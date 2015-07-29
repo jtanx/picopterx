@@ -30,6 +30,10 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
         opts = &empty;
     }
     
+    if (method == WAYPOINT_LAWNMOWER && m_pts.size() < 2) {
+        throw std::invalid_argument("Cannot do lawnmower with less than 2 waypoints");
+    }
+    
     opts->SetFamily("WAYPOINTS");
     m_update_interval = opts->GetInt("UPDATE_INTERVAL", m_update_interval);
     m_waypoint_radius = opts->GetReal("WAYPOINT_RADIUS", m_waypoint_radius);

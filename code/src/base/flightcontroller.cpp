@@ -304,6 +304,8 @@ namespace picopter {
                 stream << "Searching for an object to track."; break;
             case STATE_TRACKING_LOCKED:
                 stream << "Tracking an object."; break;
+            case STATE_TRACKING_USER:
+                stream << "Tracking user."; break;
         }
         return stream;
     }

@@ -59,7 +59,7 @@ void UserTracker::Run(FlightController *fc, void *opts) {
     
     int seq = 0;
     std::unique_lock<std::mutex> lock(m_worker_mutex);
-    SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
+    SetCurrentState(fc, STATE_TRACKING_USER);
     while (!fc->CheckForStop()) {
         m_signaller.wait_for(lock, seconds(1), [this,fc]{return m_wpt_available || fc->CheckForStop();});
         if (m_wpt_available) {
@@ -69,7 +69,6 @@ void UserTracker::Run(FlightController *fc, void *opts) {
         }
     }
     
-    SetCurrentState(fc, STATE_WAYPOINTS_FINISHED);
     fc->fb->Stop();
     m_finished = true;
 }
