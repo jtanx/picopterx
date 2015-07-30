@@ -39,8 +39,11 @@ namespace picopter {
             int m_update_interval;
             double m_waypoint_radius;
             int m_waypoint_idle;
+            /** The spacing (in m) between sweeps for the lawnmower pattern. **/
+            double m_sweep_spacing;
             std::atomic<bool> m_finished;
 
+            std::deque<navigation::Coord2D> GenerateLawnmowerPattern(navigation::Coord2D start, navigation::Coord2D end);
             /** Copy constructor (disabled) **/
             Waypoints(const Waypoints &other);
             /** Assignment operator (disabled) **/

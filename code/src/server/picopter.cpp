@@ -65,10 +65,14 @@ public:
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
             return false;
+        } else {
+            std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(m_opts, m_pts, WAYPOINT_LAWNMOWER);
+            
+            if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
+                return false;
+            }
         }
-        // Your implementation goes here
-        //printf("beginLawnmowerThread\n");
-        return false;
+        return true;
     }
 
     bool beginUserTrackingThread()

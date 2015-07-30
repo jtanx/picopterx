@@ -23,6 +23,7 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
 , m_update_interval(100)
 , m_waypoint_radius(1.2)
 , m_waypoint_idle(3000)
+, m_sweep_spacing(3)
 , m_finished{false}
 {
     Options empty;
@@ -30,14 +31,22 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
         opts = &empty;
     }
     
-    if (method == WAYPOINT_LAWNMOWER && m_pts.size() < 2) {
-        throw std::invalid_argument("Cannot do lawnmower with less than 2 waypoints");
-    }
-    
     opts->SetFamily("WAYPOINTS");
     m_update_interval = opts->GetInt("UPDATE_INTERVAL", m_update_interval);
     m_waypoint_radius = opts->GetReal("WAYPOINT_RADIUS", m_waypoint_radius);
     m_waypoint_idle = opts->GetInt("WAYPOINT_IDLE_TIME", m_waypoint_idle);
+    m_sweep_spacing = opts->GetInt("LAWNMOWER_SWEEP_SPACING", m_sweep_spacing);
+    
+    if (method == WAYPOINT_LAWNMOWER && m_pts.size() < 2) {
+        throw std::invalid_argument("Cannot do lawnmower with less than 2 waypoints");
+    } else {
+        int j = 0;
+        m_pts = std::move(GenerateLawnmowerPattern(m_pts[0], m_pts[1]));
+        for (const Coord2D &i : m_pts) {
+            Log(LOG_INFO, "Lawnmower waypoint %d: (%.7f, %.7f)", j++, i.lat, i.lon);
+        }
+        m_waypoint_idle = opts->GetInt("LAWNMOWER_IDLE_TIME", 0);
+    }
 }
 
 /** 
@@ -51,6 +60,66 @@ Waypoints::Waypoints(std::deque<Coord2D> pts, WaypointMethod method)
  */
 Waypoints::~Waypoints() {
     
+}
+
+/**
+ * Generates the sweeping lawnmower search pattern.
+ * It will sweep from the start to end position along the shortest side.
+ * @param [in] start The starting coordinate.
+ * @param [in] end The ending coordinate.
+ * @return The list of waypoints to travel to for the given lawnmower pattern.
+ */
+std::deque<Coord2D> Waypoints::GenerateLawnmowerPattern(Coord2D start, Coord2D end) {
+    //Determine which way we are sweeping
+    Coord2D sx = {start.lat, end.lon};
+    double d1 = CoordDistance(start, sx), d2 = CoordDistance(sx, end);
+    int points = static_cast<int>(std::max(d1, d2) / m_sweep_spacing);
+    std::deque<Coord2D> pts;
+    
+    if (points != 0) {
+        bool modlat = false;
+        double frac;
+        if (d1 < d2) {
+            frac = (end.lat - start.lat) / points;
+            modlat = true;
+        } else {
+            frac = (end.lon - start.lon) / points;
+        }
+        
+        for (int i = 0; i < points; i++) {
+            Coord2D v1, v2;
+            if (modlat) {
+                v1.lat = start.lat + frac*i;
+                v1.lon = start.lon;
+                v2.lat = v1.lat;
+                v2.lon = end.lon;
+            } else {
+                v1.lat = start.lat;
+                v1.lon = start.lon + frac*i;
+                v2.lat = end.lat;
+                v2.lon = v1.lon;
+            }
+            
+            if (i%2) {
+                pts.push_back(v2);
+                pts.push_back(v1);
+            } else {
+                pts.push_back(v1);
+                pts.push_back(v2);
+            }
+        }
+        
+        if (points%2 == 0) {
+            if (modlat) {
+                sx.lat = end.lat;
+                sx.lon = start.lon;
+            }
+            pts.push_back(sx);
+        }
+    }
+    pts.push_back(end);
+    
+    return pts;
 }
 
 /**
