@@ -1,4 +1,5 @@
 import sys,os,re,math
+from gpxpy.gpx import GPX, GPXTrack, GPXTrackSegment, GPXTrackPoint, GPXWaypoint
 
 DTR = lambda x: x * math.pi/180
 RTD = lambda x: x * 180/math.pi
