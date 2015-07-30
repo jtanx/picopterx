@@ -1,7 +1,10 @@
 #!/bin/bash
 
+# The location of this script's folder
+BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 # The executable
-SERVER=../code/bin/picopter
+SERVER=$BASE/../code/bin/picopter
 
 # Colourful text
 # Red text
@@ -44,14 +47,6 @@ while [ $fails -lt 1 ]; do
 	if [ $fails -gt 0 ]; then
 		log_status "Restarting server after Fatal Error #$fails"
 	fi;
-
-	log_status "(Re)starting ServoBlaster..."
-	service servoblaster stop || log_error "Failed to stop ServoBlaster"
-	service servoblaster start || log_error "Failed to start ServoBlaster"
-	#service servoblaster restart || log_error "Failed to restart ServoBlaster"
-
-	log_status "(Re)starting gpsd..."
-	service gpsd restart || log_error "Failed to restart gpsd"
 
 	log_status "(Re)starting the server..."
 	$SERVER

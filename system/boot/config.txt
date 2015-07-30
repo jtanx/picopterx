@@ -1,0 +1,5 @@
+[pi2]
+#kernel=vmlinuz-3.18.0-trunk-rpi2
+#initramfs initrd.img-3.18.0-trunk-rpi2 followkernel
+start_x=1
+gpu_mem=128
