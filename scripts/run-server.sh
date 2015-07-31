@@ -9,22 +9,21 @@ SERVER=$BASE/../code/bin/picopter
 # Colourful text
 # Red text
 function log_error() {
-    (echo -e "\e[31m$@\e[0m") 1>&2
+    echo -ne "\e[31m"; echo "$@"; echo -ne "\e[0m"
 }
 
 # Yellow text
 function log_status() {
-    (echo -e "\e[33m$@\e[0m") 1>&2
+    echo -ne "\e[33m"; echo "$@"; echo -ne "\e[0m"
 }
 
 # Green text
 function log_note() {
-    (echo -e "\e[32m$@\e[0m") 1>&2
+    echo -ne "\e[32m"; echo "$@"; echo -ne "\e[0m"
 }
 
-# Red text and exit
 function bail () {
-    (echo -e "\e[31m\e[1m!!! Fatal error: ${@}\e[0m") 1>&2
+    echo -ne "\e[31m\e[1m"; echo "!!! Fatal error: ${@}"; echo -ne "\e[0m"
     exit 1
 }
 
