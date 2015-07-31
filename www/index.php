@@ -122,6 +122,7 @@
 </div>
 
 <button id="mapping-object" class="cbtn roundbtn" onclick="beginUserMapping()">Mapping</button>
+<a href="/pics" id="mapping-download" class="cbtn roundbtn">Download</a>
 </div>
 
 

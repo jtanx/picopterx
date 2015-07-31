@@ -278,12 +278,14 @@ void CameraStream::ProcessImages() {
          cv::Mat image;
 
          if (m_save_photo) {
+            cv::Mat simage;
             m_capture.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
             m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
-            m_capture >> image;
-            cv::imwrite(m_save_filename, image, saveparams);
+            m_capture >> simage;
+            cv::imwrite(m_save_filename, simage, saveparams);
             m_capture.set(CV_CAP_PROP_FRAME_WIDTH, INPUT_WIDTH);
             m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, INPUT_HEIGHT);
+            m_save_photo = false;
          }
          
          m_capture >> image;
