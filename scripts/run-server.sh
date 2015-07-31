@@ -48,6 +48,8 @@ while [ $fails -lt 1 ]; do
 		log_status "Restarting server after Fatal Error #$fails"
 	fi;
 
+	log_status "Rotating the system logs..."
+	logrotate -f /etc/logrotate.d/picopter.conf
 	log_status "(Re)starting the server..."
 	$SERVER
 	error=$?
