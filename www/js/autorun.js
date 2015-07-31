@@ -61,7 +61,7 @@ function statusWorker(copter_yaw) {
       $("#status").html("ERROR: No connection to flight control program.");
     },
     complete: function() {
-      setTimeout(statusWorker, 2000, copter_yaw);
+      setTimeout(statusWorker, 1200, copter_yaw);
     }
   });
 }

@@ -286,7 +286,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
         //trackz = m_pidz.Compute();
     }
     
-    course->rudder = trackw;
+    //course->rudder = trackw;
     course->aileron = trackx;
     course->elevator = tracky;
     //Fix the angle for now...

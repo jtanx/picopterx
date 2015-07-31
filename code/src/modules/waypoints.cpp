@@ -37,15 +37,17 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
     m_waypoint_idle = opts->GetInt("WAYPOINT_IDLE_TIME", m_waypoint_idle);
     m_sweep_spacing = opts->GetInt("LAWNMOWER_SWEEP_SPACING", m_sweep_spacing);
     
-    if (method == WAYPOINT_LAWNMOWER && m_pts.size() < 2) {
-        throw std::invalid_argument("Cannot do lawnmower with less than 2 waypoints");
-    } else {
-        int j = 0;
-        m_pts = std::move(GenerateLawnmowerPattern(m_pts[0], m_pts[1]));
-        for (const Coord2D &i : m_pts) {
-            Log(LOG_INFO, "Lawnmower waypoint %d: (%.7f, %.7f)", j++, i.lat, i.lon);
+    if (method == WAYPOINT_LAWNMOWER) {
+        if (m_pts.size() < 2) {
+            throw std::invalid_argument("Cannot do lawnmower with less than 2 waypoints");
+        } else {
+            int j = 0;
+            m_pts = std::move(GenerateLawnmowerPattern(m_pts[0], m_pts[1]));
+            for (const Coord2D &i : m_pts) {
+                Log(LOG_INFO, "Lawnmower waypoint %d: (%.7f, %.7f)", j++, i.lat, i.lon);
+            }
+            m_waypoint_idle = opts->GetInt("LAWNMOWER_IDLE_TIME", 0);
         }
-        m_waypoint_idle = opts->GetInt("LAWNMOWER_IDLE_TIME", 0);
     }
 }
 
