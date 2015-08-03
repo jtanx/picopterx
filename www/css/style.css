@@ -81,3 +81,28 @@ height: calc(100% - 55px);
 #tab-server-config {
   overflow: scroll;
 }
+
+/* Overlay on the map to display the flight indicators */
+.tab-pane .overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1000000;
+  pointer-events: none;
+}
+
+.tab-pane .overlay .btn {
+  pointer-events: initial;
+}
+
+#copter-hud-items {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+@media screen and (max-height: 500px) {
+  #copter-hud {
+    display: none;
+  }
+}

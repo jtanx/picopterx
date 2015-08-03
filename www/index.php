@@ -82,7 +82,20 @@
           <!-- Main tab contents -->
           <div id="main-tab-content" class="tab-content fill">
             <div class="tab-pane active in semi-fill" id="tab-map">
-              <div id="map-canvas" class="fill"></div>
+              <div id="map-canvas" class="fill">
+                <!-- Our map area -->
+                <div id="copter-hud" class="overlay hidden-xs">
+                  <!-- The HUD -->
+                  <div class="btn-group">
+                  <a class="btn btn-default btn-xs glyphicon glyphicon-dashboard" data-toggle="collapse" aria-expanded="true" href="#copter-hud-items">
+                  </a>
+                  </div>
+                  <div id="copter-hud-items" class="collapse in">
+                    <div id="copter-yaw"></div>
+                    <div id="copter-att"></div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="tab-pane semi-fill text-center" id="tab-camera">
               <div id="camera-primary" class="fill"></div>

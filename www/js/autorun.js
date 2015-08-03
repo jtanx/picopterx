@@ -59,8 +59,9 @@ function cameraInit() {
 
 /**
  * Worker thread to continuously poll the server for its status.
+ * @param hud The structure containing the HUD objects.
  */
-function statusWorker() {
+function statusWorker(hud) {
   var data = {'action': 'requestAll'};
   $("#map-canvas").copterMap('getUserPosition', data);
 
@@ -72,6 +73,9 @@ function statusWorker() {
     success: function(data) {
       $("#status-bar").text(data.status).removeClass("alert-danger alert-warning").addClass("alert-success");
       $("#map-canvas").copterMap('updateCopterPosition', data.lat, data.lon);
+      hud.yaw.setHeading(data.yaw);
+      hud.att.setRoll(data.roll);
+      hud.att.setPitch(data.pitch);
     },
     error: function() {
       $("#status-bar")
@@ -80,7 +84,7 @@ function statusWorker() {
         .addClass("alert-danger");
     },
     complete: function() {
-      setTimeout(statusWorker, 1200);
+      setTimeout(statusWorker, 1200, hud);
     }
   });
 }
@@ -95,5 +99,11 @@ $(document).ready(function () {
   });
   startGeoLocator();
   cameraInit();
-  statusWorker();
+  
+  var hud = {
+    yaw : $.flightIndicator('#copter-yaw', 'heading', {showBox:false, size:150}),
+    att : $.flightIndicator('#copter-att', 'attitude', {showBox:false, size: 150})
+  };
+
+  statusWorker(hud);
 });

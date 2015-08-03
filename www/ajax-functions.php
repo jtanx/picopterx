@@ -19,6 +19,7 @@
 			
 			case "requestAll":
 				$coords = $client->requestCoords();
+        $att = $client->requestAttitude();
 				
 				if (isset($source["lat"])) {
 					$wp = new \picopter\coordDeg();
@@ -30,6 +31,7 @@
 				
 				$ans = array('lat' => $coords->lat, 'lon' => $coords->lon,
 							 'bearing' => $client->requestBearing(),
+               'roll' => $att->roll, 'pitch' => $att->pitch, 'yaw' => $att->yaw,
 							 'status' => $client->requestStatus());
 				
 				echo json_encode($ans);
