@@ -1,13 +1,15 @@
 /**
  * Autorun functions for the main webpage.
  */
- 
+
 /**
  * Start the geolocation updater for the 'follow me' function.
  */
 function startGeoLocator() {
   if (navigator.geolocation) {
-    navigator.geolocation.watchPosition(updateUserPosition);
+    navigator.geolocation.watchPosition(function (pos) {
+      $("#map-canvas").copterMap('updateUserPosition', pos.coords.latitude, pos.coords.longitude);
+    });
   }
 }
 
@@ -15,73 +17,83 @@ function startGeoLocator() {
  * Initialise the camera and the hue calibration sliders.
  */
 function cameraInit() {
-  var url = "http://" + document.domain + ":5000/?action=stream";
-  $("#camera-secondary").html("<img id='camera-secondary-img' src='" + url + "'/>");
-  sliderify("#cal-hue", -20, 20, -360, 360);
-  sliderify("#cal-sat", 97, 255, 0, 255);
-  sliderify("#cal-val", 127, 255, 0, 255);
+  var ua = window.navigator.userAgent;
+  var msie = ua.indexOf("MSIE ");
+  var simg = $("<img/>", {"id" : "camera-secondary-img"});
+  var pimg = $("<img/>", {"id" : "camera-primary-img", "class" : "fill"});
+  var url;
+
+  /* IE does not support MJPG streaming... */
+  if (msie > 0 || !!navigator.userAgent.match(/Trident.*rv\:11\./)) {
+    url = "http://" + document.domain + ":5000/?action=snapshot";
+
+    /* The number increment is to just force it to reload the image */
+    (function updateImg(n) {
+      simg.attr("src", url + "&n=" + n);
+      pimg.attr("src", url + "&n=" + n);
+      setTimeout(updateImg, 200, n+1);
+    })(0);
+  } else {
+    url = "http://" + document.domain + ":5000/?action=stream";
+  }
+
+  simg.attr("src", url);
+  pimg.attr("src", url);
+  $("#camera-secondary").append(simg);
+  $("#camera-primary").append(pimg);
+
+  $("#cal-hue").sliderify(-20, 20, -360, 360);
+  $("#cal-sat").sliderify(97, 255, 0, 255);
+  $("#cal-val").sliderify(127, 255, 0, 255);
+
+  ajaxSend('requestCameraMode').success(function (response) {
+    var mode = parseInt(response, 10);
+    if (mode >= 0) {
+      $("#camera-mode").val(mode);
+      if (mode == 999) {
+        $("#camera-calibration-inputs").removeClass('hidden');
+      }
+    }
+  });
 }
 
 /**
  * Worker thread to continuously poll the server for its status.
  */
-function statusWorker(copter_yaw) {
-  if ( typeof userMarker !== 'undefined' ) {
-    lat = userMarker.getLatLng().lat;
-    lon = userMarker.getLatLng().lng;
-    
-    data = {
-      'action': 'requestAll',
-      'lat': lat,
-      'lon': lon
-    }
-  } else {
-    data = {
-      'action': 'requestAll'
-    }
-  }
-  
+function statusWorker() {
+  var data = {'action': 'requestAll'};
+  $("#map-canvas").copterMap('getUserPosition', data);
+
   $.ajax({
     type: "POST",
     dataType: "json",
     url:'ajax-thrift.php',
     data: data,
     success: function(data) {
-      $("#status").html(data.status);
-      
-      $("#bearing").html("Facing " + Math.round(data.bearing) + "&deg;");
-      copter_yaw.setHeading(data.bearing); //WE HAVE BEARING, HEADING AND YAW!
-      
-      var latlng = L.latLng(data.lat, data.lon);
-      copterMarker.setLatLng(latlng).update();
-      
-      if (pathEnabled) updatePath(latlng);
+      $("#status-bar").text(data.status).removeClass("alert-danger alert-warning").addClass("alert-success");
+      $("#map-canvas").copterMap('updateCopterPosition', data.lat, data.lon);
     },
     error: function() {
-      $("#status").html("ERROR: No connection to flight control program.");
+      $("#status-bar")
+        .text("ERROR: No connection to flight control program.")
+        .removeClass("alert-success alert-warning")
+        .addClass("alert-danger");
     },
     complete: function() {
-      setTimeout(statusWorker, 1200, copter_yaw);
+      setTimeout(statusWorker, 1200);
     }
   });
 }
 
 /**
- * Autorunned functions. 
+ * Autorunned functions.
  */
 $(document).ready(function () {
+  $("#settings-editor").submit(function() {
+    $("#settings-space").updateSettings();
+    return false;
+  });
   startGeoLocator();
   cameraInit();
-  
-  var copter_yaw = $.flightIndicator('#copter_yaw', 'heading', {heading:150, showBox:true});
-  statusWorker(copter_yaw);
-  
-  //Switch back to map view if still on the settings page and the user navigates away.
-  $("#menu-button-holder button").click(function () {
-    if ($("#opts-main").is(":visible")) {
-      toggleMain("#opts-main");
-      $("#settings-opts").removeClass('orange-toggle');
-    }
-  });
-  
+  statusWorker();
 });
