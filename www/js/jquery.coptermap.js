@@ -88,7 +88,8 @@ L.NumberedDivIconRed = L.Icon.extend({
     editMode : (Boolean indicating if we're in edit mode),
     markers : {(Dictionary of markers by name (persistent))},
     wptMarkers : [(List of markers for waypoints)],
-    bndMarkers : [(List of markers for bounds)],
+    rctMarkers : [(List of markers for lawnmower)],
+    splMarkers : [(List of markers for spiral)],
     paths : {(Dictionary of paths by name)}
   }
 */
@@ -246,7 +247,10 @@ L.NumberedDivIconRed = L.Icon.extend({
           instance.clearMarkers(data.wptMarkers);
           instance.updateWptPath();
         } else if (data.pattern == "lawnmower") {
-          instance.clearMarkers(data.bndMarkers);
+          instance.clearMarkers(data.rctMarkers);
+          instance.updateBounds();
+        } else if (data.pattern == "spiral") {
+          instance.clearMarkers(data.splMarkers);
           instance.updateBounds();
         }
       }
@@ -272,7 +276,9 @@ L.NumberedDivIconRed = L.Icon.extend({
           if (data.pattern === "manual") {
             callback(data.pattern, packageCoordinates(data.wptMarkers));
           } else if (data.pattern == "lawnmower") {
-            callback(data.pattern, packageCoordinates(data.bndMarkers));
+            callback(data.pattern, packageCoordinates(data.rctMarkers));
+          } else if (data.pattern == "spiral") {
+            callback(data.pattern, packageCoordinates(data.splMarkers));
           }
         }
       };
@@ -305,7 +311,9 @@ L.NumberedDivIconRed = L.Icon.extend({
         if (pattern === "manual") {
           instance.toggleEditMarkers(data.wptMarkers, data.editMode);
         } else if (pattern === "lawnmower") {
-          instance.toggleEditMarkers(data.bndMarkers, data.editMode);
+          instance.toggleEditMarkers(data.rctMarkers, data.editMode);
+        } else if (pattern === "spiral") {
+          instance.toggleEditMarkers(data.splMarkers, data.editMode);
         }
         data.pattern = pattern;
       }
@@ -315,13 +323,21 @@ L.NumberedDivIconRed = L.Icon.extend({
        * @param [in] data The data for the map instance.
        */
       this.updateBounds = function() {
-        instance.removeMapLayer(data.map, data, 'boundRect');
+        instance.removeMapLayer(data.map, data, 'boundRegion');
 
-        if (data.pattern == "lawnmower") {
-          if (data.bndMarkers.length == 2) {
-            data.boundRect = L.rectangle(L.latLngBounds(
-              data.bndMarkers[0].getLatLng(), data.bndMarkers[1].getLatLng()),
+        if (data.pattern === "lawnmower") {
+          if (data.rctMarkers.length == 2) {
+            data.boundRegion = L.rectangle(L.latLngBounds(
+              data.rctMarkers[0].getLatLng(), data.rctMarkers[1].getLatLng()),
               {color : "#0066FF", weight : 1}
+            ).addTo(data.map);
+          }
+        } else if (data.pattern === "spiral") {
+          if (data.splMarkers.length == 2) {
+            
+            data.boundRegion = L.circle(data.splMarkers[0].getLatLng(),
+              data.splMarkers[0].getLatLng().distanceTo(data.splMarkers[1].getLatLng()),
+              {color : "#0033FF", weight : 1}
             ).addTo(data.map);
           }
         }
@@ -357,15 +373,19 @@ L.NumberedDivIconRed = L.Icon.extend({
 
         if (pattern === "all") {
           hide(data.wptMarkers, data.map);
-          hide(data.bndMarkers, data.map);
+          hide(data.rctMarkers, data.map);
+          hide(data.splMarkers, data.map);
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
-          instance.removeMapLayer(data.map, data, 'boundRect');
+          instance.removeMapLayer(data.map, data, 'boundRegion');
         } else if (pattern === "manual") {
           hide(data.wptMarkers, data.map);
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
         } else if (pattern === "lawnmower") {
-          hide(data.bndMarkers, data.map);
-          instance.removeMapLayer(data.map, data, 'boundRect');
+          hide(data.rctMarkers, data.map);
+          instance.removeMapLayer(data.map, data, 'boundRegion');
+        } else if (pattern === "spiral") {
+          hide(data.splMarkers, data.map);
+          instance.removeMapLayer(data.map, data, 'boundRegion');
         }
       };
 
@@ -385,7 +405,10 @@ L.NumberedDivIconRed = L.Icon.extend({
           show(data.wptMarkers, data.map);
           instance.updateWptPath();
         } else if (pattern === "lawnmower") {
-          show(data.bndMarkers, data.map);
+          show(data.rctMarkers, data.map);
+          instance.updateBounds();
+        } else if (pattern === "spiral") {
+          show(data.splMarkers, data.map);
           instance.updateBounds();
         }
       };
@@ -414,7 +437,8 @@ L.NumberedDivIconRed = L.Icon.extend({
           map : map,
           markers : {},
           wptMarkers : [],
-          bndMarkers : [],
+          rctMarkers : [],
+          splMarkers : [],
           paths : {},
           editMode : false,
           pattern : undefined
@@ -432,12 +456,15 @@ L.NumberedDivIconRed = L.Icon.extend({
               instance.addNumberedMarker(data.wptMarkers, pos.latlng, true);
               instance.updateWptPath();
             } else if (data.pattern === "lawnmower") {
-              if (data.bndMarkers.length < 2) {
-                instance.addNumberedMarker(data.bndMarkers, pos.latlng, true);
-                instance.updateBounds();
-              } else {
-                instance.updateBounds();
+              if (data.rctMarkers.length < 2) {
+                instance.addNumberedMarker(data.rctMarkers, pos.latlng, true);
               }
+              instance.updateBounds();
+            } else if (data.pattern === "spiral") {
+              if (data.splMarkers.length < 2) {
+                instance.addNumberedMarker(data.splMarkers, pos.latlng, true);
+              }
+              instance.updateBounds();
             }
           }
         });
