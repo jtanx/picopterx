@@ -1,23 +1,7 @@
 /**
- *  Functions that interact with the server via AJAX.
+ * @file ajax.js
+ * @brief Functions to interact with the server (via AJAX calls)
  */
-
-/**
- *  Pack the coordinates into something that thrift can understand.
- *  @param [in] data Object containing leaflet coordinates 
- *  @return Array of coordinates as [lat,lon] array pairs
- */
-function packageCoordinates(data) {
-  var newdata = [];
-  if (typeof data != 'undefined') {
-		$.each(data, function(index, val) {
-			lat = val.getLatLng().lat;
-			lng = val.getLatLng().lng;
-			newdata.push([lat,lng]);
-		});
-	}
-  return newdata;
-}
 
 /**
  *  Sends the command to the server
@@ -34,7 +18,7 @@ function ajaxSend(action, data) {
 			'data'   : data
 		},
 		success: function(response) {
-			$('#response').html(response);
+			//$('#response').html(response);
 		}
 	});	
 }
@@ -47,27 +31,20 @@ function allStop() {
 }
 
 /**
- *  Begin the autonomous lawnmower search pattern
+ * Begin navigation by waypoints.
  */
-function beginAuto() {
-	if (!canEdit && bounds.length == 2) {
-    ajaxSend('updateWaypoints', packageCoordinates(bounds)).
-      success(function () {
-        ajaxSend('beginAuto');
-    });
-	}
-}
-
-/**
- *  Begin the autnonomous waypoints navigation
- */
-function beginManual() {
-	if (!canEdit && markers.length > 0) {
-		ajaxSend('updateWaypoints', packageCoordinates(markers)).
-      success(function () {
+function beginWaypoints() {
+  $("#map-canvas").copterMap('getActiveMarkerCoordinates', function (pattern, coords) {
+    if (coords.length > 0 && pattern === "manual") {
+      ajaxSend('updateWaypoints', coords).success(function () {
         ajaxSend('beginManual');
-    });
-	}
+      });
+    } else if (coords.length == 2&& pattern == "lawnmower") {
+      ajaxSend('updateWaypoints', coords).success(function () {
+        ajaxSend('beginAuto');
+      });
+    }
+  });
 }
 
 /**
@@ -94,33 +71,28 @@ function beginObjectTracking(method) {
 }
 
 /**
- *  Set the camera mode
+ * Set the camera mode
+ * @param [in] mode The mode to set to.
  */
-function setCameraMode() {
-	//yuck
-	var modes = [0,1,2,3,999];
-  var modenames = {0 : "No processing", 1 : "Centre of mass", 2 : "Camshift",
-                   3 : "Connected components", 999 : "Colour training"}
-	if (typeof setCameraMode.currentModeIndex === "undefined") {
-		setCameraMode.currentModeIndex = 4;
-	}
-
-	ajaxSend('setCameraMode', modes[setCameraMode.currentModeIndex]).
+function setCameraMode(mode) {
+	return ajaxSend('setCameraMode', mode).
     success(function (ret) {
       var mode = parseInt(ret, 10);
-      if (mode in modenames) {
-        $("#camera-mode").text(modenames[mode]);
-      } else {
-        $("#camera-mode").text("Unknown mode");
-      }
+      $("#camera-mode").val(mode);
   });
-	setCameraMode.currentModeIndex = (setCameraMode.currentModeIndex + 1) % modes.length;
 }
 
+/**
+ * Set the learning size for auto learning the colour.
+ * @param [in] decrease true to decrease, false to increase size.
+ */
 function setCameraLearningSize(decrease) {
 	ajaxSend('setCameraLearningSize', decrease ? 1 : 0);
 }
 
+/**
+ * Perform camera auto learning.
+ */
 function doCameraAutoLearning() {
 	ajaxSend('doCameraAutoLearning').success(function(ret) {
     ret = $.parseJSON(ret);
@@ -133,24 +105,27 @@ function doCameraAutoLearning() {
   });
 }
 
+/**
+ * Manually set the Hue, Saturation and Value parameters.
+ */
 function setCameraLearningValues() {
   function toInts(val) {
     return parseInt(val, 10);
   };
-  
+
   var ret={};
   var h = $("#cal-hue").val().map(toInts);
   var s = $("#cal-sat").val().map(toInts);
   var v = $("#cal-val").val().map(toInts);
-  
+
   ret["MIN_HUE"] = h[0]; ret["MAX_HUE"] = h[1];
   ret["MIN_SAT"] = s[0]; ret["MAX_SAT"] = s[1];
   ret["MIN_VAL"] = v[0]; ret["MAX_VAL"] = v[1];
-  
+
   if (ret["MIN_HUE"] < 0) {
     ret["MIN_HUE"] += 360;
   }
-  
+
   ajaxSend('setCameraLearningValues', ret).success(function(ret) {
     ret = $.parseJSON(ret);
     if (ret["MIN_HUE"] > ret["MAX_HUE"]) {
@@ -162,20 +137,28 @@ function setCameraLearningValues() {
   });
 }
 
+/**
+ * Toggle the display of the thresholded image when in calibration mode.
+ */
 function toggleLearningThreshold() {
-  if (typeof toggleLearningThreshold.show === "undefined") {
-		toggleLearningThreshold.show = false;
+  if (typeof this.show === "undefined") {
+		this.show = false;
 	}
-  toggleLearningThreshold.show = !toggleLearningThreshold.show;
-  ajaxSend('showLearningThreshold', toggleLearningThreshold.show ? 1 : 0);
+  this.show = !this.show;
+  ajaxSend('showLearningThreshold', this.show ? 1 : 0);
 }
 
-function requestSettings() {
+
+/**
+ * Request settings from the server and populate the form with it.
+ * @return The AJAX promise on the server request.
+ */
+$.fn.requestSettings = function() {
+  var form = $(this);
   return ajaxSend('requestSettings').success(function (data) {
     var ret = $.parseJSON(data);
-    var form = $("#settings-space");
     form.empty();
-    
+
     for (var key in ret) {
       var family = $("<h2/>", {text : key});
       var familyData = ret[key];
@@ -183,7 +166,7 @@ function requestSettings() {
       var table = $("<div/>", {"class" : "family-group"});
       var count = 0;
       var row = null;
-      
+
       for (var opt in familyData) {
         if (!(count++ % 4)) {
           if (row) {
@@ -191,14 +174,14 @@ function requestSettings() {
           }
           row = $("<div/>", {"class" : "family-row row"});
         }
-        
+
         var optid = key + "." + opt;
         var group = $("<div/>", {class : "form-group col-md-3"}).append(
                       $("<label/>", {"for" : optid, "text" : opt})).append(
                       $("<input/>", {"id" : optid, "type" : "text", "class" : "form-control", "value" : familyData[opt]}));
         row.append(group);
       }
-      
+
       if (row) {
         table.append(row);
       }
@@ -207,20 +190,26 @@ function requestSettings() {
   });
 }
 
-function updateSettings() {
-  $("#settings-editor :input").prop("disabled", true);
-  
+/**
+ * Take all settings and send them to the server. Use the response from
+ * the server to then update what settings are currently shown.
+ * @return The AJAX promise on the request to the server.
+ */
+$.fn.updateSettings = function () {
+  var form = $(this);
   var sub = {};
-  $("#settings-editor :input[type=text]").each(function () {
+
+  form.find(":input").prop("disabled", true);
+  form.find(":input[type=text]").each(function () {
     //This will break if we have a family name with a . in it.
     var brk = $(this).attr('id').split(".");
     var val = $(this).val();
     var family = brk[0], opt = brk[1];
-    
+
     if (!(family in sub)) {
       sub[family] = {};
     }
-    
+
     if (val === 'true') {
       sub[family][opt] = true;
     } else if (val === 'false') {
@@ -233,10 +222,10 @@ function updateSettings() {
       sub[family][opt] = val;
     }
   });
-  
-  return ajaxSend('updateSettings', JSON.stringify(sub)).complete(function () {
-    requestSettings().complete(function () {
-      $("#settings-editor :input").prop("disabled", false);
+
+  return ajaxSend('updateSettings', JSON.stringify(sub)).complete(function (data,a,b,c,d) {
+    form.requestSettings().complete(function (data) {
+      form.find(":input").prop("disabled", false);
     });
-  })
+  });
 }

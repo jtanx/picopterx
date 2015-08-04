@@ -233,6 +233,19 @@ public:
             return 0;
         }
     }
+    
+    void requestAttitude(attitude& _return)
+    {
+        if (m_fc->imu) {
+            IMUData d;
+            m_fc->imu->GetLatest(&d);
+            _return.roll = d.roll;
+            _return.pitch = d.pitch;
+            _return.yaw = d.yaw;
+        } else {
+            _return.roll = _return.pitch = _return.yaw = 0;
+        }
+    }
 
     void requestNextWaypoint(coordDeg& _return)
     {

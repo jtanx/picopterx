@@ -23,6 +23,12 @@ struct coordDeg {
 	2: double lon,
 }
 
+struct attitude {
+	1: double roll,
+	2: double pitch,
+	3: double yaw,
+}
+
 service webInterface {
 	bool		beginWaypointsThread();
 	bool		beginLawnmowerThread();
@@ -44,6 +50,7 @@ service webInterface {
 	string		requestStatus();
 	coordDeg	requestCoords();
 	double		requestBearing();
+	attitude	requestAttitude();
 	string		requestSettings();
 	bool		updateSettings(1: string settings);
 	

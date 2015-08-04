@@ -1,89 +1,54 @@
+/* Custom CSS */
+
 html, body {
-	font-family: 			"Helvetica Neue",Helvetica,Arial,sans-serif;
-	background-color: 		#000;
-	margin: 				0px;
-	padding: 				0px;
-    height:                 100%;
-	
-	font-weight:			bold;
-	text-transform:			uppercase;
+  height: 100%;
 }
 
-.light {
-    background-color: #fff;
+/* Offset for the fixed header */
+body {
+  padding-top: 70px;
+  padding-bottom: 70px;
 }
 
-.lightpad {
-    padding: 1em;
+/* For the 'All Stop' button colour */
+.nav-tabs > li > a.nav-primary {
+  background-color: #008CBA !important;
+  border-color: #0079A1 !important;
+color: #FFF !important;
 }
 
-/***************************** PRIMARIES */
-
-
-/***************************** INFORMATIONAL */
-
-.text {
-	font-size:				16px;
-	color:					#9999cd;
+.nav-tabs > li > a.nav-primary:hover {
+  background-color: #006687 !important;
+  border-color: #001921 !important;
 }
 
-#status {
-	width:					100%;
-	padding-left:			20px;
+/* Make the dropdown menu appear over the map */
+.nav-tabs .dropdown-menu {
+  z-index: 100000;
 }
 
-#bearing {
-	width:				100%;
-	padding-left:			20px;
+/* Remove the underline below the tab menu */
+.nav-no-underline {
+  border-bottom: none !important;
 }
 
-#response {
-	color:					#FF965B;
-	width:					100%;
-	padding-left:			20px;
+@media screen and (min-height: 400px) {
+  /* To expand the map canvas to fill the page vertically */
+  .fill {
+height: 100%;
+  }
+  .semi-fill {
+    /* ~50px for the status bar at the bottom */
+height: calc(100% - 55px);
+  }
 }
 
-#information {
-	color:					#FF965B;
-	width:					100%;
-	padding-left:			20px;
-	float:					clear;
+/* Doesn't look good if the map is too small */
+#map-canvas {
+  min-height: 200px;
 }
 
-#videoElement {
-	width:					100%;
-	height:					100%;
-	background-color:		#666;
-}
-
-.headline {
-	background-color:		#FB8500;
-	margin-bottom:			14px;
-	margin-left:			20px;
-	margin-right:			20px;
-}
-
-.boxtext {
-    padding-left:           20px;
-}
-
-.vstretch {
-    height:                 100%;
-}
-
-.h3 {
-	font-size:				16px;
-	font-weight:			bold;
-	color:					#FF965B;
-	text-transform:			uppercase;
-	
-	background-color:		#000;
-	
-	padding:				2px 6px;
-	margin-left:			20px;
-	vertical-align:			middle;
-}
-
+/* Tool tips on the sliders */
 .slidertooltip {
 	display: none;
 	position: absolute;
@@ -102,302 +67,60 @@ html, body {
     display: block;
 }
 
-.noUi-horizontal {
-    margin: 8px 0;
-}
-
-/***************************** LCARS STRUCTURE */
-
-#menu-button-holder {
-    padding-right: 0;
-}
-
-#secondary-button-holder {
-	/*padding-left:			140px;
-	margin:					0;*/
-    padding-left: 0;
-}
-
-#tertiary-holder {
-    border-top: 20px solid #FF965B;
-    border-left: 20px solid #FF965B;
-    border-bottom: 20px solid #FF965B;
-    border-radius: 38px 0 0 38px;
-    padding: 1.5em 1em;
-    margin: 0.3em auto;
-    /*
-	clear:					both;
-	width:					100%;
-	background-color:		#000;
-    */
-}
-
-#tertiary-menu-a {
-	/*width:					140px;*/
-	height:					44px;
-	/*float:					left;*/
-	background-color:		#FF965B;
-	margin:					0 auto;
-	border-bottom-left-radius: 30px;
-}
-
-#tertiary-menu-b {
-	/*padding-left:			140px;*/
-	height:					44px;
-	margin:					0;
-	background-color:		#FF965B;
-	border-bottom-left-radius: 30px;
-}
-
-#tertiary-menu-c {
-	/*width:					40px;
-	height:					442px;
-	float:					left;*/
-    height: 420px;
-	background-color:		#FF965B;
-	margin:					0 auto;
-	margin-top:				4px;
-	border-top-left-radius: 30px;
-}
-
-#tertiary-menu-d {
-	/*padding-left:			40px;*/
-	height:					44px;
-	margin:					0;
-	margin-top:				4px;
-	background-color:		#FF965B;
-	border-top-left-radius: 30px;
-}
-
-#menu-top-a {
-	background-color:		#C0484C;
-	width:					100%;
-	height:					44px;
-	margin:					none;
-	position:				relative;
-}
-
-#menu-top-b {
-	background-color:		#000;
-	width:					100%;
-	height:					22px;
-	position:				absolute;
-	bottom:					0px;
-	border:					none;
-	border-top-left-radius: 30px;
-}
-
-#menu-top-c {
-	background-color:		#FF965B;
-	width:					100%;
-	height:					44px;
-	margin:					none;
-	position:				relative;
-}
-
-#menu-top-d {
-	background-color:		#000;
-	width:					100%;
-	height:					22px;
-	position:				absolute;
-	top:					0px;
-	border:					none;
-	border-bottom-left-radius: 30px;
-}
-
-#menu-bottom-a {
-	background-color:		#FF965B;
-	width:					100%;
-	height:					44px;
-	margin:					none;
-	position:				relative;
-}
-
-#menu-bottom-b {
-	background-color:		#000;
-	width:					100%;
-	height:					22px;
-	position:				absolute;
-	bottom:					0px;
-	border:					none;
-	border-top-left-radius: 30px;
-}
-
-.orange-toggle {
-	background-color:		#FB8500 !important;
-    border-color:           #FB8500 !important;
-}
-
-/***************************** SIDE PANEL */
-
-.nav-a {
-	width:					100%;
-	background-color:		#C0484C;
-	height:					44px;
-	border-top-left-radius: 30px;
-}
-
-.nav-b {
-	width:					100%;
-	background-color:		#C0484C;
-	height:					44px;
-}
-
-.nav-c {
-	width:					100%;
-	background-color:		#FB8500;
-	height:					44px;
-}
-
-.nav-d {
-	width:					100%;
-	background-color:		#FF965B;
-	height:					44px;
-}
-
-.nav-e {
-	width:					100%;
-	background-color:		#FF965B;
-	height:					44px;
-	border-top-left-radius: 30px;
-}
-
-/***************************** BUTTONS */
-
-a.cbtn {
-    display:                inline-block;
-    color:                  #000;
-    padding:                10px;
-}
-
-a.cbtn:hover, a.cbtn:active, a.cbtn:focus {
-    text-decoration:        none;
-}
-
-.cbtn {
-	font-size:				16px;
-	text-align:				right;
-	text-transform:			uppercase;
-	font-weight:			bold;
-	border:					none;
-	margin-bottom:			4px;
-}
-
-.sidebtn {
-	background-color:		#AC6A80;
-
-	padding:				16px 16px 6px 0px;
-	margin-bottom:			14px;
-	margin-left:			14px;
-	
-
-	border-top-right-radius: 30px;
-	border-bottom-right-radius: 30px;
-}
-
-.roundbtn {
-	background-color:		#B781B8;
-    text-align:             center;
-
-	min-width:					60px;
-	
-	padding:				10px 6px;
-	margin-bottom:			14px;
-	margin-left:			14px;
-	
-	border-radius: 30px;
-}
-
-.minibtn {
-    background-color:		#B781B8;
-    border-radius: 3px;
-    padding: 2px 5px;
-    font-size: inherit;
-}
-
-.squarebtn {
-	background-color:		#AC6A80;
-    text-align:             center;
-    
-	width:					200px;
-	
-	padding:				10px 6px;
-	margin-bottom:			14px;
-	margin-left:			14px;
-}
-
-.halfroundbtn {
-	background-color:		#AC6A80;
-
-	width:					200px;
-	
-	padding:				16px 16px 6px 0px;
-	margin-bottom:			14px;
-	margin-left:			14px;
-	
-	border-top-right-radius: 30px;
-	border-bottom-right-radius: 30px;
-}
-
-.btn-pressed {
-	background-color:		#FB8500;
-}
-
-.btn-disabled {
-	background-color:		#654765;
-}
-
-/* Primary and secondary containers */
-#mainwindow {
-    height:				100%;
-    border:             22px solid #7F74EF;
-    border-left:        none;
-    border-radius:      0 30px 30px 0;
-    padding-right:      0;
-    overflow:           hidden;
-    text-align:         center;
-}
-
-#sidepanel {
-    padding-left:		4px;
-}
-
+/* Fit the small camera image to the well */
 #camera-secondary-img {
-    height: 350px;
+  width: 100%;
 }
 
-/***************************** ORIENTATIONAL */
-
-@media screen and (orientation:portrait) {
- 	/* Primary and secondary containers */
-    #mainwindow {
-        height:             80%;
-        border:             22px solid #7F74EF;
-        padding:            0;
-        border-radius:      0;
-    }
-	
-	#tertiary-holder {
-		display:			none;
-	}
-	
-	#camera-main {
-		height:				100%;
-	}
+/* Don't allow the image to overflow on small screens */
+#camera-primary-img {
+  max-width: 100%;
 }
 
-@media screen and (orientation:landscape) {	
-	
-	#camera-main {
-		height:				100%;
-		width:				100%;
-	}
-	
-	#main-vertical {
-		overflow:			hidden;
-		width:				1.5%;
-		height:				100%;
-		background-color:	#7F74EF;
-		border-top-right-radius: 30px;
-	}
+/* The options tab is too long; scroll on overflow */
+#tab-server-config {
+  overflow: scroll;
+}
+
+/* Overlay on the map to display the flight indicators */
+.tab-pane .overlay {
+  position: absolute;
+  z-index: 999;
+  pointer-events: none;
+}
+
+/* Top-right overlay */
+.tab-pane .overlay.overlay-tr {
+  top: 0;
+  right: 0;
+}
+
+/* Bottom-left overlay */
+.tab-pane .overlay.overlay-bl {
+  bottom: 0;
+  left: 0;
+}
+
+/* Allow click events for buttons in our overlay */
+.tab-pane .overlay .btn {
+  pointer-events: initial;
+}
+
+/* Don't offset HUD when the hide/show button is there too */
+#copter-hud-items {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* Check if the the screen is too small vertically to display the HUD */
+@media screen and (max-height: 500px) {
+  #copter-hud-primary {
+    display: none;
+  }
+}
+
+#copter-hud-secondary {
+  background-color: rgba(255,255,255,0.7);
+  font-weight: bold;
 }
