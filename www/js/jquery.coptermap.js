@@ -193,7 +193,11 @@ L.NumberedDivIconRed = L.Icon.extend({
        */
       this.updateUserPosition = function(latitude, longitude) {
         var latlng = L.latLng(latitude, longitude);
-        data.markers.userMarker.setLatLng(latlng).update();
+        if (!data.markers.userMarker) {
+          instance.addMarker('userMarker', 'css/markers/marker-user.png', latlng, false);
+        } else {
+          data.markers.userMarker.setLatLng(latlng).update();
+        }
       };
 
       /**
@@ -472,10 +476,6 @@ L.NumberedDivIconRed = L.Icon.extend({
         instance.addMarker('copterMarker', 'css/markers/helicopter.png', UWA, false);
         instance.addPath('copterPath', 'red');
         instance.addPath('wptPath', 'blue');
-
-        if (navigator.geolocation) {
-          instance.addMarker('userMarker', 'css/markers/marker-user.png', UWA, false);
-        }
       }
     });
   };
