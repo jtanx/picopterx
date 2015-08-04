@@ -163,12 +163,10 @@
                 <h3 class="panel-title">Mapping</h3>
               </div>
               <div class="panel-body">
-                <div class="btn-group btn-group-justified">
-                  <a href="#" class="btn btn-default btn-control" onclick="beginUserMapping()">Take Picture</a>
-                </div>
-                <div class="btn-group btn-group-justified">
-                  <a href="pics/" class="btn btn-success">Download</a>
-                </div>
+                <p>
+                  <a href="#" class="btn btn-default btn-block btn-control" onclick="beginUserMapping()">Take Picture</a>
+                  <a href="pics/" class="btn btn-success btn-block">Download</a>
+                </p>
               </div>
             </div>
             <!-- Camera calibration sidebar -->
