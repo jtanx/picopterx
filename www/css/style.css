@@ -85,24 +85,42 @@ height: calc(100% - 55px);
 /* Overlay on the map to display the flight indicators */
 .tab-pane .overlay {
   position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 1000000;
+  z-index: 999;
   pointer-events: none;
 }
 
+/* Top-right overlay */
+.tab-pane .overlay.overlay-tr {
+  top: 0;
+  right: 0;
+}
+
+/* Bottom-left overlay */
+.tab-pane .overlay.overlay-bl {
+  bottom: 0;
+  left: 0;
+}
+
+/* Allow click events for buttons in our overlay */
 .tab-pane .overlay .btn {
   pointer-events: initial;
 }
 
+/* Don't offset HUD when the hide/show button is there too */
 #copter-hud-items {
   position: absolute;
   top: 0;
   right: 0;
 }
 
+/* Check if the the screen is too small vertically to display the HUD */
 @media screen and (max-height: 500px) {
-  #copter-hud {
+  #copter-hud-primary {
     display: none;
   }
+}
+
+#copter-hud-secondary {
+  background-color: rgba(255,255,255,0.7);
+  font-weight: bold;
 }

@@ -76,6 +76,10 @@ function statusWorker(hud) {
       hud.yaw.setHeading(data.yaw);
       hud.att.setRoll(data.roll);
       hud.att.setPitch(data.pitch);
+      $("#copter-hud-secondary").html(
+        "Pitch: "+ data.pitch.toFixed(1) + "&deg;" +
+        " Roll: " + data.roll.toFixed(1) + "&deg;" +
+        " Yaw: " + data.yaw.toFixed(1) + "&deg;");
     },
     error: function() {
       $("#status-bar")
