@@ -122,11 +122,20 @@ MAVCommsSerial::~MAVCommsSerial() {
  * @return true iff a message was read.
  */
 bool MAVCommsSerial::ReadMessage(mavlink_message_t *ret) {
+    std::lock_guard<std::mutex> lock(m_io_mutex);
+    struct timeval timeout = {2,0}; //2 second timeout
     mavlink_status_t status;
     bool received;
     uint8_t cp;
+    fd_set read_set;
 
-    if (read(m_fd, &cp, 1) < 1) {
+    FD_ZERO(&read_set);
+    FD_SET(m_fd, &read_set);
+
+    if (select(m_fd+1, &read_set, NULL, NULL, &timeout) <= 0) {
+        Log(LOG_WARNING, "Select error ocurred.");
+        return false;
+    } else if (read(m_fd, &cp, 1) < 1) {
         Log(LOG_DEBUG, "Could not read from stream: %s", strerror(errno));
         return false;
     }
@@ -145,6 +154,7 @@ bool MAVCommsSerial::ReadMessage(mavlink_message_t *ret) {
  * @return true iff the whole message was written.
  */
 bool MAVCommsSerial::WriteMessage(const mavlink_message_t *src) {
+    std::lock_guard<std::mutex> lock(m_io_mutex);
     uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
     uint16_t length = mavlink_msg_to_send_buffer(buffer, src);
     size_t ret = write(m_fd, buffer, length);

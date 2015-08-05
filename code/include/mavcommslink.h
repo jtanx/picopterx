@@ -104,6 +104,7 @@ namespace picopter {
             bool WriteMessage(const mavlink_message_t *src) override;
         private:
             std::string m_device;
+            std::mutex m_io_mutex;
             int m_baudrate, m_fd;
             int m_packet_drop_count;
 
