@@ -10,24 +10,25 @@
  *  @return The AJAX promise
  */
 function ajaxSend(action, data) {
-	return $.ajax({
-		type: "POST",
-		url: "ajax-thrift.php",
-		data: {
-			'action': action,
-			'data'   : data
-		},
-		success: function(response) {
-			//$('#response').html(response);
-		}
-	});	
+  return $.ajax({
+    type: "POST",
+    url: "ajax-thrift.php",
+    timeout: 1200,
+    data: {
+      'action': action,
+      'data'   : data
+    },
+    success: function(response) {
+      //$('#response').html(response);
+    }
+  });
 }
 
 /**
  *  Send the all stop command
  */
 function allStop() {
-	ajaxSend('allStop');
+  ajaxSend('allStop');
 }
 
 /**
@@ -51,9 +52,9 @@ function beginWaypoints() {
  *  Begin the autnonomous user tracking function
  */
 function beginUserTracking() {
-	if ((navigator.geolocation)) {
-		ajaxSend('beginUserTracking');
-	}
+  if ((navigator.geolocation)) {
+    ajaxSend('beginUserTracking');
+  }
 }
 
 /**
@@ -75,7 +76,7 @@ function beginObjectTracking(method) {
  * @param [in] mode The mode to set to.
  */
 function setCameraMode(mode) {
-	return ajaxSend('setCameraMode', mode).
+  return ajaxSend('setCameraMode', mode).
     success(function (ret) {
       var mode = parseInt(ret, 10);
       $("#camera-mode").val(mode);
@@ -87,14 +88,14 @@ function setCameraMode(mode) {
  * @param [in] decrease true to decrease, false to increase size.
  */
 function setCameraLearningSize(decrease) {
-	ajaxSend('setCameraLearningSize', decrease ? 1 : 0);
+  ajaxSend('setCameraLearningSize', decrease ? 1 : 0);
 }
 
 /**
  * Perform camera auto learning.
  */
 function doCameraAutoLearning() {
-	ajaxSend('doCameraAutoLearning').success(function(ret) {
+  ajaxSend('doCameraAutoLearning').success(function(ret) {
     ret = $.parseJSON(ret);
     if (ret["MIN_HUE"] > ret["MAX_HUE"]) {
       ret["MIN_HUE"] = ret["MIN_HUE"] - 360;
@@ -142,8 +143,8 @@ function setCameraLearningValues() {
  */
 function toggleLearningThreshold() {
   if (typeof this.show === "undefined") {
-		this.show = false;
-	}
+    this.show = false;
+  }
   this.show = !this.show;
   ajaxSend('showLearningThreshold', this.show ? 1 : 0);
 }

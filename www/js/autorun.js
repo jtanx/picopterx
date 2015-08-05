@@ -70,6 +70,7 @@ function statusWorker(hud) {
     dataType: "json",
     url:'ajax-thrift.php',
     data: data,
+    timeout: 1200,
     success: function(data) {
       $("#status-bar").text(data.status).removeClass("alert-danger alert-warning").addClass("alert-success");
       $("#map-canvas").copterMap('updateCopterPosition', data.lat, data.lon);
