@@ -83,6 +83,7 @@ void UserTracker::UpdateUserPosition(Coord2D wpt) {
     m_wpt_available = true;
     lock.unlock();
     m_signaller.notify_one();
+    Log(LOG_DEBUG, "Got user wpt: %.6f, %.6f", wpt.lat, wpt.lon);
 }
 
 /**

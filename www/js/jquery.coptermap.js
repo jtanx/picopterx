@@ -182,7 +182,7 @@ L.NumberedDivIconRed = L.Icon.extend({
         if (data.markers.userMarker) {
           var latlng = data.markers.userMarker.getLatLng();
           ret.lat = latlng.lat;
-          ret.lon = latlng.lon;
+          ret.lon = latlng.lng;
         }
       }
 
