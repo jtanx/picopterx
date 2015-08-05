@@ -71,7 +71,7 @@
         </li>
         <li class=""><a aria-expanded="false" href="#" class="nav-primary btn-control" onclick="allStop()">All Stop</a></li>
         <li class="pull-right visible-xs visible-sm">
-          <a aria-expanded="false" href="#right-sidebar">
+          <a aria-expanded="false" href="#right-sidebar-jump">
             <span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>
           </a>
         </li>
@@ -117,6 +117,7 @@
         </div>
 
         <!-- Sidebar contents -->
+        <div id="right-sidebar-jump" class="nav-jump"></div>
         <div class="col-md-3" id="right-sidebar">
           <div id="sidebar-tab-content" class="tab-content">
             <!-- Waypoints sidebar -->

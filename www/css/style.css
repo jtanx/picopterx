@@ -32,6 +32,12 @@ color: #FFF !important;
   border-bottom: none !important;
 }
 
+/* Offset to allow for page jumps when using a fixed header */
+.nav-jump {
+  position: relative;
+  top: -50px;
+}
+
 @media screen and (min-height: 400px) {
   /* To expand the map canvas to fill the page vertically */
   .fill {
