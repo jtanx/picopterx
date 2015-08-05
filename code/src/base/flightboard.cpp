@@ -206,15 +206,15 @@ void FlightBoard::OutputLoop() {
             float py = std::sin(yaw);
             sp.target_system = m_system_id;
             sp.target_component = m_component_id;
-            sp.vx = (8 * (m_currentData.elevator * px - m_currentData.aileron * py)) / 100.0; //Max speed is 8 m/s along one axis
-            sp.vy = (8 * (m_currentData.aileron * px + m_currentData.elevator * py)) / 100.0;
+            sp.vx = (4 * (m_currentData.elevator * px - m_currentData.aileron * py)) / 100.0; //Max speed is 4 m/s along one axis
+            sp.vy = (4 * (m_currentData.aileron * px + m_currentData.elevator * py)) / 100.0;
             
             mavlink_msg_set_position_target_local_ned_encode(m_system_id, m_flightboard_id, &msg, &sp);
             //Log(LOG_DEBUG, "px: %.2f, py: %.2f, A: %d, E: %d, R: %d, vx: %.2f, vy: %.2f", px, py, m_currentData.aileron, m_currentData.elevator, m_currentData.rudder, sp.vx, sp.vy);
             m_link->WriteMessage(&msg);
             
             if (m_currentData.rudder != 0) {
-                //Log(LOG_DEBUG, "MOVING RUDDER");
+                Log(LOG_DEBUG, "MOVING RUDDER");
                 yaw_sp.target_system = m_system_id;
                 yaw_sp.target_component = m_component_id;
                 yaw_sp.param1 = 0.5;//std::fabs(m_currentData.rudder * 15/100.0); //Yaw in deg (relative)
