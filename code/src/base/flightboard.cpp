@@ -101,7 +101,7 @@ void FlightBoard::InputLoop() {
                     //Skip heartbeats that aren't from the copter
                     if (heartbeat.type != MAV_TYPE_GCS) {
                         m_is_auto_mode = static_cast<bool>(heartbeat.custom_mode == GUIDED);
-                        LogSimple(LOG_DEBUG, "Heatbeat! Mode: %d, %d, %d, %d", heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, (int)m_is_auto_mode);
+                        LogSimple(LOG_DEBUG, "Heartbeat! Mode: %d, %d, %d, %d", heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, (int)m_is_auto_mode);
                         
                         if (m_last_heartbeat >= m_heartbeat_timeout) {
                             mavlink_message_t smsg;
@@ -128,6 +128,11 @@ void FlightBoard::InputLoop() {
                     //    status.voltage_battery*1e-3,
                     //    status.current_battery*1e-2,
                     //    status.battery_remaining);
+                } break;
+                case MAVLINK_MSG_ID_COMMAND_ACK: {
+                    mavlink_command_ack_t ack;
+                    mavlink_msg_command_ack_decode(&msg, &ack);
+                    Log(LOG_DEBUG, "COMMAND: %d, RESULT: %d", ack.command, ack.result);
                 } break;
                 //case MAVLINK_MSG_ID_MISSION_ITEM_REACHED: {
                 //    Log(LOG_DEBUG, "MID REACHED!!!!!");
@@ -199,14 +204,19 @@ void FlightBoard::OutputLoop() {
             float yaw = DEG2RAD(m_imu->GetLatestYaw());
             float px = std::cos(yaw);
             float py = std::sin(yaw);
+            sp.target_system = m_system_id;
+            sp.target_component = m_component_id;
             sp.vx = (8 * (m_currentData.elevator * px - m_currentData.aileron * py)) / 100.0; //Max speed is 8 m/s along one axis
             sp.vy = (8 * (m_currentData.aileron * px + m_currentData.elevator * py)) / 100.0;
+            
             mavlink_msg_set_position_target_local_ned_encode(m_system_id, m_flightboard_id, &msg, &sp);
             //Log(LOG_DEBUG, "px: %.2f, py: %.2f, A: %d, E: %d, R: %d, vx: %.2f, vy: %.2f", px, py, m_currentData.aileron, m_currentData.elevator, m_currentData.rudder, sp.vx, sp.vy);
             m_link->WriteMessage(&msg);
             
             if (m_currentData.rudder != 0) {
                 //Log(LOG_DEBUG, "MOVING RUDDER");
+                yaw_sp.target_system = m_system_id;
+                yaw_sp.target_component = m_component_id;
                 yaw_sp.param1 = 0.5;//std::fabs(m_currentData.rudder * 15/100.0); //Yaw in deg (relative)
                 yaw_sp.param2 = std::fabs(m_currentData.rudder * 30/100.0); //Yaw rate in deg/s
                 yaw_sp.param3 = m_currentData.rudder < 0 ? -1 : 1; //Yaw direction (CCW or CW)
@@ -226,6 +236,8 @@ bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, float lat
     mavlink_message_t msg;
     std::lock_guard<std::mutex> lock(m_output_mutex);
     
+    mi.target_system = m_system_id;
+    mi.target_component = m_component_id;
     mi.seq = seq;
     mi.frame = MAV_FRAME_GLOBAL_RELATIVE_ALT;
     mi.command = MAV_CMD_NAV_WAYPOINT;
