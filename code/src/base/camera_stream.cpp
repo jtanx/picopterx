@@ -365,13 +365,13 @@ void CameraStream::ProcessImages() {
         }
         
         // Only write the image out for web streaming every 5th frame
-        if ((frame_counter % 5) == 0) {
+        //if ((frame_counter % 5) == 0) {
             if (STREAM_WIDTH < INPUT_WIDTH) {
                 cv::resize(image, image, cv::Size(STREAM_WIDTH, (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH));
             }
             static const std::vector<int> params = {CV_IMWRITE_JPEG_QUALITY, 75};
-            cv::imwrite(STREAM_FILE, image, params);
-        }
+            cv::imwrite(STREAM_FILE + std::to_string(frame_counter%20) + ".jpg", image, params);
+        //}
         
         frame_counter++;
         frame_duration = duration_cast<milliseconds>(steady_clock::now() - start_time).count();
