@@ -16,12 +16,12 @@ def lawnmower(lat1, lon1, lat2, lon2):
     #Determine which way we are sweeping
     d1 = distance.haversine(lat1, lon1, lat1, lon2)
     d2 = distance.haversine(lat1, lon2, lat2, lon2)
-    points = int(max(d1, d2)//SWEEP_SPACING)
+    points = int(min(d1, d2)//SWEEP_SPACING)
     pts = []
     
     if points != 0:
         modlat = True
-        if d1 < d2:
+        if d1 > d2:
             frac = (lat2 - lat1) / points
         else:
             frac = (lon2 - lon1) / points
@@ -38,6 +38,8 @@ def lawnmower(lat1, lon1, lat2, lon2):
                 pts.append(v2)
         if not points%2:
             pts.append(Coord(lat2, lon1) if modlat else Coord(lat1, lon2))
+    else:
+        pts.append(Coord(lat1, lon1))
     pts.append(Coord(lat2, lon2))
     
     return pts

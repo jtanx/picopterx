@@ -75,13 +75,13 @@ std::deque<Coord2D> Waypoints::GenerateLawnmowerPattern(Coord2D start, Coord2D e
     //Determine which way we are sweeping
     Coord2D sx = {start.lat, end.lon};
     double d1 = CoordDistance(start, sx), d2 = CoordDistance(sx, end);
-    int points = static_cast<int>(std::max(d1, d2) / m_sweep_spacing);
+    int points = static_cast<int>(std::min(d1, d2) / m_sweep_spacing);
     std::deque<Coord2D> pts;
     
     if (points != 0) {
         bool modlat = false;
         double frac;
-        if (d1 < d2) {
+        if (d1 > d2) {
             frac = (end.lat - start.lat) / points;
             modlat = true;
         } else {
@@ -118,6 +118,8 @@ std::deque<Coord2D> Waypoints::GenerateLawnmowerPattern(Coord2D start, Coord2D e
             }
             pts.push_back(sx);
         }
+    } else {
+        pts.push_back(start);
     }
     pts.push_back(end);
     
