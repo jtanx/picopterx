@@ -429,6 +429,37 @@ bool CameraStream::centerOfMass(cv::Mat& Isrc) {
     }
 }
 
+bool CameraStream::CamShift(cv::Mat& src) {
+    static cv::Rect roi_bounds;
+    static cv::Mat hist;
+    static bool has_roi = false;
+    // we compute the histogram from the 0-th and 1-st channels
+    int channels[] = {0, 1};
+    // hue varies from 0 to 179, see cvtColor
+    // saturation varies from 0 (black-gray-white) to
+    // 255 (pure spectrum color)
+    float hranges[] = {0,180}, sranges[] = {0,256};
+    static const float *ranges[] = {hranges, sranges};
+    cv::TermCriteria tc(cv::TermCriteria::EPS|cv::TermCriteria::COUNT, 10, 1);
+
+    if (!has_roi) {
+        cv::Mat roi = src(roi_bounds);
+        cv::cvtColor(roi, roi, CV_BGR2HSV);
+        // Quantize the hue to 30 levels and the saturation to 32 levels
+        int histSize[] = {30, 32};
+        cv::calcHist(&roi, 1, channels, cv::Mat(), hist, 2, histSize, ranges,
+            true, false);
+        //cv::normalize(hist, hist, )
+        has_roi = true;
+    } else {
+        cv::Mat dst;
+        cv::cvtColor(src, dst, CV_BGR2HSV);
+        cv::Mat bp;
+        cv::calcBackProject(&dst, 1, channels, hist, bp, ranges);
+        cv::RotatedRect rr = cv::CamShift(bp, roi_bounds, tc);
+    }
+}
+
 bool CameraStream::camShift(cv::Mat& Isrc) {
     Point2D object;
     CamWindow window;
