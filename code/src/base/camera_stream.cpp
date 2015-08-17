@@ -242,12 +242,16 @@ double CameraStream::GetFramerate() {
     return m_fps;
 }
 
-void CameraStream::TakePhoto(std::string filename) {
+bool CameraStream::TakePhoto(std::string filename) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
-    if(!filename.empty()) {
-        m_save_filename = filename;
+    if (!m_save_photo) {
+        if(!filename.empty()) {
+            m_save_filename = filename;
+        }
+        m_save_photo = true;
+        return true;
     }
-    m_save_photo = true;
+    return false;
 }
 
 /** 
@@ -279,17 +283,17 @@ void CameraStream::ProcessImages() {
 
          if (m_save_photo) {
             cv::Mat simage;
-            m_capture.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
-            m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
+            //m_capture.set(CV_CAP_PROP_FRAME_WIDTH, 1280);
+            //m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, 720);
             m_capture >> simage;
             cv::imwrite(m_save_filename, simage, saveparams);
-            m_capture.set(CV_CAP_PROP_FRAME_WIDTH, INPUT_WIDTH);
-            m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, INPUT_HEIGHT);
+            //m_capture.set(CV_CAP_PROP_FRAME_WIDTH, INPUT_WIDTH);
+            //m_capture.set(CV_CAP_PROP_FRAME_HEIGHT, INPUT_HEIGHT);
             m_save_photo = false;
          }
          
          m_capture >> image;
-         
+
         /*----------------------*
          *     Process image    *
          *----------------------*/
@@ -323,10 +327,10 @@ void CameraStream::ProcessImages() {
                 break;
             
             case MODE_CAMSHIFT:	//Center of mass detection
-                if(camShift(image)) {
+                if(CamShift(image)) {
                     drawObjectMarker(image, cv::Point(redObjectList[0].x+image.cols/2, -redObjectList[0].y+image.rows/2), cv::Scalar(0, 0, 0));
+                    drawBox(image, cv::Point(windowList[0].x, windowList[0].y), cv::Point(windowList[0].x+windowList[0].w, windowList[0].y+windowList[0].l), cv::Scalar(255, 255, 255));
                 }
-                drawBox(image, cv::Point(windowList[0].x, windowList[0].y), cv::Point(windowList[0].x+windowList[0].w, windowList[0].y+windowList[0].l), cv::Scalar(255, 255, 255));
                 drawCrosshair(image);
                 break;
                 
@@ -432,32 +436,55 @@ bool CameraStream::centerOfMass(cv::Mat& Isrc) {
 bool CameraStream::CamShift(cv::Mat& src) {
     static cv::Rect roi_bounds;
     static cv::Mat hist;
-    static bool has_roi = false;
+    static int capcount = 0;
+    static int smin = 30, vmin = 10, vmax = 256;
     // we compute the histogram from the 0-th and 1-st channels
     int channels[] = {0, 1};
     // hue varies from 0 to 179, see cvtColor
     // saturation varies from 0 (black-gray-white) to
     // 255 (pure spectrum color)
     float hranges[] = {0,180}, sranges[] = {0,256};
-    static const float *ranges[] = {hranges, sranges};
+    const float *ranges[] = {hranges, sranges};
     cv::TermCriteria tc(cv::TermCriteria::EPS|cv::TermCriteria::COUNT, 10, 1);
 
-    if (!has_roi) {
-        cv::Mat roi = src(roi_bounds);
-        cv::cvtColor(roi, roi, CV_BGR2HSV);
-        // Quantize the hue to 30 levels and the saturation to 32 levels
-        int histSize[] = {30, 32};
-        cv::calcHist(&roi, 1, channels, cv::Mat(), hist, 2, histSize, ranges,
-            true, false);
-        //cv::normalize(hist, hist, )
-        has_roi = true;
+    if (capcount < 10 || roi_bounds.width <= 1 || roi_bounds.height <= 1) {
+        if (ConnectedComponents(src)) {
+            roi_bounds = cv::Rect(windowList[0].x, windowList[0].y, windowList[0].w, windowList[0].l);
+            cv::Mat roi = src(roi_bounds), mask;
+            cv::cvtColor(roi, roi, CV_BGR2HSV);
+            cv::inRange(roi, cv::Scalar(0, smin, std::min(vmin, vmax)),
+                        cv::Scalar(180, 256, std::max(vmin, vmax)), mask);
+            // Quantize the hue to 30 levels and the saturation to 32 levels
+            int histSize[] = {10,30};
+            cv::calcHist(&roi, 1, channels, mask, hist, 1, histSize, ranges,
+                true, false);
+            cv::imshow("Histogram", hist);
+            //cv::normalize(hist, hist, 0, 255, cv::NORM_MINMAX);
+            capcount++;
+        } else {
+            capcount = 0;
+        }
     } else {
-        cv::Mat dst;
+        cv::Mat dst, bp;
         cv::cvtColor(src, dst, CV_BGR2HSV);
-        cv::Mat bp;
         cv::calcBackProject(&dst, 1, channels, hist, bp, ranges);
+        cv::imshow("backprojection", bp);
         cv::RotatedRect rr = cv::CamShift(bp, roi_bounds, tc);
+        roi_bounds = rr.boundingRect();
+        Point2D centre = {rr.center.x - src.cols/2, -rr.center.y + src.rows/2};
+        CamWindow bbox = {roi_bounds.x, roi_bounds.y, roi_bounds.height, roi_bounds.width};
+
+        LogSimple(LOG_DEBUG, "X: %.1f, Y: %.1f, W: %d, H: %d", rr.center.x, rr.center.y, roi_bounds.width, roi_bounds.height);
+        redObjectList.clear();
+        windowList.clear();
+
+        redObjectList.push_back(centre);
+        windowList.push_back(bbox);
+
+        return true;
     }
+
+    return false;
 }
 
 bool CameraStream::camShift(cv::Mat& Isrc) {

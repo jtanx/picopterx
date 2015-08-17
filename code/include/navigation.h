@@ -83,6 +83,19 @@ namespace picopter {
         } EulerAngle;
         
         /**
+         * Defines a tile point.
+         * @see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Zoom_levels
+         */
+        typedef struct TilePoint {
+            /** The x-point **/
+            int x;
+            /** The y-point **/
+            int y;
+            /** The zoom level **/
+            int zoom;
+        } TilePoint;
+        
+        /**
          * Determines if the given coordinate is within the bounded rectangle.
          * The bounds are inclusive.
          * @param here The current location (must have lat/lon members)
@@ -121,8 +134,8 @@ namespace picopter {
          * Uses the Haversine method (great-circle distance) with an 
          * Earth radius of 6364.963km. 
          * @see http://www.ga.gov.au/scientific-topics/positioning-navigation/geodesy/geodetic-techniques/distance-calculation-algorithms
-         * @param from The first coordinate, in radians.
-         * @param to The second coordinate,in radians.
+         * @param from The first coordinate, in degrees.
+         * @param to The second coordinate,in degrees.
          * @return The distance between the coordinates, in metres.
          */
         template <typename Coord1, typename Coord2>
@@ -138,8 +151,8 @@ namespace picopter {
         
         /**
          * Calculates the initial bearing (forward azimuth).
-         * @param from The first coordinate, in radians.
-         * @param to The second coordinate, in radians.
+         * @param from The first coordinate, in degrees.
+         * @param to The second coordinate, in degrees.
          * @param The bearing, in degrees, 0 < ret < 360
          */
         template <typename Coord1, typename Coord2>
@@ -152,6 +165,24 @@ namespace picopter {
             double y = sin(to.lon - from.lon) * cos(to.lat);
             double ret = RAD2DEG(atan2(y, x));
             return (ret < 0) ? (ret + 360) : ret;
+        }
+        
+        /**
+         * Converts a coordinate/zoom level into the corresonding tile number.
+         * @param [in] from The coordinate of the tile.
+         * @see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Zoom_levels
+         * @param [in] zoom The zoom level of the tile.
+         * @return The tile number.
+         */
+        template <typename Coord>
+        TilePoint CoordToTile(Coord from, int zoom) {
+            TilePoint ret;
+            int n =  1 << zoom;
+            double rlat = DEG2RAD(from.lat);
+            ret.x = static_cast<int>(((from.lon + 180.0) / 360.0) * n);
+            ret.y = static_cast<int>((1.0 - log(tan(rlat) + (1/cos(rlat)))/M_PI)/2.0 * n);
+            ret.zoom = zoom;
+            return ret;
         }
         
         const Coord2D PERTH_BL = {-33, 115};

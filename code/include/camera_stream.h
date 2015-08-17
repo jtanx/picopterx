@@ -67,7 +67,7 @@ namespace picopter {
             void SetArrow(navigation::Point2D vec);
             
             double GetFramerate(void);
-            void TakePhoto(std::string);
+            bool TakePhoto(std::string);
         private:
             int MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL, PIXEL_THRESHOLD;
             int DILATE_ELEMENT, ERODE_ELEMENT;
@@ -107,6 +107,7 @@ namespace picopter {
             
             void ProcessImages(void);
             bool centerOfMass(cv::Mat& Isrc);
+            bool CamShift(cv::Mat& src);
             bool camShift(cv::Mat& Isrc);
             int connectComponents(cv::Mat& Isrc);
             int ConnectedComponents(cv::Mat& src);

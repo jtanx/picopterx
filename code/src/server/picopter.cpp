@@ -37,12 +37,24 @@ private:
     const std::unique_ptr<picopter::FlightController> &m_fc;
     std::deque<navigation::Coord2D> m_pts;
     std::shared_ptr<FlightTask> m_user_tracker;
+    std::thread m_camera_thread;
+    std::atomic<bool> m_camera_stop;
+    int m_camera_sequence;
 public:
     webInterfaceHandler(Options *opts, std::unique_ptr<picopter::FlightController> &fc)
     : m_opts(opts) 
     , m_fc(fc)
+    , m_camera_stop{false}
+    , m_camera_sequence(0)
     {
         // Your initialization goes here
+    }
+    
+    ~webInterfaceHandler() {
+        m_camera_stop = true;
+        if (m_camera_thread.joinable()) {
+            m_camera_thread.join();
+        }
     }
 
     bool beginWaypointsThread()
@@ -93,14 +105,33 @@ public:
     
     bool beginUserMappingThread()
     {
-        static int counter = 0;
-        std::string path = std::string(PICOPTER_HOME_LOCATION "/pics/save_") + std::to_string(counter++) + std::string(".jpg");
-        
-        if (m_fc->cam) {
-            m_fc->cam->TakePhoto(path);
+        if (m_camera_thread.joinable()) {
+            m_camera_stop = true;
+            m_camera_thread.join();
+            m_camera_stop = false;
+            Log(LOG_DEBUG, "USER MAPPING STOP");
+            return false;
+        } else {
+            m_camera_thread = std::thread([this] {
+                Log(LOG_DEBUG, "THREAD START %d", m_camera_sequence);
+                for (int counter = 0; !m_camera_stop;) {
+                    std::string path = std::string(PICOPTER_HOME_LOCATION "/pics/save_") +
+                    std::to_string(m_camera_sequence) + "_" + 
+                    std::to_string(counter) + std::string(".jpg");
+                    
+                    if (m_fc->cam) {
+                        if (m_fc->cam->TakePhoto(path)) {
+                            counter++;
+                        }
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(35));
+                }
+                m_camera_sequence++;
+            });
+            
+            Log(LOG_DEBUG, "USER MAPPING");
         }
-        Log(LOG_DEBUG, "USER MAPPING");
-        return false;
+        return true;
     }
     
     bool beginObjectTrackingThread(const int32_t method)
