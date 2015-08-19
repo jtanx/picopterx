@@ -458,7 +458,9 @@ bool CameraStream::CamShift(cv::Mat& src) {
             int histSize[] = {10,30};
             cv::calcHist(&roi, 1, channels, mask, hist, 1, histSize, ranges,
                 true, false);
-            cv::imshow("Histogram", hist);
+            if (m_demo) {
+                cv::imshow("Histogram", hist);
+            }
             //cv::normalize(hist, hist, 0, 255, cv::NORM_MINMAX);
             capcount++;
         } else {
@@ -468,7 +470,9 @@ bool CameraStream::CamShift(cv::Mat& src) {
         cv::Mat dst, bp;
         cv::cvtColor(src, dst, CV_BGR2HSV);
         cv::calcBackProject(&dst, 1, channels, hist, bp, ranges);
-        cv::imshow("backprojection", bp);
+        if (m_demo) {
+            cv::imshow("backprojection", bp);
+        }
         cv::RotatedRect rr = cv::CamShift(bp, roi_bounds, tc);
         roi_bounds = rr.boundingRect();
         Point2D centre = {rr.center.x - src.cols/2, -rr.center.y + src.rows/2};
