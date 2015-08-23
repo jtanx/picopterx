@@ -42,7 +42,7 @@ function cameraInit() {
   $("#camera-secondary").append(simg);
   $("#camera-primary").append(pimg);
 
-  $("#cal-hue").sliderify(-20, 20, -360, 360);
+  $("#cal-hue").sliderify(-20, 20, -180, 180);
   $("#cal-sat").sliderify(97, 255, 0, 255);
   $("#cal-val").sliderify(127, 255, 0, 255);
 
@@ -104,7 +104,7 @@ $(document).ready(function () {
   });
   startGeoLocator();
   cameraInit();
-  
+
   var hud = {
     yaw : $.flightIndicator('#copter-yaw', 'heading', {showBox:false, size:150}),
     att : $.flightIndicator('#copter-att', 'attitude', {showBox:false, size: 150})

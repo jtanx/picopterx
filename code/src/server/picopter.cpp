@@ -42,14 +42,14 @@ private:
     int m_camera_sequence;
 public:
     webInterfaceHandler(Options *opts, std::unique_ptr<picopter::FlightController> &fc)
-    : m_opts(opts) 
+    : m_opts(opts)
     , m_fc(fc)
     , m_camera_stop{false}
     , m_camera_sequence(0)
     {
         // Your initialization goes here
     }
-    
+
     ~webInterfaceHandler() {
         m_camera_stop = true;
         if (m_camera_thread.joinable()) {
@@ -64,7 +64,7 @@ public:
             return false;
         } else {
             std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(m_opts, m_pts, WAYPOINT_NORMAL);
-            
+
             if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
                 return false;
             }
@@ -79,7 +79,7 @@ public:
             return false;
         } else {
             std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(m_opts, m_pts, WAYPOINT_LAWNMOWER);
-            
+
             if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
                 return false;
             }
@@ -102,7 +102,7 @@ public:
         //printf("beginUserTrackingThread\n");
         return false;
     }
-    
+
     bool beginUserMappingThread()
     {
         if (m_camera_thread.joinable()) {
@@ -116,9 +116,9 @@ public:
                 Log(LOG_DEBUG, "THREAD START %d", m_camera_sequence);
                 for (int counter = 0; !m_camera_stop;) {
                     std::string path = std::string(PICOPTER_HOME_LOCATION "/pics/save_") +
-                    std::to_string(m_camera_sequence) + "_" + 
+                    std::to_string(m_camera_sequence) + "_" +
                     std::to_string(counter) + std::string(".jpg");
-                    
+
                     if (m_fc->cam) {
                         if (m_fc->cam->TakePhoto(path)) {
                             counter++;
@@ -128,24 +128,23 @@ public:
                 }
                 m_camera_sequence++;
             });
-            
+
             Log(LOG_DEBUG, "USER MAPPING");
         }
         return true;
     }
-    
+
     bool beginObjectTrackingThread(const int32_t method)
     {
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
             return false;
         } else if (m_fc->cam != NULL) {
-            int width = m_fc->cam->GetInputWidth(), height = m_fc->cam->GetInputHeight();
-            std::shared_ptr<FlightTask> trk = std::make_shared<ObjectTracker>(m_opts, width, height);
+            std::shared_ptr<FlightTask> trk = std::make_shared<ObjectTracker>(m_opts);
             if (method == 1) {
                 static_cast<ObjectTracker*>(trk.get())->SetTrackMethod(ObjectTracker::TRACK_ROTATE);
             }
-            
+
             if (!m_fc->RunTask(TASK_OBJECT_TRACKING, trk, NULL)) {
                 return false;
             }
@@ -171,38 +170,32 @@ public:
         return -1;
     }
 
-    bool setCameraLearningSize(bool decrease) {
+    bool doCameraAutoLearning() {
         if (m_fc->cam) {
-            m_fc->cam->SetLearningSize(decrease);
-        }
-        return true;
-    }
-
-    bool showLearningThreshold(bool show) {
-        if (m_fc->cam) {
-            m_fc->cam->ShowLearningThreshold(show);
+            m_fc->cam->DoAutoLearning();
             return true;
         }
         return false;
     }
 
-    void doCameraAutoLearning(std::map<std::string, int32_t> & _return) {
+    void requestCameraConfig(std::string& _return) {
         if (m_fc->cam) {
-            m_fc->cam->DoAutoLearning(&_return);
+            Options config;
+            m_fc->cam->GetConfig(&config);
+            _return = config.Serialise();
+        } else {
+            _return = "{}";
         }
     }
 
-    void setCameraLearningValues(std::map<std::string, int32_t> & _return, const std::map<std::string, int32_t> & values)  {
+    bool setCameraConfig(const std::string& config) {
         if (m_fc->cam) {
-            m_fc->cam->DoManualLearning(values, &_return);
+            Options opts;
+            opts.Merge(config.c_str());
+            m_fc->cam->SetConfig(&opts);
+            return true;
         }
-    }
-
-    int32_t requestLearningHue() {
-        if (m_fc->cam) {
-            return m_fc->cam->GetLearningHue();
-        }
-        return 0;
+        return false;
     }
 
     bool allStop()
@@ -215,6 +208,9 @@ public:
     {
         std::stringstream ss;
         ss << (*m_fc);
+        if (m_camera_thread.joinable()) {
+            ss << " (Capturing photos)";
+        }
         _return = ss.str();
     }
 
@@ -226,7 +222,7 @@ public:
         _return.lon = std::isnan(d.fix.lon) ? -1 : d.fix.lon;
         //printf("requestCoords %f,%f\n", _return.lat, _return.lon);
     }
-    
+
     void requestSettings(std::string& _return) {
         if (m_opts) {
             _return = m_opts->Serialise();
@@ -234,7 +230,7 @@ public:
             _return = "{}";
         }
     }
-    
+
     bool updateSettings(const std::string& settings) {
         //Only update if we're not running anything...
         if (m_fc->GetCurrentTaskId() == TASK_NONE && m_opts) {
@@ -264,7 +260,7 @@ public:
             return 0;
         }
     }
-    
+
     void requestAttitude(attitude& _return)
     {
         if (m_fc->imu) {
@@ -295,7 +291,7 @@ public:
                 navigation::Coord2D uwpt;
                 uwpt.lat = wpt.lat;
                 uwpt.lon = wpt.lon;
-                
+
                 static_cast<UserTracker*>(trk.get())->UpdateUserPosition(uwpt);
                 return true;
             }
@@ -306,7 +302,7 @@ public:
     bool updateWaypoints(const std::vector<coordDeg> & wpts)
     {
         Log(LOG_INFO, "Updating waypoints");
-        
+
         int i = 1;
         m_pts.clear();
         for (coordDeg v : wpts) {
@@ -333,12 +329,12 @@ public:
  */
 void terminate(int signum) {
     static int killcount = 0;
-    
+
     if (++killcount > 3) {
         Fatal("Okay you asked for it; exiting immediately!");
     } else {
         Log(LOG_WARNING, "Terminate signal received! Attempting termination...");
-        
+
         if (!g_fc) {
             Fatal("Flight controller was not initialised; exiting immediately!");
         } else if (!g_server) {
@@ -357,31 +353,31 @@ int main(int argc, char **argv)
 {
     Options *opts = NULL;
     LogInit();
-    
+
     //We need options irregardless.
     if (argc > 1) {
         opts = new Options(argv[1]);
     } else {
         opts = new Options();
     }
-    
+
     //Signal handlers
     struct sigaction signal_handler;	
     signal_handler.sa_handler = terminate;
     sigemptyset(&signal_handler.sa_mask);
     signal_handler.sa_flags = 0;
-    
+
     sigaction(SIGTERM, &signal_handler, NULL);
     sigaction(SIGINT,  &signal_handler, NULL);
-    
+
     int port = 9090;
-    
+
     try {
         g_fc.reset(new picopter::FlightController(opts));
     } catch (const std::invalid_argument &e) {
         Fatal("Failed to initialise %s which is required, exiting.", e.what());
     }
-    
+
     shared_ptr<webInterfaceHandler> handler(new webInterfaceHandler(opts, g_fc));
     shared_ptr<TProcessor> processor(new webInterfaceProcessor(handler));
     shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
@@ -392,7 +388,7 @@ int main(int argc, char **argv)
     shared_ptr<PosixThreadFactory> threadFactory(new PosixThreadFactory());
     threadManager->threadFactory(threadFactory);
     threadManager->start();
-    
+
     g_server.reset(new TThreadPoolServer(processor,serverTransport,transportFactory,protocolFactory,threadManager));
     try {
         Log(LOG_INFO, "Server started.");
@@ -400,7 +396,7 @@ int main(int argc, char **argv)
     } catch (const TTransportException &e) {
         Fatal("Cannot start server: Thrift port 9090 is already in use.");
     }
-    
+
     delete opts;
     Log(LOG_INFO, "Server stopped.");
     return 0;

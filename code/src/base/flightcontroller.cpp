@@ -77,7 +77,6 @@ FlightController::FlightController(Options *opts)
     m_gps = m_fb->GetGPSInstance();
     InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
     if (m_camera) {
-        m_camera->Start();
         m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);
     }
     
@@ -146,7 +145,6 @@ bool FlightController::ReloadSettings(Options *opts) {
     delete m_camera;
     InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
     if (m_camera) {
-        m_camera->Start();
         m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);
     }
     return static_cast<bool>(m_camera);

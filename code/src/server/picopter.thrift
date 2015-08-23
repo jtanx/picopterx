@@ -39,11 +39,9 @@ service webInterface {
 
 	i32			setCameraMode(1: i32 mode);
 	i32			requestCameraMode();
-	bool		showLearningThreshold(1: bool show);
-	bool		setCameraLearningSize(1: bool decrease);
-	map<string,i32>	doCameraAutoLearning();
-	map<string,i32>	setCameraLearningValues(1: map<string,i32>	values);
-	i32			requestLearningHue();
+	bool		doCameraAutoLearning();
+	string		requestCameraConfig();
+	bool		setCameraConfig(1:string config);
 	
 	bool		allStop();
 	

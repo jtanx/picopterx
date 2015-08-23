@@ -32,18 +32,18 @@ static Value* GetValue(Value *d, const char *key) {
 /**
  * Constructor.
  * Initialised empty, optionally loading from a file or serialised string.
- * @param file The location of a file containing options, or nullptr if not present. 
+ * @param file The location of a file containing options, or nullptr if not present.
  * @param json_string The serialised JSON string to load, or nullptr if not present.
  *                    Will take precedence over the contents of the specified
- *                    file, if any. 
+ *                    file, if any.
  */
 Options::Options(const char *file, const char *json_string) {
     Document *d = new Document();
-    
+
     if (json_string) {
         d->Parse<0>(json_string);
     }
-    
+
     if (file) {
         FILE *fp = fopen(file, "rb");
         if (fp) {
@@ -52,12 +52,12 @@ Options::Options(const char *file, const char *json_string) {
                 FileReadStream is(fp, buffer, sizeof(buffer));
                 d->ParseStream<0, UTF8<>, FileReadStream>(is);
             }
-            
+
             fclose(fp);
             m_file = std::string(file);
         }
     }
-    
+
     if (!d->IsObject()) {
         d->SetObject();
         m_family_inst = nullptr;
@@ -68,7 +68,7 @@ Options::Options(const char *file, const char *json_string) {
         }
         m_family_inst = fi;
     }
-    
+
     m_doc = d;
     m_family = FAMILY_DEFAULT;
 }
@@ -77,7 +77,7 @@ Options::Options(const char *file, const char *json_string) {
  * Constructs an options class from the specified file or serialised string.
  * @param data The file location or serialised string.
  * @param is_serialised Determines if 'data' is a file location or if it is
- *                      serialised JSON data. 
+ *                      serialised JSON data.
  */
 Options::Options(const char *data, bool is_serialised)
 : Options(is_serialised ? nullptr : data, is_serialised ? data : nullptr) {}
@@ -97,7 +97,7 @@ Options::~Options() {
 
 /**
  * Sets the family under which to store and retrieve settings from.
- * @param family The name of the family. If nullptr, it will default to 
+ * @param family The name of the family. If nullptr, it will default to
  *               Options::FAMILY_DEFAULT.
  */
 void Options::SetFamily(const char *family) {
@@ -107,6 +107,19 @@ void Options::SetFamily(const char *family) {
         fi->SetObject();
     }
     m_family_inst = fi;
+}
+
+/**
+ * Determines if the specified key exists.
+ * @param [in] key The key to the value.
+ * @return true iff the key exists.
+ */
+bool Options::Contains(const char *key) {
+    Value *fi = static_cast<Value*>(m_family_inst);
+    if (fi) {
+        return GetValue(fi, key) != nullptr;
+    }
+    return false;
 }
 
 /**
@@ -120,13 +133,58 @@ int Options::GetInt(const char *key, int otherwise) {
     if (fi) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsInt()) {
-        	int ret = vpt->GetInt();
-        	LogSimple(LOG_INFO, "%s: %d", key, ret); 
+            int ret = vpt->GetInt();
+            LogSimple(LOG_INFO, "%s: %d", key, ret);
             return ret;
         }
     }
     LogSimple(LOG_INFO, "%s [default]: %d", key, otherwise);
     return otherwise;
+}
+
+/**
+ * Retrieves the integer value associated with a key.
+ * @param [in] key The key to the value.
+ * @param [in,out] value The location to store the value. It will be left
+ *                       unchanged if the key does not exist.
+ * @return true iff the value was retreived.
+ */
+bool Options::GetInt(const char *key, int *value) {
+    Value *fi = static_cast<Value*>(m_family_inst);
+    if (fi) {
+        Value *vpt = GetValue(fi, key);
+        if (vpt && vpt->IsInt()) {
+            *value = vpt->GetInt();
+            LogSimple(LOG_INFO, "%s: %d", key, *value);
+            return true;
+        }
+    }
+    LogSimple(LOG_INFO, "%s [default]: %d", key, *value);
+    return false;
+}
+
+/**
+ * Retrieves the integer value associated with a key.
+ * This version will clamp the value to between the specified bounds.
+ * @param [in] key The key to the value.
+ * @param [in,out] value The location to store the value. It will be left
+ *                       unchanged (incl. no clamping) if the key does not exist.
+ * @param [in] min The minimum parameter value.
+ * @param [in] max The maximum parameter value.
+ * @return true iff the value was retrieved.
+ */
+bool Options::GetInt(const char *key, int *value, int min, int max) {
+    Value *fi = static_cast<Value*>(m_family_inst);
+    if (fi) {
+        Value *vpt = GetValue(fi, key);
+        if (vpt && vpt->IsInt()) {
+            *value = picopter::clamp(vpt->GetInt(), min, max);
+            LogSimple(LOG_INFO, "%s: %d", key, *value);
+            return true;
+        }
+    }
+    LogSimple(LOG_INFO, "%s [default]: %d", key, *value);
+    return false;
 }
 
 /**
@@ -140,8 +198,8 @@ bool Options::GetBool(const char *key, bool otherwise) {
     if (fi) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsBool()) {
-        	bool ret = vpt->GetBool();
-        	LogSimple(LOG_INFO, "%s: %s", key, ret ? "true" : "false"); 
+            bool ret = vpt->GetBool();
+            LogSimple(LOG_INFO, "%s: %s", key, ret ? "true" : "false");
             return ret;
         }
     }
@@ -150,20 +208,41 @@ bool Options::GetBool(const char *key, bool otherwise) {
 }
 
 /**
+ * Retrieves the Boolean value associated with a key.
+ * @param [in] key The key to the value.
+ * @param [in,out] value The location to store the value. It will be left
+ *                       unchanged if the key does not exist.
+ * @return true iff the value was retreived.
+ */
+bool Options::GetBool(const char *key, bool *value) {
+    Value *fi = static_cast<Value*>(m_family_inst);
+    if (fi) {
+        Value *vpt = GetValue(fi, key);
+        if (vpt && vpt->IsBool()) {
+            *value = vpt->GetBool();
+            LogSimple(LOG_INFO, "%s: %s", key, *value ? "true" : "false");
+            return true;
+        }
+    }
+    LogSimple(LOG_INFO, "%s [default]: %s", key, *value ? "true" : "false");
+    return false;
+}
+
+/**
  * Retrieves the string value associated with a key.
  * @param key The key to the value.
  * @param otherwise The value to return if it does not exist.
  * @return The retrieved value, or `otherwise` if it does not exist. This value
  *         must not be modified. It will only be valid until this parameter is
- *         modified (via Set or Remove), or in the case of `otherwise` being 
- *         returned, until that value is either freed or goes out of scope. 
+ *         modified (via Set or Remove), or in the case of `otherwise` being
+ *         returned, until that value is either freed or goes out of scope.
  */
 const char* Options::GetString(const char *key, const char *otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsString()) {
-        	const char *ret = vpt->GetString();
+            const char *ret = vpt->GetString();
             LogSimple(LOG_INFO, "%s: %s", key, ret ? ret : "Null");
             return ret;
         }
@@ -184,7 +263,7 @@ double Options::GetReal(const char *key, double otherwise) {
         Value *vpt = GetValue(fi, key);
         if (vpt && vpt->IsDouble()) {
             double ret = vpt->GetDouble();
-        	LogSimple(LOG_INFO, "%s: %f", key, ret);
+            LogSimple(LOG_INFO, "%s: %f", key, ret);
             return ret;
         } else if (vpt && vpt->IsInt()) {
             int ret = vpt->GetInt();
@@ -194,6 +273,34 @@ double Options::GetReal(const char *key, double otherwise) {
     }
     LogSimple(LOG_INFO, "%s [default]: %f", key, otherwise);
     return otherwise;
+}
+
+/**
+ * Retrieves the Real (double precision) value associated with a key.
+ * This version will clamp the value to between the specified bounds.
+ * @param [in] key The key to the value.
+ * @param [in,out] value The location to store the value. It will be left
+ *                       unchanged (incl. no clamping) if the key does not exist.
+ * @param [in] min The minimum parameter value.
+ * @param [in] max The maximum parameter value.
+ * @return true iff the value was retrieved.
+ */
+bool Options::GetReal(const char *key, double *value, double min, double max) {
+    Value *fi = static_cast<Value*>(m_family_inst);
+    if (fi) {
+        Value *vpt = GetValue(fi, key);
+        if (vpt && vpt->IsDouble()) {
+            *value = picopter::clamp(vpt->GetDouble(), min, max);
+            LogSimple(LOG_INFO, "%s: %f", key, *value);
+            return true;
+        } else if (vpt && vpt->IsInt()) {
+            *value = picopter::clamp(static_cast<double>(vpt->GetInt()), min, max);
+            LogSimple(LOG_INFO, "%s: %d", key, *value);
+            return true;
+        }
+    }
+    LogSimple(LOG_INFO, "%s [default]: %f", key, *value);
+    return false;
 }
 
 /**
@@ -213,7 +320,7 @@ void Options::SetImpl(const char *key, const T& val) {
         Value family_val(Type::kObjectType);
         Value entry_key(key, d->GetAllocator());
         Value entry_val(val);
-        
+
         family_val.AddMember(entry_key, entry_val, d->GetAllocator());
         d->AddMember(family_key, family_val, d->GetAllocator());
         m_family_inst = &(*d)[m_family.c_str()];
@@ -240,13 +347,13 @@ void Options::SetImpl(const char *key, const T& val) {
 void Options::Set(const char *key, const char *val) {
     Document *d = static_cast<Document*>(m_doc);
     Value *fi = static_cast<Value*>(m_family_inst);
-    
+
     if (!fi) { //Family doesn't exist, so create it
         Value family_key(m_family.c_str(), d->GetAllocator());
         Value family_val(Type::kObjectType);
         Value entry_key(key, d->GetAllocator());
         Value entry_val(val, d->GetAllocator());
-        
+
         family_val.AddMember(entry_key, entry_val, d->GetAllocator());
         d->AddMember(family_key, family_val, d->GetAllocator());
         m_family_inst = &(*d)[m_family.c_str()];
@@ -304,9 +411,9 @@ bool Options::Remove(const char *key) {
 
 /**
  * Merge one set of options into this one.
- * All settings in the input take precedence over anything currently stored. 
+ * All settings in the input take precedence over anything currently stored.
  * @param json_string The serialised JSON string to merge from.
- * @return true iff successfully merged.  
+ * @return true iff successfully merged.
  */
 bool Options::Merge(const char *json_string) {
     if (json_string) {
@@ -355,7 +462,7 @@ bool Options::Merge(const char *json_string) {
             return true;
         }
     }
-    
+
     return false;
 }
 
@@ -367,7 +474,7 @@ std::string Options::Serialise() {
     GenericStringBuffer<UTF8<>> buffer;
     PrettyWriter<GenericStringBuffer<UTF8<>>> pw(buffer);
     Document *d = static_cast<Document*>(m_doc);
-    
+
     d->Accept(pw);
     return std::string(buffer.GetString());
 }
@@ -380,7 +487,7 @@ void Options::Save(FILE *fp) {
     FileWriteStream fws(fp, buf, sizeof(buf));
     PrettyWriter<FileWriteStream> pw(fws);
     Document *d = static_cast<Document*>(m_doc);
-    
+
     d->Accept(pw);
 }
 

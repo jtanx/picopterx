@@ -15,12 +15,13 @@ using std::chrono::seconds;
 using std::chrono::duration_cast;
 using std::this_thread::sleep_for;
 
-static void printFlightData(FlightData*);
-
-ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMethod method)
-: m_camwidth(camwidth)
-, m_camheight(camheight)
-, m_pidw(0,0,0,0.03)
+/**
+ * Constructs a new (image based) object tracker.
+ * @param [in] opts A pointer to options, if any (NULL for defaults).
+ * @param [in] method The tracking method to use (deprecated).
+ */
+ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
+: m_pidw(0,0,0,0.03)
 , m_pidx(0,0,0,0.03)
 , m_pidy(0,0,0,0.03)
 , m_track_method{method}
@@ -39,9 +40,9 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
 
-    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 60);
-    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 40);
-    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 30);
+    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 50);
+    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 22);
+    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 22);
     //double TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
     TRACK_TauIw = opts->GetReal("TRACK_TauIw", 5);
     TRACK_TauIx = opts->GetReal("TRACK_TauIx", 5);
@@ -81,22 +82,42 @@ ObjectTracker::ObjectTracker(Options *opts, int camwidth, int camheight, TrackMe
     //m_pidz.SetSetPoint(TRACK_SETPOINT_Z);
 }
 
-ObjectTracker::ObjectTracker(int camwidth, int camheight, TrackMethod method)
-: ObjectTracker(NULL, camwidth, camheight, method) {}
+/**
+ * Constructor. Same as calling ObjectTracker(NULL, method)
+ * @param [in] method A pointer to options, if any (NULL for defaults).
+ */
+ObjectTracker::ObjectTracker(TrackMethod method)
+: ObjectTracker(NULL, method) {}
 
+/**
+ * Destructor.
+ */
 ObjectTracker::~ObjectTracker() {
     
 }
 
+/**
+ * Returns the current tracking method.
+ * @return The current tracking method.
+ */
 ObjectTracker::TrackMethod ObjectTracker::GetTrackMethod() {
     return m_track_method.load(std::memory_order_relaxed);
 }
 
+/**
+ * Sets the current tracking method.
+ * @param [in] method The tracking method to set to.
+ */
 void ObjectTracker::SetTrackMethod(TrackMethod method) {
     Log(LOG_INFO, "Track method: %d", method);
     m_track_method.store(method, std::memory_order_relaxed);
 }
 
+/**
+ * Main computation loop of the object tracker.
+ * @param [in] fc The flight controller that initiated this run.
+ * @param [in] opts Closure (unused).
+ */
 void ObjectTracker::Run(FlightController *fc, void *opts) {
     if (fc->cam == NULL) {
         Log(LOG_WARNING, "Not running object detection - no usable camera!");
@@ -116,11 +137,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     Log(LOG_INFO, "Authorisation acknowledged. Finding object to track...");
     SetCurrentState(fc, STATE_TRACKING_SEARCHING);
     
-    Point2D detected_object = {0,0};
+    ObjectInfo detected_object = {};
+    //Location of the target in body coordinates is in detected_object.offset
     //Point2D input_limits = {m_camwidth/2.0, m_camheight/2.0};
-    Point3D object_body_coords = {0,0,0};  //location of the target in body coordinates
 
-    std::vector<Point2D> locations;
+    std::vector<ObjectInfo> locations;
     FlightData course;
     GPSData gps_position;
     auto last_fix = steady_clock::now() - seconds(2);
@@ -143,13 +164,14 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
             
-            EstimatePositionFromImageCoords(&gps_position, &course, &detected_object, &object_body_coords);
+            EstimatePositionFromImageCoords(&gps_position, &course, &detected_object);
 
             if (!m_observation_mode) {
-                CalculateTrackingTrajectory(fc, &course, &object_body_coords, true);
+                CalculateTrackingTrajectory(fc, &course, &detected_object, true);
                 fc->fb->SetData(&course);
             }
-            printFlightData(&course);
+            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: %03d\r",
+                course.aileron, course.elevator, course.rudder, course.gimbal);
             last_fix = steady_clock::now();
             had_fix = true;
         } else if (had_fix && steady_clock::now() - last_fix < seconds(2)) {
@@ -163,10 +185,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             
             //Determine trajectory to track the object (PID control)
             if (!m_observation_mode) {
-                CalculateTrackingTrajectory(fc, &course, &object_body_coords, false);
+                CalculateTrackingTrajectory(fc, &course, &detected_object, false);
                 fc->fb->SetData(&course);
             }
-            printFlightData(&course);
+            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: %03d\r",
+                course.aileron, course.elevator, course.rudder, course.gimbal);
         } else {
             //Object lost; we should do a search pattern (TBA)
             SetCurrentState(fc, STATE_TRACKING_SEARCHING);
@@ -178,7 +201,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
             fc->fb->Stop();
             if (had_fix) {
-                fc->cam->SetArrow({0,0});
+                fc->cam->SetTrackingArrow({0,0,0});
                 Log(LOG_WARNING, "No object detected. Idling.");
                 had_fix = false;
             }
@@ -186,7 +209,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         
         sleep_for(sleep_time);
     }
-    fc->cam->SetArrow({0,0});
+    fc->cam->SetTrackingArrow({0,0,0});
     Log(LOG_INFO, "Object detection ended.");
     fc->fb->Stop();
     m_finished = true;
@@ -200,9 +223,17 @@ bool ObjectTracker::Finished() {
     return m_finished;
 }
 
-//create the body coordinate vector for the object in the image
-//in the absence of a distance sensor, we're assuming the object is on the ground, at the height we launched from.
-void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, Point2D *object_location, Point3D *object_position){
+/**
+ * Create the body coordinate vector for the object in the image.
+ * In the absence of a distance sensor, we're assuming the object is on the
+ * ground, at the height we launched from.
+ * 
+ * @todo Review the use of the LIDAR-Lite for distance sensing.
+ * @param [in] pos The current position of the copter.
+ * @param [in] current The current outputs of the copter (for gimbal angle).
+ * @param [in,out] object The detected object.
+ */
+void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, ObjectInfo *object) {
     double heightAboveTarget = std::max(pos->fix.alt - pos->fix.groundalt, 0.0);
     
     if (std::isnan(heightAboveTarget)) {
@@ -221,29 +252,36 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     
     //Calibration factor Original: 2587.5 seemed too low from experimental testing
     //0.9m high 
-    double L = 3687.5 * m_camwidth/2592.0;
+    double L = 3687.5 * object->image_width/2592.0;
     double gimbalVertical = 50; //gimbal angle that sets the camera to point straight down
 
     //Angles from image normal
-    double theta = atan(object_location->y/L); //y angle
-    double phi   = atan(object_location->x/L); //x angle
+    double theta = atan(object->position.y/L); //y angle
+    double phi   = atan(object->position.x/L); //x angle
     
     //Tilt - in radians from vertical
     double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
     double objectAngleY = gimbalTilt + theta;
     double forwardPosition = tan(objectAngleY) * heightAboveTarget;
 
-    double lateralPosition = ((object_location->x / L) / cos(objectAngleY)) * heightAboveTarget;
+    double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
 
-    object_position->y = forwardPosition;
-    object_position->x = lateralPosition;
-    object_position->z = heightAboveTarget;
+    object->offset.y = forwardPosition;
+    object->offset.x = lateralPosition;
+    object->offset.z = heightAboveTarget;
 
     Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
         heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
 }
 
-void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, Point3D *object_position, bool has_fix) {
+/**
+ * Calculates the trajectory (flight output) needed to track the object.
+ * @param [in] fc The flight controller.
+ * @param [in,out] course The current outputs of the copter.
+ * @param [in] object The detected object.
+ * @param [in] has_fix Indicates if we have a fix on the object or not.
+ */
+void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, ObjectInfo *object, bool has_fix) {
     double trackx, tracky, trackw;
     
     if (!has_fix) {
@@ -256,7 +294,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
         memset(course, 0, sizeof(FlightData));
         
         double desiredSlope = 0.8;    //Maintain about the same camera angle 
-        double desiredForwardPosition = object_position->z/desiredSlope;
+        double desiredForwardPosition = object->offset.z/desiredSlope;
         //double desiredForwardPosition = 1; //1m away
         //m_pidy.SetSetPoint(desiredForwardPosition);
         m_pidx.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
@@ -264,21 +302,21 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
 
         //We can't quite use the original image bearing here, computing against actual position is more appropriate.
         //This needs to be angle from the center, hence 90deg - angle
-        double phi = M_PI/2 - atan2(object_position->y,object_position->x);
+        double phi = M_PI/2 - atan2(object->offset.y,object->offset.x);
 
         /*
         m_pidx.SetProcessValue(-phi);   //rename this to m_pid_yaw or something, we can seriously use an X controller in chase now.
-        m_pidy.SetProcessValue(object_position->y);
+        m_pidy.SetProcessValue(object->offset.y);
         */
             //Now we can take full advantage of this omnidirectional platform.
-        double objectDistance = std::sqrt(object_position->x*object_position->x + object_position->y*object_position->y);
+        double objectDistance = std::sqrt(object->offset.x*object->offset.x + object->offset.y*object->offset.y);
         double distanceError = desiredForwardPosition-objectDistance;
         m_pidw.SetProcessValue(-phi);
-        m_pidx.SetProcessValue(-(object_position->x/objectDistance) * std::abs(distanceError));  //the place we want to put the copter, relative to the copter.
-        m_pidy.SetProcessValue((object_position->y/objectDistance) * distanceError);
+        m_pidx.SetProcessValue(-(object->offset.x/objectDistance) * std::abs(distanceError));  //the place we want to put the copter, relative to the copter.
+        m_pidy.SetProcessValue((object->offset.y/objectDistance) * distanceError);
         //m_pidz.SetProcessValue(  //throttle controller not used
 
-        Log(LOG_DEBUG, "PIDX: %.2f, PIDY: %.2f", -phi, -object_position->y);
+        Log(LOG_DEBUG, "PIDX: %.2f, PIDY: %.2f", -phi, -object->offset.y);
 
         trackw = m_pidw.Compute();
         trackx = m_pidx.Compute();
@@ -291,12 +329,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
     course->elevator = tracky;
     //Fix the angle for now...
     //course->gimbal = 50;
-    fc->cam->SetArrow({100*trackw/TRACK_SPEED_LIMIT_W, -100*tracky/TRACK_SPEED_LIMIT_Y});
+    fc->cam->SetTrackingArrow({trackx/TRACK_SPEED_LIMIT_X,
+        -tracky/TRACK_SPEED_LIMIT_Y, trackw/TRACK_SPEED_LIMIT_W});
 
-}
-
-void printFlightData(FlightData* data) {
-    printf("A: %03d E: %03d R: %03d G: %03d\r",
-        data->aileron, data->elevator, data->rudder, data->gimbal);
-    fflush(stdout);
 }

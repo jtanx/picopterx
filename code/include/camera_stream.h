@@ -1,14 +1,8 @@
 /**
- * @file    camera_stream.h
- * @author	Michael Baxter	<20503664@student.uwa.edu.au>
- * @author  Jeremy Tan <20933708@student.uwa.edu.au>
- * 
- * Class used to start camera stream.
- * 
- * Wonderful omni-function camera streaming action fun!
- * 
+ * @file camera_stream.h
+ * @brief Camera interaction declarations.
  **/
- 
+
 #ifndef _PICOPTERX_CAMERA_STREAM_H
 #define _PICOPTERX_CAMERA_STREAM_H
 
@@ -19,20 +13,48 @@
 #include <opencv2/opencv.hpp>
 
 #define STREAM_FILE "/mnt/ramdisk/out.jpg"
+/** The size of the threshold lookup (number of colour bins per channel) **/
+#define THRESH_SIZE 16
+/** The scaling factor for reducing a value into its respective colour bin **/
+#define THRESH_DIV (256/THRESH_SIZE)
+/** Un-reduces a threshold value into the midpoint of the colour bin. **/
+#define UNREDUCE(x) (((x)*255 + 127) / THRESH_SIZE)
 
-#define LOOKUP_SIZE 8
-#define CHAR_SIZE 256
-
-#define CAMERA_OK 0
- 
 namespace picopter {
-    typedef struct {
-        int x;
-        int y;
-        int l;
-        int w;
-    } CamWindow;
 
+    /**
+     * Structure to hold hue thresholding information.
+     */
+    typedef struct HueThresholds {
+        int hue_min, hue_max;
+        int sat_min, sat_max;
+        int val_min, val_max;
+
+        cv::Scalar Min() {return cv::Scalar(hue_min, sat_min, val_min);}
+        cv::Scalar Max() {return cv::Scalar(hue_max, sat_max, val_max);}
+    } HueThresholds;
+
+    /**
+     * Holds information about a detected object.
+     */
+    typedef struct ObjectInfo {
+        /** The object ID **/
+        int id;
+        /** The size of the image used for this object detection. **/
+        int image_width, image_height;
+        /** Position in the detected frame **/
+        navigation::Point2D position;
+        /** The relative location (in body-frame coordinates; real units, e.g. metres) **/
+        navigation::Point3D offset;
+        /** Bounding rectangle of the object */
+        cv::Rect bounds;
+        /** Real-world location (lat/lon/alt) **/
+        navigation::Coord3D location;
+    } ObjectInfo;
+
+    /**
+     * Camera class. Uses OpenCV to interact with the camera.
+     */
     class CameraStream {
         public:
             typedef enum {
@@ -42,97 +64,81 @@ namespace picopter {
                 MODE_CONNECTED_COMPONENTS = 3,
                 MODE_LEARN_COLOUR = 999
             } CameraMode;
-            
+
             CameraStream();
             CameraStream(Options *opts);
             virtual ~CameraStream(void);
-            
-            bool Start(void);
-            void Stop(void);
-            
-            int GetInputWidth();
-            int GetInputHeight();
-            
+
             CameraMode GetMode(void);
             void SetMode(CameraMode mode);
 
-            void SetLearningSize(bool decrease);
-            void ShowLearningThreshold(bool show);
-            int GetLearningHue();
-            void DoAutoLearning(std::map<std::string, int32_t> *ret);
-            void DoManualLearning(const std::map<std::string, int32_t> & values, std::map<std::string, int32_t> *ret);
-            
-            void GetDetectedObjects(std::vector<navigation::Point2D>*);
-            
-            void SetArrow(navigation::Point2D vec);
-            
+            int GetInputWidth(void);
+            int GetInputHeight(void);
+
+            void GetConfig(Options *config);
+            void SetConfig(Options *config);
+
+            void DoAutoLearning(void);
+
+            void GetDetectedObjects(std::vector<ObjectInfo>* objects);
             double GetFramerate(void);
-            bool TakePhoto(std::string);
+            bool TakePhoto(std::string filename);
+            void SetTrackingArrow(navigation::Point3D arrow);
         private:
-            int MIN_HUE, MAX_HUE, MIN_SAT, MAX_SAT, MIN_VAL, MAX_VAL, PIXEL_THRESHOLD;
-            int DILATE_ELEMENT, ERODE_ELEMENT;
-            int INPUT_WIDTH, INPUT_HEIGHT, PROCESS_WIDTH, PROCESS_HEIGHT, STREAM_WIDTH;
-            int PIXEL_SKIP;
-            int LEARN_SIZE, LEARN_HUE_WIDTH, LEARN_MIN_HUE, LEARN_AVG_HUE, LEARN_MAX_HUE,
-                LEARN_MIN_SAT, LEARN_AVG_SAT, LEARN_MAX_SAT,
-                LEARN_MIN_VAL, LEARN_AVG_VAL, LEARN_MAX_VAL;
-            int THREAD_SLEEP_TIME;
-            double BOX_SIZE;
-            
-            std::atomic<bool> m_stop;
-            CameraMode m_mode;
-            
-            std::mutex m_worker_mutex;
-            std::future<void> m_worker_thread;
-            
-            std::mutex m_aux_mutex;
-            
-            navigation::Point2D m_arrow_vec;
-            
+            /** A list of distinct colours **/
+            static const std::vector<cv::Scalar> m_colours;
+            /** The OpenCV video capture handle **/
             cv::VideoCapture m_capture;
-            
-            bool m_learning_show_threshold;
-            
-            int frame_counter;
+            /** Flag to indicate that the worker thread should be stopped **/
+            std::atomic<bool> m_stop;
+            /** The current camera mode **/
+            CameraMode m_mode;
+
+            /** The main mutex to interact with the thread **/
+            std::mutex m_worker_mutex;
+            /** Secondary mutex to interact with worker **/
+            std::mutex m_aux_mutex;
+            /** The video processing thread **/
+            std::future<void> m_worker_thread;
+
+            /** The colour thresholding parameters **/
+            HueThresholds m_thresholds;
+            /** The colour auto-learning thresholding parameters **/
+            HueThresholds m_learning_thresholds;
+            /** The processing rate (FPS) **/
             double m_fps;
-            
+            /** Demo mode (displays camera stream in GTK window) **/
+            bool m_demo_mode;
+            /** Show the working copy (e.g. thresholded image) **/
+            bool m_show_backend;
+            /** Indicates that a snapshot should be taken **/
             bool m_save_photo;
+            /** The path to store the snapshot to **/
             std::string m_save_filename;
-            
-            /** Demo mode **/
-            bool m_demo;
-            
-            uchar lookup_threshold[LOOKUP_SIZE][LOOKUP_SIZE][LOOKUP_SIZE];
-            uchar lookup_reduce_colourspace[CHAR_SIZE];
-            
+            /** Arrow indicating movement **/
+            navigation::Point3D m_arrow;
+            /** Detected objects **/
+            std::vector<ObjectInfo> m_detected;
+            /** Colour lookup thresholding table **/
+            uint8_t m_lookup_threshold[THRESH_SIZE][THRESH_SIZE][THRESH_SIZE];
+
+            int INPUT_WIDTH, INPUT_HEIGHT, PROCESS_WIDTH, PROCESS_HEIGHT;
+            int STREAM_WIDTH, STREAM_HEIGHT, PIXEL_SKIP, PIXEL_THRESHOLD;
+            int LEARN_SIZE;
+
             void ProcessImages(void);
-            bool centerOfMass(cv::Mat& Isrc);
-            bool CamShift(cv::Mat& src);
-            bool camShift(cv::Mat& Isrc);
-            int connectComponents(cv::Mat& Isrc);
-            int ConnectedComponents(cv::Mat& src);
-            void Threshold(cv::Mat& src, cv::Mat&out);
-            void LearnHue(cv::Mat& src, cv::Point &left, cv::Point &right);
-            
-            std::vector<navigation::Point2D> redObjectList;
-            std::vector<CamWindow> windowList;
+            void DrawFramerate(cv::Mat& img);
+            void DrawCrosshair(cv::Mat& img, cv::Point centre, const cv::Scalar& colour, int size);
+            void DrawTrackingArrow(cv::Mat& img);
 
-            std::vector<cv::Scalar> windowColours;
+            void RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t *s, uint8_t *v);
+            void BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], HueThresholds thresh);
+            void Threshold(const cv::Mat& src, cv::Mat &out, int width);
+            void LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect roi);
+            bool CentreOfMass(cv::Mat& src, cv::Mat& threshold);
+            int ConnectedComponents(cv::Mat& src, cv::Mat& threshold);
+            bool CamShift(cv::Mat& src, cv::Mat& threshold);
 
-
-            void RGB2HSV(int r, int g, int b, int *h, int *s, int *v);
-            void build_lookup_threshold(uchar lookup_threshold[][LOOKUP_SIZE][LOOKUP_SIZE], int minHue, int maxHue, int minSat, int maxSat, int minVal, int maxVal);
-            void build_lookup_reduce_colourspace(uchar lookup_reduce_colourspace[]);
-            int unreduce(int x);
-            
-            void drawCrosshair(cv::Mat& img);
-            void drawObjectMarker(cv::Mat& img, cv::Point centre, cv::Scalar colour);
-            void drawBox(cv::Mat& img, cv::Point topLeft, cv::Point bottomRight, cv::Scalar colour);
-            void drawFramerate(cv::Mat& img);
-            void drawArrow(cv::Mat& img, cv::Point from, cv::Point to);
-            
-            void buildColours(std::vector<cv::Scalar>*);
-            
             /** Copy constructor (disabled) **/
             CameraStream(const CameraStream &other);
             /** Assignment operator (disabled) **/
