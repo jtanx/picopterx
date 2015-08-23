@@ -61,9 +61,10 @@ static const char* FileTimestamp() {
  */
 DataLog::DataLog(const char *file, bool log_startstop, const char *location)
 : m_log_startstop(log_startstop)
+, m_serial(FileTimestamp())
 {
     char buf[BUFSIZ];
-    snprintf(buf, BUFSIZ, "%s/%s-%s.txt", location, file, FileTimestamp());
+    snprintf(buf, BUFSIZ, "%s/%s-%s.txt", location, file, m_serial.c_str());
     m_fp = fopen(buf, "w+");
     if (!m_fp) {
         Log(LOG_WARNING, "Could not open log for writing, falling back to stderr: %s", file);
@@ -82,6 +83,14 @@ DataLog::~DataLog() {
         Write(": Log closed");
     }
     fclose(m_fp);
+}
+
+/**
+ * Retrieves the unique serial (timestamp) for this datalog.
+ * @return The serial of this datalog.
+ */
+std::string DataLog::GetSerial() {
+    return m_serial;
 }
 
 /**

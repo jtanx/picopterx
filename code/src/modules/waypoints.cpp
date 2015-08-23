@@ -10,6 +10,10 @@
 
 using namespace picopter;
 using namespace picopter::navigation;
+using std::chrono::seconds;
+using std::chrono::milliseconds;
+using std::chrono::steady_clock;
+using std::chrono::duration_cast;
 
 /**
  * Constructor. Creates a new waypoint maneuvering module.
@@ -24,7 +28,9 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
 , m_waypoint_radius(1.2)
 , m_waypoint_idle(3000)
 , m_sweep_spacing(3)
+, m_image_counter(0)
 , m_finished{false}
+, m_log("waypoints")
 {
     Options empty;
     if (opts == NULL) {
@@ -137,6 +143,8 @@ void Waypoints::Run(FlightController *fc, void *opts) {
     Coord2D next_point;
     int req_seq = 0, at_seq = 0;
     double wp_distance;
+    std::vector<ObjectInfo> detected_objects;
+    auto last_detection = steady_clock::now()-seconds(30); //Hysteresis for object detection
     
     Log(LOG_INFO, "Waypoints movement initiated; awaiting authorisation...");
     SetCurrentState(fc, STATE_AWAITING_AUTH);
@@ -188,6 +196,36 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
                 m_waypoint_idle / 1000.0f, next_point.lat, next_point.lon, 0, true);
         }
+        
+        if (fc->cam && ((steady_clock::now()-last_detection) > seconds(3))) {
+            fc->cam->GetDetectedObjects(&detected_objects);
+            if (detected_objects.size() > 0) {
+                ObjectInfo object = detected_objects.front();
+                Log(LOG_INFO, "Detected object! Recording...");
+                fc->buzzer->Play(500, 800, 100);
+                fc->fb->Stop();
+                fc->Sleep(700);
+                
+                std::string path = 
+                    std::string(PICOPTER_HOME_LOCATION "/pics/wpt_") +
+                    m_log.GetSerial() + "_" + 
+                    std::to_string(m_image_counter++) + std::string(".jpg");
+                
+                fc->cam->TakePhoto(path);
+                fc->gps->GetLatest(&d);
+                m_log.Write(" Detected object: ID: %d", object.id);
+                m_log.Write(" Location: (%.7f, %.7f) at %.2fm", 
+                    d.fix.lat, d.fix.lon, d.fix.alt-d.fix.groundalt);
+                m_log.Write(" Image: %s", path.c_str());
+                m_log.Write(" Object count in frame: %d", detected_objects.size());
+                last_detection = steady_clock::now();
+                
+                Log(LOG_INFO, "Continuing...");
+                fc->fb->SetGuidedWaypoint(req_seq, m_waypoint_radius,
+                    m_waypoint_idle / 1000.0f, next_point.lat, next_point.lon, 0, true);
+            }
+        }
+        
         fc->Sleep(m_update_interval);
     }
     
