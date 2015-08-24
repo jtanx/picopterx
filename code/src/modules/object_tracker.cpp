@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "object_tracker.h"
+#include <opencv2/opencv.hpp>
 
 using namespace picopter;
 using namespace picopter::navigation;
@@ -144,6 +145,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     std::vector<ObjectInfo> locations;
     FlightData course;
     GPSData gps_position;
+    IMUData imu_data;
     auto last_fix = steady_clock::now() - seconds(2);
     bool had_fix = false;
 
@@ -154,7 +156,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         fc->cam->GetDetectedObjects(&locations);
         fc->fb->GetData(&course);
         fc->gps->GetLatest(&gps_position);
-        
+        fc->imu->GetLatest(&imu_data);
         //Do we have an object?
         if (locations.size() > 0) {                                             
             detected_object = locations.front();
@@ -164,7 +166,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
             
-            EstimatePositionFromImageCoords(&gps_position, &course, &detected_object);
+            EstimatePositionFromImageCoords(&gps_position, &course, &imu_data, &detected_object);
 
             if (!m_observation_mode) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, true);
@@ -233,7 +235,7 @@ bool ObjectTracker::Finished() {
  * @param [in] current The current outputs of the copter (for gimbal angle).
  * @param [in,out] object The detected object.
  */
-void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, ObjectInfo *object) {
+void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, IMUData *imu_data, ObjectInfo *object) {
     double heightAboveTarget = std::max(pos->fix.alt - pos->fix.groundalt, 0.0);
     
     if (std::isnan(heightAboveTarget)) {
@@ -245,7 +247,39 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
         }
         heightAboveTarget = 4;
     }
-    
+
+    //taking Euler chained rotations:
+    double a;
+    a = imu_data->roll;
+    cv::Matx33d Rx(1,      0,       0,
+                   0, cos(a), -sin(a),
+                   0, sin(a),  cos(a));
+
+    a = imu_data->pitch;
+    cv::Matx33d Ry(cos(a), 0, -sin(a),
+                        0, 1,       0,
+                   sin(a), 0,  cos(a));
+    a = imu_data->yaw;
+    cv::Matx33d Rz(cos(a), -sin(a), 0,
+                   sin(a),  cos(a), 0,
+                        0,       0, 1);
+    cv::Matx33d Rbody = Rx*Ry*Rz;
+
+
+    /*
+    lidar dist;
+    imu_data->roll;
+    imu_data->pitch;
+    imu_data->yaw;
+    object->location.lat;
+    object->location.lon;
+    object->location.alt;
+    object->offset.x;
+    object->offset.y;
+    object->offset.z;
+    */
+
+
     //Comment this out to use dynamic altitude.
     //#warning "using 4m as height above target"
     //heightAboveTarget = 4;    //hard-coded for lab test
@@ -254,6 +288,12 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     //0.9m high 
     double L = 3687.5 * object->image_width/2592.0;
     double gimbalVertical = 50; //gimbal angle that sets the camera to point straight down
+
+
+    //3D vector of the target on the image plane
+    cv::Matx13d RelCam(object->position.x, object->position.y, L);
+    //3D vector of the target in global rotations, relative to the copter
+    cv::Matx13d RelBody = RelCam * Rbody;
 
     //Angles from image normal
     double theta = atan(object->position.y/L); //y angle
@@ -270,9 +310,12 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     object->offset.x = lateralPosition;
     object->offset.z = heightAboveTarget;
 
+
+
     Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
         heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
 }
+
 
 /**
  * Calculates the trajectory (flight output) needed to track the object.
