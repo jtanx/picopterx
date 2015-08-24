@@ -61,6 +61,21 @@ function waypointsClear() {
   $("#map-canvas").copterMap('clearActiveMarkers');
 }
 
+function detectionShow() {
+  var log = $("#detection-review option:selected");
+  var data = log.data('detection');
+  $("#map-canvas").copterMap('clearDetectionMarkers');
+  $.each(data.detected, function(i,v) {
+      $("#map-canvas").copterMap('addDetection', v);
+  });
+  
+  console.log(data);
+}
+
+function detectionClear() {
+  $("#map-canvas").copterMap('clearDetectionMarkers');
+}
+
 /**
  * JS hooks to make the site interactive/display properly.
  */
@@ -128,6 +143,11 @@ $(document).ready(function () {
         $("#camera-calibration-inputs").removeClass('hidden');
       }
     });
+  });
+  
+  /* Display the detections on the map. */
+  $("#detection-review").change(function() {
+    detectionShow();
   });
 
   /* Camera presets menu */

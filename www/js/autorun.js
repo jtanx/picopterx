@@ -104,6 +104,7 @@ $(document).ready(function () {
   });
   startGeoLocator();
   cameraInit();
+  getDetectedObjects();
 
   var hud = {
     yaw : $.flightIndicator('#copter-yaw', 'heading', {showBox:false, size:150}),

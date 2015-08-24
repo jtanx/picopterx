@@ -25,6 +25,34 @@ function ajaxSend(action, data) {
 }
 
 /**
+ * Populates the detected object list.
+ */
+function getDetectedObjects() {
+  return $.ajax({
+    type: "GET",
+    url: "ajax-review.php",
+    timeout: 1200,
+    success: function(response) {
+      var ret = $.parseJSON(response);
+      $('#detection-review').empty();
+      $.each(ret, function (index, detection) {
+        detection.timestamp = new Date(detection.timestamp);
+        $.each(detection.detected, function(idx, v) {
+          v.timestamp = new Date(v.timestamp);
+        });
+        
+        var opt = $('<option>', {
+            value: detection.log,
+            text: detection.log
+        }).data("detection", detection);
+        $('#detection-review').append(opt);
+        console.log(detection);
+      });
+    }
+  });
+}
+
+/**
  *  Send the all stop command
  */
 function allStop() {
