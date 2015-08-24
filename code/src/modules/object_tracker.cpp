@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "object_tracker.h"
-#include <opencv2/opencv.hpp>
+
 
 using namespace picopter;
 using namespace picopter::navigation;
@@ -251,19 +251,35 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     //taking Euler chained rotations:
     double a;
     a = imu_data->roll;
-    cv::Matx33d Rx(1,      0,       0,
+    cv::Matx33d Rbx(1,      0,       0,
                    0, cos(a), -sin(a),
                    0, sin(a),  cos(a));
 
     a = imu_data->pitch;
-    cv::Matx33d Ry(cos(a), 0, -sin(a),
+    cv::Matx33d Rby(cos(a), 0, -sin(a),
                         0, 1,       0,
                    sin(a), 0,  cos(a));
     a = imu_data->yaw;
-    cv::Matx33d Rz(cos(a), -sin(a), 0,
+    cv::Matx33d Rbz(cos(a), -sin(a), 0,
                    sin(a),  cos(a), 0,
                         0,       0, 1);
-    cv::Matx33d Rbody = Rx*Ry*Rz;    
+    cv::Matx33d Rbody = Rbx*Rby*Rbz;    
+
+
+    a = current->gimbal.roll;
+    cv::Matx33d Rgx(1,      0,       0,
+                   0, cos(a), -sin(a),
+                   0, sin(a),  cos(a));
+
+    a = current->gimbal.pitch;
+    cv::Matx33d Rgy(cos(a), 0, -sin(a),
+                        0, 1,       0,
+                   sin(a), 0,  cos(a));
+    a = current->gimbal.yaw;
+    cv::Matx33d Rgz(cos(a), -sin(a), 0,
+                   sin(a),  cos(a), 0,
+                        0,       0, 1);
+    cv::Matx33d Rgimbal = Rgx*Rgy*Rgz;    
 
     /*
     lidar dist;
@@ -292,22 +308,27 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     //3D vector of the target on the image plane
     cv::Vec3d RelCam(object->position.x, object->position.y, L);
     //3D vector of the target in global rotations, relative to the copter
-    cv::Vec3d RelBody = Rbody * RelCam;
+    cv::Vec3d RelBody = Rbody * Rgimbal * RelCam;
 
     //Angles from image normal
-    double theta = atan(object->position.y/L); //y angle
-    double phi   = atan(object->position.x/L); //x angle
+    double theta = atan(RelCam[1]/RelCam[2]); //y angle
+    double phi   = atan(RelCam[0]/RelCam[2]); //x angle
     
     //Tilt - in radians from vertical
     //double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
-    double gimbalTilt = current->gimbal.pitch;
-    double objectAngleY = gimbalTilt + theta;
-    double forwardPosition = tan(objectAngleY) * heightAboveTarget;
+    //double gimbalTilt = current->gimbal.pitch;
+    double objectAngleY = current->gimbal.pitch + theta;
+    //double forwardPosition = tan(objectAngleY) * heightAboveTarget;
 
-    double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
+    //double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
     bool useAlt = true;
+    bool useLidar = false;
+    double LidarRange = 5.0;    //distance in metres
     if(useAlt){
         double k = heightAboveTarget / RelBody[2];
+        RelBody *= k;
+    }else if(useLidar){
+        double k = LidarRange/norm(RelBody, cv::NORM_L2);
         RelBody *= k;
     }
 
@@ -321,7 +342,8 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
 
 
     Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
-        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
+//        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
+        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), object->offset.y, object->offset.x);
 }
 
 

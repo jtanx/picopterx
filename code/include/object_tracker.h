@@ -11,7 +11,8 @@
 #include "flightcontroller.h"
 #include "navigation.h"
 #include "PID.h"
-
+#include <opencv2/opencv.hpp>
+ 
 namespace picopter {
     /**
      * Class for moving the hexacopter through waypoints.
