@@ -416,12 +416,14 @@ void CameraStream::RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t 
     }
 
     if(r == rgb_max) {
-        *h = 30 * (g-b)/delta;
+        *h = 43 * (g-b)/delta;
     } else if(g == rgb_max) {
-        *h = 60 + 30 * (b-r)/delta;
+        *h = 85 + 43 * (b-r)/delta;
     } else {
-        *h = 120 + 30 * (r-g)/delta;
+        *h = 171 + 43 * (r-g)/delta;
     }
+    
+    *h = (uint8_t)(((int)180*(*h))/255);
 }
 
 /**
