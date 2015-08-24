@@ -128,9 +128,10 @@ CameraStream::CameraMode CameraStream::GetMode(void) {
  * Sets the mode of the camera.
  * @param [in] mode The mode to set the camera to.
  */
-void CameraStream::SetMode(CameraMode mode) {
+CameraStream::CameraMode CameraStream::SetMode(CameraMode mode) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     m_mode = mode;
+    return m_mode;
 }
 
 /**
