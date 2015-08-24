@@ -13,6 +13,7 @@
 #include "gps_mav.h"
 #include "imu_feed.h"
 
+using namespace picopter::navigation;
 using picopter::FlightBoard;
 using picopter::FlightData;
 using picopter::GPS;
@@ -217,8 +218,8 @@ void FlightBoard::OutputLoop() {
                 Log(LOG_DEBUG, "MOVING RUDDER");
                 yaw_sp.target_system = m_system_id;
                 yaw_sp.target_component = m_component_id;
-                yaw_sp.param1 = 0.5;//std::fabs(m_currentData.rudder * 15/100.0); //Yaw in deg (relative)
-                yaw_sp.param2 = std::fabs(m_currentData.rudder * 30/100.0); //Yaw rate in deg/s
+                yaw_sp.param1 = std::fabs(m_currentData.rudder * 15/100.0); //Yaw in deg (relative)
+                yaw_sp.param2 = 0; //std::fabs(m_currentData.rudder * 30/100.0); //Yaw rate in deg/s
                 yaw_sp.param3 = m_currentData.rudder < 0 ? -1 : 1; //Yaw direction (CCW or CW)
                 yaw_sp.param4 = 1; //Relative
                 mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &yaw_sp);
@@ -231,6 +232,18 @@ void FlightBoard::OutputLoop() {
     }
 }
 
+/**
+ * Sets a waypoint to move to.
+ * @param [in] seq The sequence id of this waypoint.
+ * @param [in] radius Acceptance radius (in m) of being at the waypoint.
+ * @param [in] wait The wait time (in s) at the waypoint.
+ * @param [in] lat The latitude of the waypoint.
+ * @param [in] lon The longitude of the waypoint.
+ * @param [in] alt The altitude of the waypoint.
+ * @param [in] relative_alt Whether or not the altitude specified is relative
+ *             to the current altitude.
+ * @return true iff the waypoint was sent.
+ */
 bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, float lat, float lon, float alt, bool relative_alt) {
     mavlink_mission_item_t mi = {0};
     mavlink_message_t msg;
@@ -257,6 +270,52 @@ bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, float lat
     
     m_waypoints_mode = true;
     mavlink_msg_mission_item_encode(m_system_id, m_flightboard_id, &msg, &mi);
+    m_link->WriteMessage(&msg);
+    return true;
+}
+
+/**
+ * Sets the region of interest (faces the copter at the ROI)
+ * @param [in] roi The absolute location of the ROI.
+ *                 Note: Setting lat=lng=alt=0 will disable ROI tracking.
+ * @return true iff the message was sent.
+ */
+bool FlightBoard::SetRegionOfInterest(Coord3D roi) {
+    mavlink_command_long_t cmd = {0};
+    mavlink_message_t msg;
+    //std::lock_guard<std::mutex> lock(m_output_mutex);
+    //m_waypoints_mode = true;
+    
+    cmd.target_system = m_system_id;
+    cmd.target_component = m_component_id;
+    cmd.command = MAV_CMD_DO_SET_ROI;
+    cmd.param5 = roi.lat;
+    cmd.param6 = roi.lon;
+    cmd.param7 = roi.alt;
+    
+    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
+    m_link->WriteMessage(&msg);
+    return true;
+}
+
+/**
+ * Changes the maximum speed at which the copter moves to waypoints.
+ * @param [in] sp The speed to move at, in m/s.
+ * @return true iff the message was sent.
+ */
+bool FlightBoard::SetWaypointSpeed(int sp) {
+    mavlink_command_long_t cmd = {0};
+    mavlink_message_t msg;
+    //std::lock_guard<std::mutex> lock(m_output_mutex);
+    //m_waypoints_mode = true;
+    
+    cmd.target_system = m_system_id;
+    cmd.target_component = m_component_id;
+    cmd.command = MAV_CMD_DO_CHANGE_SPEED;
+    //All parameters are unused by ArduCopter except this one.
+    cmd.param2 = sp;
+    
+    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
     m_link->WriteMessage(&msg);
     return true;
 }

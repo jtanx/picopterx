@@ -33,6 +33,7 @@ CameraStream::CameraStream(Options *opts)
 , m_fps(-1)
 , m_show_backend(false)
 , m_save_photo(false)
+, m_arrow{}
 {
     Options clear;
     if (!opts) {
@@ -127,9 +128,10 @@ CameraStream::CameraMode CameraStream::GetMode(void) {
  * Sets the mode of the camera.
  * @param [in] mode The mode to set the camera to.
  */
-void CameraStream::SetMode(CameraMode mode) {
+CameraStream::CameraMode CameraStream::SetMode(CameraMode mode) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     m_mode = mode;
+    return m_mode;
 }
 
 /**
@@ -415,12 +417,14 @@ void CameraStream::RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t 
     }
 
     if(r == rgb_max) {
-        *h = 30 * (g-b)/delta;
+        *h = 43 * (g-b)/delta;
     } else if(g == rgb_max) {
-        *h = 60 + 30 * (b-r)/delta;
+        *h = 85 + 43 * (b-r)/delta;
     } else {
-        *h = 120 + 30 * (r-g)/delta;
+        *h = 171 + 43 * (r-g)/delta;
     }
+    
+    *h = (uint8_t)(((int)180*(*h))/255);
 }
 
 /**

@@ -157,8 +157,7 @@ public:
     int32_t setCameraMode(int32_t mode) {
         if (m_fc->cam) {
             Log(LOG_INFO, "Mode: %d", mode);
-            m_fc->cam->SetMode(static_cast<CameraStream::CameraMode>(mode));
-            return m_fc->cam->GetMode();
+            return m_fc->cam->SetMode(static_cast<CameraStream::CameraMode>(mode));
         }
         return -1;
     }

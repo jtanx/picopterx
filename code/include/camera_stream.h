@@ -70,7 +70,7 @@ namespace picopter {
             virtual ~CameraStream(void);
 
             CameraMode GetMode(void);
-            void SetMode(CameraMode mode);
+            CameraMode SetMode(CameraMode mode);
 
             int GetInputWidth(void);
             int GetInputHeight(void);

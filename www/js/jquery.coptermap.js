@@ -134,8 +134,9 @@ L.NumberedDivIconRed = L.Icon.extend({
        * @param [in] markerList The list of markers to add this new one to.
        * @param [in] location The location to add the marker at.
        * @param [in] draggable Whether or not this marker is draggable.
+       * @param [in] readonly Whether or not this marker is editable.
        */
-      this.addNumberedMarker = function(markerList, location, draggable) {
+      this.addNumberedMarker = function(markerList, location, draggable, readonly) {
         var iconFactory = draggable ? L.NumberedDivIconRed : L.NumberedDivIcon;
         var icon = new iconFactory({number : (markerList.length + 1)});
         var marker = new L.marker(location, {
@@ -144,15 +145,17 @@ L.NumberedDivIconRed = L.Icon.extend({
         }).addTo(data.map);
 
         markerList.push(marker);
-        marker.on('click', function(event) {
-          if (data.editMode) {
-            data.map.removeLayer(marker);
-            markerList.splice($.inArray(marker, markerList), 1);
-            instance.toggleEditMarkers(markerList, true);
-          }
-          instance.updateBounds();
-          instance.updateWptPath();
-        });
+        if (!readonly) {
+          marker.on('click', function(event) {
+            if (data.editMode) {
+              data.map.removeLayer(marker);
+              markerList.splice($.inArray(marker, markerList), 1);
+              instance.toggleEditMarkers(markerList, true);
+            }
+            instance.updateBounds();
+            instance.updateWptPath();
+          });
+        }
 
         marker.on('drag', function(e) {
           instance.updateBounds();
@@ -174,6 +177,21 @@ L.NumberedDivIconRed = L.Icon.extend({
         }
       };
 
+      /**
+       * Adds a detection marker to the image
+       * @param [in] detection The detection data.
+       */
+      this.addDetection = function(detection) {
+        var latlng = L.latLng(detection.lat, detection.lon);
+        instance.addNumberedMarker(data.dctMarkers, latlng, false, true);
+        var marker = data.dctMarkers[data.dctMarkers.length-1];
+        marker.bindPopup("<img src=\""+detection.image+"\">" + 
+          "<br>Time: " + detection.timestamp +
+          "<br>At: " + detection.lat + ", " + detection.lon +
+          "<br>Detection altitude: " +
+          detection.alt + "m");
+      }
+      
       /**
        * Retrieve the current user's position.
        * @param [in] ret The object to store the return value in.
@@ -242,6 +260,13 @@ L.NumberedDivIconRed = L.Icon.extend({
         }
         markerList.length = 0;
       };
+      
+      /**
+       * Clear the detection markers.
+       */
+      this.clearDetectionMarkers = function() {
+        instance.clearMarkers(data.dctMarkers);
+      }
 
       /**
        * Removes the currently displayed markers.
@@ -305,7 +330,7 @@ L.NumberedDivIconRed = L.Icon.extend({
        * @param [in] pattern The pattern which we are editing.
        */
       this.toggleEditMode = function(pattern) {
-        if (pattern === "off" && data.pattern) {
+        if (pattern === "off") {
           pattern = data.pattern;
           data.editMode = false;
         } else {
@@ -443,6 +468,7 @@ L.NumberedDivIconRed = L.Icon.extend({
           wptMarkers : [],
           rctMarkers : [],
           splMarkers : [],
+          dctMarkers : [],
           paths : {},
           editMode : false,
           pattern : undefined

@@ -195,8 +195,11 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
             fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
                 m_waypoint_idle / 1000.0f, next_point.lat, next_point.lon, 0, true);
+            //fc->fb->SetWaypointSpeed(10);
         }
         
+        //Coord3D cord = {1,0,0};
+        //fc->fb->SetRegionOfInterest(cord);
         if (fc->cam && ((steady_clock::now()-last_detection) > seconds(3))) {
             fc->cam->GetDetectedObjects(&detected_objects);
             if (detected_objects.size() > 0) {
