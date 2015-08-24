@@ -185,7 +185,11 @@ L.NumberedDivIconRed = L.Icon.extend({
         var latlng = L.latLng(detection.lat, detection.lon);
         instance.addNumberedMarker(data.dctMarkers, latlng, false, true);
         var marker = data.dctMarkers[data.dctMarkers.length-1];
-        marker.bindPopup("<img src=\""+detection.image+"\"><br>Time: " + detection.timestamp);
+        marker.bindPopup("<img src=\""+detection.image+"\">" + 
+          "<br>Time: " + detection.timestamp +
+          "<br>At: " + detection.lat + ", " + detection.lon +
+          "<br>Detection altitude: " +
+          detection.alt + "m");
       }
       
       /**

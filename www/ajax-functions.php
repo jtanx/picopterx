@@ -154,7 +154,7 @@
         break;
 
       case "requestCameraConfig":
-        echo $client->requestCameraConfig();
+        print $client->requestCameraConfig();
         break;
 
       case "setCameraConfig":

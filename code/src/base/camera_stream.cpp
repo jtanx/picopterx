@@ -33,6 +33,7 @@ CameraStream::CameraStream(Options *opts)
 , m_fps(-1)
 , m_show_backend(false)
 , m_save_photo(false)
+, m_arrow{}
 {
     Options clear;
     if (!opts) {
