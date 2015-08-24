@@ -263,8 +263,7 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     cv::Matx33d Rz(cos(a), -sin(a), 0,
                    sin(a),  cos(a), 0,
                         0,       0, 1);
-    cv::Matx33d Rbody = Rx*Ry*Rz;
-
+    cv::Matx33d Rbody = Rx*Ry*Rz;    
 
     /*
     lidar dist;
@@ -287,29 +286,38 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     //Calibration factor Original: 2587.5 seemed too low from experimental testing
     //0.9m high 
     double L = 3687.5 * object->image_width/2592.0;
-    double gimbalVertical = 50; //gimbal angle that sets the camera to point straight down
+    //double gimbalVertical = 50; //gimbal angle that sets the camera to point straight down
 
 
     //3D vector of the target on the image plane
-    cv::Matx13d RelCam(object->position.x, object->position.y, L);
+    cv::Vec3d RelCam(object->position.x, object->position.y, L);
     //3D vector of the target in global rotations, relative to the copter
-    cv::Matx13d RelBody = RelCam * Rbody;
+    cv::Vec3d RelBody = Rbody * RelCam;
 
     //Angles from image normal
     double theta = atan(object->position.y/L); //y angle
     double phi   = atan(object->position.x/L); //x angle
     
     //Tilt - in radians from vertical
-    double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
+    //double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
+    double gimbalTilt = current->gimbal.pitch;
     double objectAngleY = gimbalTilt + theta;
     double forwardPosition = tan(objectAngleY) * heightAboveTarget;
 
     double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
+    bool useAlt = true;
+    if(useAlt){
+        double k = heightAboveTarget / RelBody[2];
+        RelBody *= k;
+    }
 
-    object->offset.y = forwardPosition;
-    object->offset.x = lateralPosition;
-    object->offset.z = heightAboveTarget;
+    //object->offset.y = forwardPosition;
+    //object->offset.x = lateralPosition;
+    //object->offset.z = heightAboveTarget;
 
+    object->offset.y = RelBody[0];
+    object->offset.x = RelBody[1];
+    object->offset.z = RelBody[2];
 
 
     Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",

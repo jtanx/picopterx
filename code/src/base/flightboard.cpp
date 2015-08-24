@@ -393,7 +393,7 @@ void FlightBoard::SetData(FlightData *d) {
     m_currentData.aileron = picopter::clamp(d->aileron, -100, 100);
     m_currentData.elevator = picopter::clamp(d->elevator, -100, 100);
     m_currentData.rudder = picopter::clamp(d->rudder, -100, 100);
-    m_currentData.gimbal = picopter::clamp(d->gimbal, 0, 90);
+    //m_currentData.gimbal = picopter::clamp(d->gimbal, 0, 90);
 }
 
 
@@ -429,7 +429,8 @@ void FlightBoard::SetRudder(int speed) {
  * Sets the gimbal angle.
  * @param pos The gimbal angle, in degrees (0 to 90)
  */
-void FlightBoard::SetGimbal(int pos) {
+void FlightBoard::SetGimbal(GimbalAngle pose) {
     std::lock_guard<std::mutex> lock(m_output_mutex);
-    m_currentData.gimbal = picopter::clamp(pos, 0, 90);
+    //m_currentData.gimbal = picopter::clamp(pose, 0, 90);
+    m_currentData.gimbal = pose;//
 }

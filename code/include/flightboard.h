@@ -22,6 +22,7 @@ namespace picopter {
     /**
      * Contains information about the actuation of the hexacopter
      */
+    typedef navigation::EulerAngle GimbalAngle;
     typedef struct FlightData {
         /** Aileron speed, -100 to 100 **/
         int aileron;
@@ -29,8 +30,8 @@ namespace picopter {
         int elevator;
         /** Rudder speed, -100 to 100 **/
         int rudder;
-        /** Gimbal angle, 0 to 90 **/
-        int gimbal;
+        /** Gimbal angle, full Euler angles **/
+        GimbalAngle gimbal;
     } FlightData;
 
     /**
@@ -63,7 +64,7 @@ namespace picopter {
             void SetAileron(int speed);
             void SetElevator(int speed);
             void SetRudder(int speed);
-            void SetGimbal(int pos);
+            void SetGimbal(GimbalAngle pose);
 
             int RegisterHandler(int msgid, EventHandler handler);
             void DeregisterHandler(int handlerid);
