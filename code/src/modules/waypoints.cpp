@@ -59,6 +59,7 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod met
             throw std::invalid_argument("Cannot do spiral with less than 2 waypoints");
         } else {
             m_pts = std::move(GenerateSpiralPattern(m_pts[0], m_pts[1]));
+            m_waypoint_idle = opts->GetInt("SPIRAL_IDLE_TIME", 0);
         }
     }
 }
@@ -141,13 +142,19 @@ std::deque<Waypoints::Waypoint> Waypoints::GenerateLawnmowerPattern(Waypoint sta
 std::deque<Waypoints::Waypoint> Waypoints::GenerateSpiralPattern(Waypoint centre, Waypoint edge) {
     //Use a flat Earth approximation to generate the waypoints
     double radius = CoordDistance(centre.pt, edge.pt);
-    double start_angle = CoordBearing(centre.pt, edge.pt);
+    double start_angle = 90-CoordBearing(centre.pt, edge.pt);
     double offset_x, offset_y;
     double earth_radius = 6378137;
+    double delta = 360.0/(2*M_PI*radius/4.0); //Angle increment
     std::deque<Waypoint> pts;
     
-    for (int alt = 0; alt < edge.pt.alt - centre.pt.alt; alt += 2) {
-        for (int i = 0; i < 360; i += 10) {
+    //Convert angle into -180 to 180, relative to positive x axis.
+    if (start_angle < -180) {
+        start_angle += 360;
+    }
+    
+    //for (int alt = 0; alt < edge.pt.alt - centre.pt.alt; alt += 2) {
+        for (double i = 0; i < 360; i += delta) {
             Waypoint pt{};
             offset_x = radius * cos(DEG2RAD(start_angle+i));
             offset_y = radius * sin(DEG2RAD(start_angle+i));
@@ -157,13 +164,16 @@ std::deque<Waypoints::Waypoint> Waypoints::GenerateSpiralPattern(Waypoint centre
             
             pt.pt.lat = centre.pt.lat + RAD2DEG(offset_y);
             pt.pt.lon = centre.pt.lon + RAD2DEG(offset_x);
+            pt.roi = centre.pt;
+            pt.has_roi = true;
             
             if (i == 0) {
-                pt.pt.alt = alt;
+                pt.pt.alt = 0;//alt;
             }
             pts.push_back(pt);
         }
-    }
+        //pts.push_back(starting pt)
+    //}
     return pts;
 }
 
@@ -231,6 +241,11 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
                 m_waypoint_idle / 1000.0f, next_point.pt.lat, next_point.pt.lon, 0, true);
             fc->fb->SetWaypointSpeed(3);
+            if (next_point.has_roi) {
+                fc->fb->SetRegionOfInterest(next_point.roi);
+            } else {
+                fc->fb->UnsetRegionOfInterest();
+            }
         }
         
         //Coord3D cord = {1,0,0};
@@ -268,6 +283,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
     }
     
     SetCurrentState(fc, STATE_WAYPOINTS_FINISHED);
+    fc->fb->UnsetRegionOfInterest();
     fc->fb->Stop();
     m_finished = true;
 }

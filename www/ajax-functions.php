@@ -109,14 +109,14 @@
         print "resetWaypoints " . $b[$ans] . "\n";
         break;
 
-      case "beginManual":
-        $ans = $client->beginWaypointsThread();
-        print "beginWaypointsThread " . $b[$ans] . "\n";
-        break;
-
-      case "beginAuto":
-        $ans = $client->beginLawnmowerThread();
-        print "beginLawnmowerThread " . $b[$ans] . "\n";
+      case "beginWaypoints":
+        if (isset($source["data"])) {
+          $mode = intval($source["data"]);
+          $ans = $client->beginWaypointsThread($mode);
+          print "beginWaypointsThread " . $b[$ans] . "\n";
+        } else {
+          print "beginWaypointsThread: No mode specified.\n";
+        }
         break;
 
       case "beginUserTracking":

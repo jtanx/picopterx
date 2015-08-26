@@ -17,11 +17,11 @@ namespace picopter {
      */
     typedef enum WaypointMethod {
         /** Follow the waypoints directly. **/
-        WAYPOINT_NORMAL,
+        WAYPOINT_NORMAL = 0,
         /** The waypoints list consists of two waypoints, specifying the corners for a lawnmower search pattern. **/
-        WAYPOINT_LAWNMOWER,
+        WAYPOINT_LAWNMOWER = 1,
         /** Spiral mode (todo) **/
-        WAYPOINT_SPIRAL
+        WAYPOINT_SPIRAL = 2
     } WaypointMethod;
 
     /**

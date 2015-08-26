@@ -66,11 +66,15 @@ function beginWaypoints() {
   $("#map-canvas").copterMap('getActiveMarkerCoordinates', function (pattern, coords) {
     if (coords.length > 0 && pattern === "manual") {
       ajaxSend('updateWaypoints', coords).success(function () {
-        ajaxSend('beginManual');
+        ajaxSend('beginWaypoints', 0);
       });
     } else if (coords.length == 2&& pattern == "lawnmower") {
       ajaxSend('updateWaypoints', coords).success(function () {
-        ajaxSend('beginAuto');
+        ajaxSend('beginWaypoints', 1);
+      });
+    } else if (coords.length == 2 && pattern == "spiral") {
+      ajaxSend('updateWaypoints', coords).success(function () {
+        ajaxSend('beginWaypoints', 2);
       });
     }
   });

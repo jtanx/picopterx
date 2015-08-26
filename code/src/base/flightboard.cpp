@@ -299,6 +299,17 @@ bool FlightBoard::SetRegionOfInterest(Coord3D roi) {
 }
 
 /**
+ * Unsets the region of interest. This stops the copter from tracking
+ * a particular region of interest. It is a convenience function to calling
+ * SetRegionOfInterest with the ROI set to (0,0,0).
+ * @return true iff the message was sent.
+ */
+bool FlightBoard::UnsetRegionOfInterest() {
+    Coord3D none{};
+    return SetRegionOfInterest(none);
+}
+
+/**
  * Changes the maximum speed at which the copter moves to waypoints.
  * @param [in] sp The speed to move at, in m/s.
  * @return true iff the message was sent.

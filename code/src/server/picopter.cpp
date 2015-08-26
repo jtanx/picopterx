@@ -57,29 +57,28 @@ public:
         }
     }
 
-    bool beginWaypointsThread()
+    bool beginWaypointsThread(int mode)
     {
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
             return false;
         } else {
-            std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(m_opts, m_pts, WAYPOINT_NORMAL);
-
-            if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
-                return false;
+            switch(mode) {
+                case WAYPOINT_LAWNMOWER: case WAYPOINT_SPIRAL:
+                    if (m_pts.size() != 2) {
+                        return false;
+                    }
+                break;
+                
+                case WAYPOINT_NORMAL:
+                break;
+                
+                default: //Don't accept unkown modes.
+                    return false;
+                
             }
-        }
-        return true;
-    }
-
-    bool beginLawnmowerThread()
-    {
-        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
-            // ALREADY RUNNING
-            return false;
-        } else {
-            std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(m_opts, m_pts, WAYPOINT_LAWNMOWER);
-
+            
+            std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(m_opts, m_pts, static_cast<WaypointMethod>(mode));
             if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
                 return false;
             }

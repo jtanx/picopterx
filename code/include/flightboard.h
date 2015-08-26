@@ -58,6 +58,7 @@ namespace picopter {
             //void SetAccel(Coord3D acc);
             bool SetGuidedWaypoint(int seq, float radius, float wait, float lat, float lon, float alt, bool relative_alt);
             bool SetRegionOfInterest(navigation::Coord3D roi);
+            bool UnsetRegionOfInterest();
             bool SetWaypointSpeed(int sp);
             
             void GetData(FlightData *d);
