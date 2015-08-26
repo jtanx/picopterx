@@ -35,7 +35,7 @@ class webInterfaceHandler : virtual public webInterfaceIf
 private:
     Options *m_opts;
     const std::unique_ptr<picopter::FlightController> &m_fc;
-    std::deque<navigation::Coord2D> m_pts;
+    std::deque<Waypoints::Waypoint> m_pts;
     std::shared_ptr<FlightTask> m_user_tracker;
     std::thread m_camera_thread;
     std::atomic<bool> m_camera_stop;
@@ -305,10 +305,10 @@ public:
         int i = 1;
         m_pts.clear();
         for (coordDeg v : wpts) {
-            navigation::Coord2D wpt;
+            Waypoints::Waypoint wpt{};
             Log(LOG_INFO, "%d: (%.6f,%.6f)", i++, v.lat, v.lon);
-            wpt.lat = v.lat;
-            wpt.lon = v.lon;
+            wpt.pt.lat = v.lat;
+            wpt.pt.lon = v.lon;
             m_pts.push_back(wpt);
         }
         //printf("updateWaypoints\n");

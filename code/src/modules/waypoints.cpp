@@ -21,7 +21,7 @@ using std::chrono::duration_cast;
  * @param [in] pts The set of waypoints to move to.
  * @param [in] method The method for moving through the specified waypoints.
  */
-Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod method)
+Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method)
 : m_pts(pts)
 , m_method(method)
 , m_update_interval(100)
@@ -49,10 +49,16 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
         } else {
             int j = 0;
             m_pts = std::move(GenerateLawnmowerPattern(m_pts[0], m_pts[1]));
-            for (const Coord2D &i : m_pts) {
-                Log(LOG_INFO, "Lawnmower waypoint %d: (%.7f, %.7f)", j++, i.lat, i.lon);
+            for (const Waypoint &i : m_pts) {
+                Log(LOG_INFO, "Lawnmower waypoint %d: (%.7f, %.7f)", j++, i.pt.lat, i.pt.lon);
             }
             m_waypoint_idle = opts->GetInt("LAWNMOWER_IDLE_TIME", 0);
+        }
+    } else if (method == WAYPOINT_SPIRAL) {
+        if (m_pts.size() < 2) {
+            throw std::invalid_argument("Cannot do spiral with less than 2 waypoints");
+        } else {
+            m_pts = std::move(GenerateSpiralPattern(m_pts[0], m_pts[1]));
         }
     }
 }
@@ -60,7 +66,7 @@ Waypoints::Waypoints(Options *opts, std::deque<Coord2D> pts, WaypointMethod meth
 /** 
  * Constructor. Constructs with default settings.
  */
-Waypoints::Waypoints(std::deque<Coord2D> pts, WaypointMethod method)
+Waypoints::Waypoints(std::deque<Waypoint> pts, WaypointMethod method)
 : Waypoints(NULL, pts, method) {}
 
 /**
@@ -77,35 +83,35 @@ Waypoints::~Waypoints() {
  * @param [in] end The ending coordinate.
  * @return The list of waypoints to travel to for the given lawnmower pattern.
  */
-std::deque<Coord2D> Waypoints::GenerateLawnmowerPattern(Coord2D start, Coord2D end) {
+std::deque<Waypoints::Waypoint> Waypoints::GenerateLawnmowerPattern(Waypoint start, Waypoint end) {
     //Determine which way we are sweeping
-    Coord2D sx = {start.lat, end.lon};
-    double d1 = CoordDistance(start, sx), d2 = CoordDistance(sx, end);
+    Waypoint sx = {{start.pt.lat, end.pt.lon}};
+    double d1 = CoordDistance(start.pt, sx.pt), d2 = CoordDistance(sx.pt, end.pt);
     int points = static_cast<int>(std::min(d1, d2) / m_sweep_spacing);
-    std::deque<Coord2D> pts;
+    std::deque<Waypoint> pts;
     
     if (points != 0) {
         bool modlat = false;
         double frac;
         if (d1 > d2) {
-            frac = (end.lat - start.lat) / points;
+            frac = (end.pt.lat - start.pt.lat) / points;
             modlat = true;
         } else {
-            frac = (end.lon - start.lon) / points;
+            frac = (end.pt.lon - start.pt.lon) / points;
         }
         
         for (int i = 0; i < points; i++) {
-            Coord2D v1, v2;
+            Waypoint v1{}, v2{};
             if (modlat) {
-                v1.lat = start.lat + frac*i;
-                v1.lon = start.lon;
-                v2.lat = v1.lat;
-                v2.lon = end.lon;
+                v1.pt.lat = start.pt.lat + frac*i;
+                v1.pt.lon = start.pt.lon;
+                v2.pt.lat = v1.pt.lat;
+                v2.pt.lon = end.pt.lon;
             } else {
-                v1.lat = start.lat;
-                v1.lon = start.lon + frac*i;
-                v2.lat = end.lat;
-                v2.lon = v1.lon;
+                v1.pt.lat = start.pt.lat;
+                v1.pt.lon = start.pt.lon + frac*i;
+                v2.pt.lat = end.pt.lat;
+                v2.pt.lon = v1.pt.lon;
             }
             
             if (i%2) {
@@ -119,8 +125,8 @@ std::deque<Coord2D> Waypoints::GenerateLawnmowerPattern(Coord2D start, Coord2D e
         
         if (points%2 == 0) {
             if (modlat) {
-                sx.lat = end.lat;
-                sx.lon = start.lon;
+                sx.pt.lat = end.pt.lat;
+                sx.pt.lon = start.pt.lon;
             }
             pts.push_back(sx);
         }
@@ -132,6 +138,35 @@ std::deque<Coord2D> Waypoints::GenerateLawnmowerPattern(Coord2D start, Coord2D e
     return pts;
 }
 
+std::deque<Waypoints::Waypoint> Waypoints::GenerateSpiralPattern(Waypoint centre, Waypoint edge) {
+    //Use a flat Earth approximation to generate the waypoints
+    double radius = CoordDistance(centre.pt, edge.pt);
+    double start_angle = CoordBearing(centre.pt, edge.pt);
+    double offset_x, offset_y;
+    double earth_radius = 6378137;
+    std::deque<Waypoint> pts;
+    
+    for (int alt = 0; alt < edge.pt.alt - centre.pt.alt; alt += 2) {
+        for (int i = 0; i < 360; i += 10) {
+            Waypoint pt{};
+            offset_x = radius * cos(DEG2RAD(start_angle+i));
+            offset_y = radius * sin(DEG2RAD(start_angle+i));
+            
+            offset_x /= earth_radius * cos(DEG2RAD(centre.pt.lat));
+            offset_y /= earth_radius;
+            
+            pt.pt.lat = centre.pt.lat + RAD2DEG(offset_y);
+            pt.pt.lon = centre.pt.lon + RAD2DEG(offset_x);
+            
+            if (i == 0) {
+                pt.pt.alt = alt;
+            }
+            pts.push_back(pt);
+        }
+    }
+    return pts;
+}
+
 /**
  * Runs the waypoint following code. Should only be called once, and only by
  * the FlightController class.
@@ -140,7 +175,7 @@ std::deque<Coord2D> Waypoints::GenerateLawnmowerPattern(Coord2D start, Coord2D e
  */
 void Waypoints::Run(FlightController *fc, void *opts) {
     GPSData d;
-    Coord2D next_point;
+    Waypoint next_point;
     int req_seq = 0, at_seq = 0;
     double wp_distance;
     std::vector<ObjectInfo> detected_objects;
@@ -174,7 +209,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
         
         if (at_seq < req_seq) {
             fc->gps->GetLatest(&d);
-            wp_distance = CoordDistance(d.fix, next_point);
+            wp_distance = CoordDistance(d.fix, next_point.pt);
 
             if (wp_distance < m_waypoint_radius) {
                 Log(LOG_INFO, "At waypoint, idling...");
@@ -194,7 +229,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             m_pts.pop_front();
             SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
             fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
-                m_waypoint_idle / 1000.0f, next_point.lat, next_point.lon, 0, true);
+                m_waypoint_idle / 1000.0f, next_point.pt.lat, next_point.pt.lon, 0, true);
             fc->fb->SetWaypointSpeed(3);
         }
         

@@ -57,5 +57,5 @@
     print json_encode($entries);
   }
   
-  scanLogs("/home/jeremy/logs");
+  scanLogs("/home/pi/logs");
 ?>

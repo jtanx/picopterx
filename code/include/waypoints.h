@@ -29,15 +29,22 @@ namespace picopter {
      */
     class Waypoints : public FlightTask {
         public:
-            Waypoints(std::deque<navigation::Coord2D> pts, WaypointMethod method);
-            Waypoints(Options *opts, std::deque<navigation::Coord2D> pts, WaypointMethod method);
+            typedef struct Waypoint {
+                navigation::Coord3D pt;
+                navigation::Coord3D roi;
+                bool has_roi;
+                bool absolute_alt;
+            } Waypoint;
+            
+            Waypoints(std::deque<Waypoint> pts, WaypointMethod method);
+            Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method);
             virtual ~Waypoints() override;
             
             void Run(FlightController *fc, void *opts) override;
             bool Finished() override;
         private:
             /** The list of waypoints to move through **/
-            std::deque<navigation::Coord2D> m_pts;
+            std::deque<Waypoint> m_pts;
             /** The waypoint movement method (e.g. manual or lawnmower) **/
             WaypointMethod m_method;
             /** How often to update the calculation **/
@@ -55,7 +62,8 @@ namespace picopter {
             /** Log to store information about detected objects **/
             DataLog m_log;
             
-            std::deque<navigation::Coord2D> GenerateLawnmowerPattern(navigation::Coord2D start, navigation::Coord2D end);
+            std::deque<Waypoint> GenerateLawnmowerPattern(Waypoint start, Waypoint end);
+            std::deque<Waypoint> GenerateSpiralPattern(Waypoint centre, Waypoint edge);
             /** Copy constructor (disabled) **/
             Waypoints(const Waypoints &other);
             /** Assignment operator (disabled) **/
