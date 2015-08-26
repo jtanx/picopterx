@@ -247,11 +247,14 @@ void CameraStream::ProcessImages() {
     auto sampling_start = steady_clock::now();
 
     while (!m_stop) {
-        std::lock_guard<std::mutex> lock(m_worker_mutex);
+        std::unique_lock<std::mutex> lock(m_worker_mutex, std::defer_lock);
         cv::Mat image, backend;
 
         //Grab image
         m_capture >> image;
+        
+        //Acquire the mutex
+        lock.lock();
         
         //Save it, if requested to.
         if (m_save_photo) {
