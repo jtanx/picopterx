@@ -195,7 +195,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
             fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
                 m_waypoint_idle / 1000.0f, next_point.lat, next_point.lon, 0, true);
-            //fc->fb->SetWaypointSpeed(10);
+            fc->fb->SetWaypointSpeed(3);
         }
         
         //Coord3D cord = {1,0,0};
@@ -206,8 +206,8 @@ void Waypoints::Run(FlightController *fc, void *opts) {
                 ObjectInfo object = detected_objects.front();
                 Log(LOG_INFO, "Detected object! Recording...");
                 fc->buzzer->Play(500, 800, 100);
-                fc->fb->Stop();
-                fc->Sleep(700);
+                //fc->fb->Stop();
+                //fc->Sleep(700);
                 
                 std::string path = 
                     std::string(PICOPTER_HOME_LOCATION "/pics/wpt_") +
@@ -224,8 +224,8 @@ void Waypoints::Run(FlightController *fc, void *opts) {
                 last_detection = steady_clock::now();
                 
                 Log(LOG_INFO, "Continuing...");
-                fc->fb->SetGuidedWaypoint(req_seq, m_waypoint_radius,
-                    m_waypoint_idle / 1000.0f, next_point.lat, next_point.lon, 0, true);
+                //fc->fb->SetGuidedWaypoint(req_seq, m_waypoint_radius,
+                //    m_waypoint_idle / 1000.0f, next_point.lat, next_point.lon, 0, true);
             }
         }
         
