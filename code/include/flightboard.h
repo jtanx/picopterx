@@ -19,10 +19,11 @@ namespace picopter {
     /* Forward declaration of the IMU class */
     class IMU;
     
+    typedef navigation::EulerAngle GimbalAngle;
+    
     /**
      * Contains information about the actuation of the hexacopter
      */
-    typedef navigation::EulerAngle GimbalAngle;
     typedef struct FlightData {
         /** Aileron speed, -100 to 100 **/
         int aileron;

@@ -74,11 +74,11 @@ namespace picopter {
          * Holds a set of Euler angles.
          */
         typedef struct EulerAngle {
-            /** Roll of the IMU, -pi to pi **/
+            /** Roll of the IMU, -180 to 180 **/
             double roll;
-            /** Pitch of the IMU, -pi to pi **/
+            /** Pitch of the IMU, -180 to 180 **/
             double pitch;
-            /** Yaw of the IMU, -pi to pi **/
+            /** Yaw of the IMU, -180 to 180 **/
             double yaw;
         } EulerAngle;
         

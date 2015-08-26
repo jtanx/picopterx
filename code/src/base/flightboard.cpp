@@ -393,6 +393,7 @@ void FlightBoard::SetData(FlightData *d) {
     m_currentData.aileron = picopter::clamp(d->aileron, -100, 100);
     m_currentData.elevator = picopter::clamp(d->elevator, -100, 100);
     m_currentData.rudder = picopter::clamp(d->rudder, -100, 100);
+    m_currentData.gimbal = d->gimbal;
     //m_currentData.gimbal = picopter::clamp(d->gimbal, 0, 90);
 }
 

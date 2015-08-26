@@ -172,8 +172,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, true);
                 fc->fb->SetData(&course);
             }
-            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: %03d\r",
-                course.aileron, course.elevator, course.rudder, course.gimbal);
+            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: (%03.1f, %03.1f, %03.1f)\r",
+                course.aileron, course.elevator, course.rudder, course.gimbal.roll, course.gimbal.pitch, course.gimbal.yaw);
             last_fix = steady_clock::now();
             had_fix = true;
         } else if (had_fix && steady_clock::now() - last_fix < seconds(2)) {
@@ -190,8 +190,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, false);
                 fc->fb->SetData(&course);
             }
-            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: %03d\r",
-                course.aileron, course.elevator, course.rudder, course.gimbal);
+            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: (%03.1f, %03.1f, %03.1f)\r",
+                course.aileron, course.elevator, course.rudder, course.gimbal.roll, course.gimbal.pitch, course.gimbal.yaw);
         } else {
             //Object lost; we should do a search pattern (TBA)
             SetCurrentState(fc, STATE_TRACKING_SEARCHING);
@@ -250,16 +250,16 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
 
     //taking Euler chained rotations:
     double a;
-    a = imu_data->roll;
+    a = DEG2RAD(imu_data->roll);
     cv::Matx33d Rbx(1,      0,       0,
                    0, cos(a), -sin(a),
                    0, sin(a),  cos(a));
 
-    a = imu_data->pitch;
+    a = DEG2RAD(imu_data->pitch);
     cv::Matx33d Rby(cos(a), 0, -sin(a),
                         0, 1,       0,
                    sin(a), 0,  cos(a));
-    a = imu_data->yaw;
+    a = DEG2RAD(imu_data->yaw);
     cv::Matx33d Rbz(cos(a), -sin(a), 0,
                    sin(a),  cos(a), 0,
                         0,       0, 1);
@@ -317,7 +317,7 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     //Tilt - in radians from vertical
     //double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
     //double gimbalTilt = current->gimbal.pitch;
-    double objectAngleY = current->gimbal.pitch + theta;
+    double objectAngleY = DEG2RAD(current->gimbal.pitch) + theta;
     //double forwardPosition = tan(objectAngleY) * heightAboveTarget;
 
     //double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
