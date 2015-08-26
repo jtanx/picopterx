@@ -13,7 +13,7 @@ function ajaxSend(action, data) {
   return $.ajax({
     type: "POST",
     url: "ajax-thrift.php",
-    timeout: 1200,
+    timeout: 2000,
     data: {
       'action': action,
       'data'   : data
@@ -31,7 +31,7 @@ function getDetectedObjects() {
   return $.ajax({
     type: "GET",
     url: "ajax-review.php",
-    timeout: 1200,
+    timeout: 2000,
     success: function(response) {
       var ret = $.parseJSON(response);
       $('#detection-review').empty();
