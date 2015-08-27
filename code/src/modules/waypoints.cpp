@@ -245,8 +245,9 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             m_pts.pop_front();
             SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
             
+            //Aus regs: Cannot fly above 400ft (138m). We'll just limit it to 100m.
             next_point.pt.alt = next_point.pt.alt >= m_waypoint_alt_minimum ? 
-                next_point.pt.alt : 0; 
+                std::min(next_point.pt.alt, 100.0) : 0;
             fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
                 m_waypoint_idle / 1000.0f, next_point.pt.lat, next_point.pt.lon,
                 next_point.pt.alt, next_point.pt.alt == 0);
