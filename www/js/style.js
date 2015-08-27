@@ -159,15 +159,21 @@ $(document).ready(function () {
   $("select").each(function () {
     $(this).val($(this).children("option:first").val());
   });
+  
+  /* Reset checkboxes */
+  $(":input").removeAttr("checked");
 
   /* Show the drawn pattern (if any) on the map */
   $("#waypoints-pattern").change(function() {
     var pattern = $("#waypoints-pattern option:selected").val();
+    $("#wpt-spiralconfig").toggleClass("hidden", pattern !== "spiral");
     $("#map-canvas").copterMap('hideMarkers', "all").copterMap('showMarkers', pattern);
   });
   
+  /* Update waypoints on map as the fields are edited */
   $('#waypoint-editor').on('change', 'input', updateWptInfo);
   
+  /* Update the fields in the table as the waypoints are moved/deleted */
   $("#map-canvas").on("wptUpdated", function(e) {
     $("#waypoint-editor tbody").empty();
     $("#map-canvas").copterMap('getActiveMarkerCoordinates', updateWptEditor, true);

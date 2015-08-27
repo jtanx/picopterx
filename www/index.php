@@ -150,6 +150,9 @@
                     <option value="spiral">Spiral</option>
                   </select>
                 </div>
+                <div class="checkbox hidden" id="wpt-spiralconfig">
+                  <label><input type="checkbox" id="wpt-spiraldir"> Face outwards</label>
+                </div>
                 <div class="btn-group btn-group-justified">
                   <a href="#" class="btn btn-default btn-control" onclick='waypointsEdit()'>Edit</a>
                   <a href="#" class="btn btn-default btn-control" onclick='waypointsClear()'>Clear</a>

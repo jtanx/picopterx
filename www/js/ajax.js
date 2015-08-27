@@ -74,7 +74,8 @@ function beginWaypoints() {
       });
     } else if (coords.length >= 2 && pattern == "spiral") {
       ajaxSend('updateWaypoints', coords).success(function () {
-        ajaxSend('beginWaypoints', 2);
+        var mode = $("#wpt-spiraldir").is(":checked") ? 3 : 2;
+        ajaxSend('beginWaypoints', mode);
       });
     }
   });

@@ -20,8 +20,10 @@ namespace picopter {
         WAYPOINT_NORMAL = 0,
         /** The waypoints list consists of two waypoints, specifying the corners for a lawnmower search pattern. **/
         WAYPOINT_LAWNMOWER = 1,
-        /** Spiral mode (todo) **/
-        WAYPOINT_SPIRAL = 2
+        /** Spiral mode, facing inwards **/
+        WAYPOINT_SPIRAL = 2,
+        /** Spiral mode, facing outwards **/
+        WAYPOINT_SPIRAL_OUT = 3
     } WaypointMethod;
 
     /**
@@ -33,7 +35,6 @@ namespace picopter {
                 navigation::Coord3D pt;
                 navigation::Coord3D roi;
                 bool has_roi;
-                bool absolute_alt;
             } Waypoint;
             
             Waypoints(std::deque<Waypoint> pts, WaypointMethod method);
@@ -67,7 +68,7 @@ namespace picopter {
             DataLog m_log;
             
             std::deque<Waypoint> GenerateLawnmowerPattern(Waypoint start, Waypoint end);
-            std::deque<Waypoint> GenerateSpiralPattern(Waypoint centre, Waypoint edge);
+            std::deque<Waypoint> GenerateSpiralPattern(Waypoint centre, Waypoint edge1, Waypoint edge2, bool face_out);
             /** Copy constructor (disabled) **/
             Waypoints(const Waypoints &other);
             /** Assignment operator (disabled) **/

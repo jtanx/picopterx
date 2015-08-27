@@ -64,9 +64,19 @@ public:
             return false;
         } else {
             switch(mode) {
-                case WAYPOINT_LAWNMOWER: case WAYPOINT_SPIRAL:
+                case WAYPOINT_LAWNMOWER:
                     if (m_pts.size() != 2) {
                         return false;
+                    }
+                break;
+                
+                case WAYPOINT_SPIRAL: case WAYPOINT_SPIRAL_OUT:
+                    if (m_pts.size() < 2) {
+                        return false;
+                    } else if (CoordDistance(m_pts[0].pt, m_pts[1].pt) < 0.5) {
+                        return false; //Radius too small to do spiral pattern.
+                    } else if (m_pts.size() >= 3 && CoordDistance(m_pts[0].pt, m_pts[2].pt) < 0.5) {
+                        return false; //Radius too small to do spiral pattern.
                     }
                 break;
                 
@@ -78,7 +88,8 @@ public:
                 
             }
             
-            std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(m_opts, m_pts, static_cast<WaypointMethod>(mode));
+            std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(
+                m_opts, m_pts, static_cast<WaypointMethod>(mode));
             if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
                 return false;
             }

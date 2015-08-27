@@ -58,11 +58,21 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod met
             }
             m_waypoint_idle = opts->GetInt("LAWNMOWER_IDLE_TIME", 0);
         }
-    } else if (method == WAYPOINT_SPIRAL) {
+    } else if (method == WAYPOINT_SPIRAL || method == WAYPOINT_SPIRAL_OUT) {
         if (m_pts.size() < 2) {
             throw std::invalid_argument("Cannot do spiral with less than 2 waypoints");
         } else {
-            m_pts = std::move(GenerateSpiralPattern(m_pts[0], m_pts[1]));
+            if (CoordDistance(m_pts[0].pt, m_pts[1].pt) < 0.5) {
+                throw std::invalid_argument("Spiral radius is too small");
+            }
+            if (m_pts.size() >= 3) {
+                if (CoordDistance(m_pts[0].pt, m_pts[2].pt) < 0.5) {
+                    throw std::invalid_argument("Spiral radius is too small");
+                }
+                m_pts = std::move(GenerateSpiralPattern(m_pts[0], m_pts[1], m_pts[2], method == WAYPOINT_SPIRAL_OUT));
+            } else {
+                m_pts = std::move(GenerateSpiralPattern(m_pts[0], m_pts[1], m_pts[1], method == WAYPOINT_SPIRAL_OUT));
+            }
             m_waypoint_idle = opts->GetInt("SPIRAL_IDLE_TIME", 0);
         }
     }
@@ -143,41 +153,58 @@ std::deque<Waypoints::Waypoint> Waypoints::GenerateLawnmowerPattern(Waypoint sta
     return pts;
 }
 
-std::deque<Waypoints::Waypoint> Waypoints::GenerateSpiralPattern(Waypoint centre, Waypoint edge) {
-    //Use a flat Earth approximation to generate the waypoints
-    double radius = CoordDistance(centre.pt, edge.pt);
-    double start_angle = 90-CoordBearing(centre.pt, edge.pt);
-    double offset_x, offset_y;
-    double earth_radius = 6378137;
-    double delta = 360.0/(2*M_PI*radius/4.0); //Angle increment
+/**
+ * Generates a 3D spiral pattern.
+ * @param [in] centre The centre point to rotate about.
+ * @param [in] edge1 Defines the starting position and altitude.
+ * @param [in] edge2 Defines the ending position and altitude.
+ * @param [in] face_out Boolean indicating whether or not to face outwards or
+ *                      inwards when spiralling.
+ * @return A list of waypoints needed to move in a spiral pattern.
+ */
+std::deque<Waypoints::Waypoint> Waypoints::GenerateSpiralPattern(Waypoint centre, Waypoint edge1, Waypoint edge2, bool face_out) {
+    double start_radius = CoordDistance(centre.pt, edge1.pt);
+    double end_radius   = CoordDistance(centre.pt, edge2.pt);
+    double start_angle  = CoordBearingX(centre.pt, edge1.pt);
+    double end_angle    = CoordBearingX(centre.pt, edge2.pt);
+    double climb_rate;
+    int revs = 1;
     std::deque<Waypoint> pts;
     
-    //Convert angle into -180 to 180, relative to positive x axis.
-    if (start_angle < -180) {
-        start_angle += 360;
+    //Cannot have altitude change if we don't know both in absolute measures.
+    if (edge1.pt.alt == 0 || edge2.pt.alt == 0) {
+        edge1.pt.alt = edge2.pt.alt = 0;
     }
     
-    //for (int alt = 0; alt < edge.pt.alt - centre.pt.alt; alt += 2) {
-        for (double i = 0; i < 360; i += delta) {
+    //The climb rate, in m/revolution
+    climb_rate = std::min(1.0, edge2.pt.alt-edge1.pt.alt);
+    if (climb_rate > 0) {
+        revs = ceil((edge2.pt.alt-edge1.pt.alt)/climb_rate);
+    }
+    
+    for (int i = 0; i < revs;i++) {
+        for (double j = 0; j < 360;) {
             Waypoint pt{};
-            offset_x = radius * cos(DEG2RAD(start_angle+i));
-            offset_y = radius * sin(DEG2RAD(start_angle+i));
+            double pct = (i + j/360.0)/revs;
+            double radius = start_radius + (end_radius-start_radius)*pct;
+            double alt = edge1.pt.alt + (edge2.pt.alt-edge1.pt.alt)*pct;
+            double angle = start_angle + (end_angle-start_angle)*pct;
             
-            offset_x /= earth_radius * cos(DEG2RAD(centre.pt.lat));
-            offset_y /= earth_radius;
-            
-            pt.pt.lat = centre.pt.lat + RAD2DEG(offset_y);
-            pt.pt.lon = centre.pt.lon + RAD2DEG(offset_x);
-            pt.roi = centre.pt;
+            pt.pt = CoordAddOffset(centre.pt, radius, angle+j);
+            pt.pt.alt = alt;
+            pt.roi = face_out ? CoordAddOffset(centre.pt, radius+10, angle+j) :
+                     centre.pt;
             pt.has_roi = true;
             
-            if (i == 0) {
-                pt.pt.alt = 0;//alt;
-            }
             pts.push_back(pt);
+            j += 360/(2*M_PI*radius/4);
         }
-        //pts.push_back(starting pt)
-    //}
+    }
+    
+    edge2.roi = face_out ? CoordAddOffset(centre.pt, end_radius+10, end_angle) :
+                centre.pt;
+    edge2.has_roi = true;
+    pts.push_back(edge2);
     return pts;
 }
 

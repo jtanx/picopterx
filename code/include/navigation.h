@@ -168,6 +168,41 @@ namespace picopter {
         }
         
         /**
+         * Calculates the bearing as per CoordBearing, but translated to
+         * be relative to the positive x-axis.
+         * @param [in] from The first coordinate, in degrees.
+         * @param [in] to The second coordinate, in degrees.
+         * @return The bearing, in degrees, -180 < ret < 180, relative to the
+         *         positive x-axis.
+         */
+        template <typename Coord1, typename Coord2>
+        double CoordBearingX(Coord1 from, Coord2 to) {
+            double ret = 90 - CoordBearing(from, to);
+            return (ret < -180) ? (ret + 360) : ret;
+        }
+        
+        /**
+         * Adds an offset to a given coordinate.
+         * This method uses a flat-earth approximation.
+         * @param [in] c The coordinate to offset.
+         * @param [in] radius The magnitude of the offset, in metres.
+         * @param [in] angle The angle of the offset, in degrees, relative
+         *                   to the positive x-axis (-180 < angle < 180).
+         * @return The offset coordinate.
+         */
+        template <typename Coord>
+        Coord CoordAddOffset(Coord c, double radius, double angle) {
+            double offset_x = radius * cos(DEG2RAD(angle));
+            double offset_y = radius * sin(DEG2RAD(angle));
+            offset_x /= 1000 * RADIUS_OF_EARTH * cos(DEG2RAD(c.lat));
+            offset_y /= 1000 * RADIUS_OF_EARTH;
+            
+            c.lat += RAD2DEG(offset_y);
+            c.lon += RAD2DEG(offset_x);
+            return c;
+        }
+        
+        /**
          * Converts a coordinate/zoom level into the corresonding tile number.
          * @param [in] from The coordinate of the tile.
          * @see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Zoom_levels
