@@ -218,6 +218,8 @@ public:
         m_fc->gps->GetLatest(&d);
         _return.lat = std::isnan(d.fix.lat) ? -1 : d.fix.lat;
         _return.lon = std::isnan(d.fix.lon) ? -1 : d.fix.lon;
+        _return.alt = std::isnan(d.fix.alt) || std::isnan(d.fix.groundalt) ?
+            -1 : d.fix.alt - d.fix.groundalt;
         //printf("requestCoords %f,%f\n", _return.lat, _return.lon);
     }
 
@@ -271,13 +273,7 @@ public:
             _return.roll = _return.pitch = _return.yaw = 0;
         }
     }
-
-    void requestNextWaypoint(coordDeg& _return)
-    {
-        // Your implementation goes here
-        //printf("requestNextWaypoint\n");
-    }
-
+    
     bool updateUserPosition(const coordDeg& wpt)
     {
         std::shared_ptr<FlightTask> trk(m_user_tracker);
@@ -305,20 +301,14 @@ public:
         m_pts.clear();
         for (coordDeg v : wpts) {
             Waypoints::Waypoint wpt{};
-            Log(LOG_INFO, "%d: (%.6f,%.6f)", i++, v.lat, v.lon);
+            Log(LOG_INFO, "%d: (%.6f,%.6f,%.1f)", i++, v.lat, v.lon, v.alt);
             wpt.pt.lat = v.lat;
             wpt.pt.lon = v.lon;
+            wpt.pt.alt = v.alt;
             m_pts.push_back(wpt);
         }
         //printf("updateWaypoints\n");
         return true;
-    }
-
-    bool resetWaypoints()
-    {
-        // Your implementation goes here
-        //printf("resetWaypoints\n");
-        return false;
     }
 };
 

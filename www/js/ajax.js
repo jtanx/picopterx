@@ -72,7 +72,7 @@ function beginWaypoints() {
       ajaxSend('updateWaypoints', coords).success(function () {
         ajaxSend('beginWaypoints', 1);
       });
-    } else if (coords.length == 2 && pattern == "spiral") {
+    } else if (coords.length >= 2 && pattern == "spiral") {
       ajaxSend('updateWaypoints', coords).success(function () {
         ajaxSend('beginWaypoints', 2);
       });

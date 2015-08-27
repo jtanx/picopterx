@@ -51,6 +51,10 @@ namespace picopter {
             int m_update_interval;
             /** The acceptance radius (in m) for being at a waypoint. **/
             double m_waypoint_radius;
+            /** The acceptance error (in m) for being at a waypoint (altitude). **/
+            double m_waypoint_alt_radius;
+            /** The minimum height (in m) above ground that waypoints can be. **/
+            double m_waypoint_alt_minimum;
             /** The idle time (in ms) at the waypoint **/
             int m_waypoint_idle;
             /** The spacing (in m) between sweeps for the lawnmower pattern. **/

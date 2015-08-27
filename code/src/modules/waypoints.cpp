@@ -26,6 +26,8 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod met
 , m_method(method)
 , m_update_interval(100)
 , m_waypoint_radius(1.2)
+, m_waypoint_alt_radius(0.2)
+, m_waypoint_alt_minimum(4)
 , m_waypoint_idle(3000)
 , m_sweep_spacing(3)
 , m_image_counter(0)
@@ -40,6 +42,8 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod met
     opts->SetFamily("WAYPOINTS");
     m_update_interval = opts->GetInt("UPDATE_INTERVAL", m_update_interval);
     m_waypoint_radius = opts->GetReal("WAYPOINT_RADIUS", m_waypoint_radius);
+    m_waypoint_alt_radius = opts->GetReal("WAYPOINT_ALT_RADIUS", m_waypoint_alt_radius);
+    m_waypoint_alt_minimum = opts->GetReal("WAYPOINT_ALT_MINIMUM", m_waypoint_alt_minimum);
     m_waypoint_idle = opts->GetInt("WAYPOINT_IDLE_TIME", m_waypoint_idle);
     m_sweep_spacing = opts->GetInt("LAWNMOWER_SWEEP_SPACING", m_sweep_spacing);
     
@@ -187,7 +191,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
     GPSData d;
     Waypoint next_point;
     int req_seq = 0, at_seq = 0;
-    double wp_distance;
+    double wp_distance, wp_alt_delta;
     std::vector<ObjectInfo> detected_objects;
     auto last_detection = steady_clock::now()-seconds(30); //Hysteresis for object detection
     
@@ -220,8 +224,10 @@ void Waypoints::Run(FlightController *fc, void *opts) {
         if (at_seq < req_seq) {
             fc->gps->GetLatest(&d);
             wp_distance = CoordDistance(d.fix, next_point.pt);
+            wp_alt_delta = next_point.pt.alt != 0 ? 
+                std::fabs((d.fix.alt-d.fix.groundalt)-next_point.pt.alt) : 0;
 
-            if (wp_distance < m_waypoint_radius) {
+            if (wp_distance < m_waypoint_radius && wp_alt_delta < m_waypoint_alt_minimum) {
                 Log(LOG_INFO, "At waypoint, idling...");
                 fc->buzzer->Play(1000, 1000, 100);
                 at_seq++;
@@ -238,8 +244,12 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             next_point = m_pts.front();
             m_pts.pop_front();
             SetCurrentState(fc, STATE_WAYPOINTS_MOVING);
+            
+            next_point.pt.alt = next_point.pt.alt >= m_waypoint_alt_minimum ? 
+                next_point.pt.alt : 0; 
             fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
-                m_waypoint_idle / 1000.0f, next_point.pt.lat, next_point.pt.lon, 0, true);
+                m_waypoint_idle / 1000.0f, next_point.pt.lat, next_point.pt.lon,
+                next_point.pt.alt, next_point.pt.alt == 0);
             fc->fb->SetWaypointSpeed(3);
             if (next_point.has_roi) {
                 fc->fb->SetRegionOfInterest(next_point.roi);

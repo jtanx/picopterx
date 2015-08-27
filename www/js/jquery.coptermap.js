@@ -144,6 +144,9 @@ L.NumberedDivIconRed = L.Icon.extend({
           icon: icon
         }).addTo(data.map);
 
+        //Set altitude default
+        marker.alt = 0;
+        
         markerList.push(marker);
         if (!readonly) {
           marker.on('click', function(event) {
@@ -151,6 +154,7 @@ L.NumberedDivIconRed = L.Icon.extend({
               data.map.removeLayer(marker);
               markerList.splice($.inArray(marker, markerList), 1);
               instance.toggleEditMarkers(markerList, true);
+              $(instance).trigger("wptUpdated");
             }
             instance.updateBounds();
             instance.updateWptPath();
@@ -160,6 +164,7 @@ L.NumberedDivIconRed = L.Icon.extend({
         marker.on('drag', function(e) {
           instance.updateBounds();
           instance.updateWptPath();
+          $(instance).trigger("wptUpdated");
         });
       };
 
@@ -230,6 +235,24 @@ L.NumberedDivIconRed = L.Icon.extend({
           data.paths.copterPath.addLatLng(latlng);
         }
       };
+      
+      /**
+       * Jumps to the specified location.
+       * @param [in] latitude A latitude, "copter", or "user".
+       * @param [in] longitude A longitude. Optional if "copter" or "user"
+       *                       is specified.
+       */
+      this.jumpTo = function(latitude, longitude) {
+        if (latitude === "copter") {
+          data.map.panTo(data.markers.copterMarker.getLatLng());
+        } else if (latitude === "user") {
+          if (data.markers.userMarker) {
+            data.map.panTo(data.markers.userMarker.getLatLng());
+          }
+        } else {
+          data.map.panTo(new L.LatLng(latitude, longitude));
+        }
+      }
 
       /**
        * Clears the displayed path that the copter has travelled.
@@ -259,6 +282,7 @@ L.NumberedDivIconRed = L.Icon.extend({
           data.map.removeLayer(markerList[i]);
         }
         markerList.length = 0;
+        $(instance).trigger("wptUpdated");
       };
       
       /**
@@ -287,21 +311,23 @@ L.NumberedDivIconRed = L.Icon.extend({
       /**
        * Get the active marker coordinates.
        * @param [in] callback The callback to pass the list of coordinates to.
+       * @param [in] force Call the callback even if in edit mode.
        */
-      this.getActiveMarkerCoordinates = function(callback) {
+      this.getActiveMarkerCoordinates = function(callback, force) {
         var packageCoordinates = function (data) {
           var newdata = [];
           if (typeof data != 'undefined') {
             $.each(data, function(index, val) {
               lat = val.getLatLng().lat;
               lng = val.getLatLng().lng;
-              newdata.push([lat,lng]);
+              alt = val.alt;
+              newdata.push([lat,lng, alt]);
             });
           }
           return newdata;
         };
 
-        if (!data.editMode) { //Don't send if we're editing...
+        if (!data.editMode || force) { //Don't send if we're editing...
           if (data.pattern === "manual") {
             callback(data.pattern, packageCoordinates(data.wptMarkers));
           } else if (data.pattern == "lawnmower") {
@@ -311,6 +337,37 @@ L.NumberedDivIconRed = L.Icon.extend({
           }
         }
       };
+      
+      /**
+       * Updates a waypoint position and information
+       * @param [in] index The zero-index of the marker/waypoint.
+       * @param [in] type The type of the value to update (lat/lon/alt)
+       * @param [in] value The value to update with.
+       */
+      this.updateWaypoint = function(index, type, value) {
+        if (data.editMode) {
+          var markers;
+          if (data.pattern === "manual") {
+            markers = data.wptMarkers;
+          } else if (data.pattern === "lawnmower") {
+            markers === data.rctMarkers;
+          } else if (data.pattern === "spiral") {
+            markers = data.splMarkers;
+          }
+          
+          if (markers && index < markers.length) {
+            var ll = markers[index].getLatLng();
+            if (type === "lat") {
+              ll.lat = value;
+            } else if (type === "lon") {
+              ll.lon = value;
+            } else if (type === "alt") {
+              markers[index].alt = value;
+            }
+            markers[index].setLatLng(ll).update();
+          }
+        }
+      }
 
       /**
        * Toggle the display of the draggable waypoint markers.
@@ -322,7 +379,9 @@ L.NumberedDivIconRed = L.Icon.extend({
         instance.clearMarkers(markerList);
         $.each(tmpmarkers, function(index, value){
           instance.addNumberedMarker(markerList, value.getLatLng(), editMode);
+          markerList[index].alt = value.alt;
         });
+        $(instance).trigger("wptUpdated");
       };
 
       /**
@@ -353,6 +412,7 @@ L.NumberedDivIconRed = L.Icon.extend({
        */
       this.updateBounds = function() {
         instance.removeMapLayer(data.map, data, 'boundRegion');
+        instance.removeMapLayer(data.map, data, 'upperBoundRegion');
 
         if (data.pattern === "lawnmower") {
           if (data.rctMarkers.length == 2) {
@@ -362,11 +422,16 @@ L.NumberedDivIconRed = L.Icon.extend({
             ).addTo(data.map);
           }
         } else if (data.pattern === "spiral") {
-          if (data.splMarkers.length == 2) {
-            
+          if (data.splMarkers.length >= 2) {
             data.boundRegion = L.circle(data.splMarkers[0].getLatLng(),
               data.splMarkers[0].getLatLng().distanceTo(data.splMarkers[1].getLatLng()),
               {color : "#0033FF", weight : 1}
+            ).addTo(data.map);
+          }
+          if (data.splMarkers.length >= 3) {
+            data.upperBoundRegion = L.circle(data.splMarkers[0].getLatLng(),
+              data.splMarkers[0].getLatLng().distanceTo(data.splMarkers[2].getLatLng()),
+              {color : "#FF3300", weight : 1}
             ).addTo(data.map);
           }
         }
@@ -406,6 +471,7 @@ L.NumberedDivIconRed = L.Icon.extend({
           hide(data.splMarkers, data.map);
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
           instance.removeMapLayer(data.map, data, 'boundRegion');
+          instance.removeMapLayer(data.map, data, 'upperBoundRegion');
         } else if (pattern === "manual") {
           hide(data.wptMarkers, data.map);
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
@@ -415,6 +481,7 @@ L.NumberedDivIconRed = L.Icon.extend({
         } else if (pattern === "spiral") {
           hide(data.splMarkers, data.map);
           instance.removeMapLayer(data.map, data, 'boundRegion');
+          instance.removeMapLayer(data.map, data, 'upperBoundRegion');
         }
       };
 
@@ -440,6 +507,7 @@ L.NumberedDivIconRed = L.Icon.extend({
           show(data.splMarkers, data.map);
           instance.updateBounds();
         }
+        $(instance).trigger("wptUpdated");
       };
 
       /**
@@ -491,11 +559,12 @@ L.NumberedDivIconRed = L.Icon.extend({
               }
               instance.updateBounds();
             } else if (data.pattern === "spiral") {
-              if (data.splMarkers.length < 2) {
+              if (data.splMarkers.length < 3) {
                 instance.addNumberedMarker(data.splMarkers, pos.latlng, true);
               }
               instance.updateBounds();
             }
+            $(instance).trigger("wptUpdated");
           }
         });
 

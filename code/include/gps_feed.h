@@ -20,7 +20,7 @@ namespace picopter {
         double lon;
         /** The GPS altitude, in metres. Uncertainty in metres.**/
         double alt;
-        /** The estimated ground altitude, in metres. Uncertainty in metres. **/
+        /** The estimated altitude of the ground, in metres. Uncertainty in metres. **/
         double groundalt;
         /** The speed, in m/s. Uncertainty in m/s. **/
         double speed;

@@ -29,8 +29,8 @@
           $client->updateUserPosition($wp);
         }
 
-        $ans = array('lat' => $coords->lat, 'lon' => $coords->lon,
-               'bearing' => $client->requestBearing(),
+        $ans = array('lat' => $coords->lat, 'lon' => $coords->lon, 
+               'alt' => $coords->alt, 'bearing' => $client->requestBearing(),
                'roll' => $att->roll, 'pitch' => $att->pitch, 'yaw' => $att->yaw,
                'status' => $client->requestStatus());
 
@@ -94,6 +94,7 @@
             $wp = new \picopter\coordDeg();
             $wp->lat = $i[0];
             $wp->lon = $i[1];
+            $wp->alt = $i[2];
             array_push($waypoints, $wp);
           }
 

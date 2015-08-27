@@ -52,6 +52,7 @@ function waypointsEdit() {
   $("#map-canvas").copterMap('toggleEditMode', pattern);
   $("#wpt-begin-container").toggleClass('hidden');
   $("#wpt-editalert").toggleClass('hidden');
+  $("#waypoint-editor").toggleClass('hidden');
 }
 
 /**
@@ -74,6 +75,37 @@ function detectionShow() {
 
 function detectionClear() {
   $("#map-canvas").copterMap('clearDetectionMarkers');
+}
+
+function jumpTo(dst) {
+  $("#map-canvas").copterMap('jumpTo', dst);
+}
+
+function updateWptEditor(pattern, coords) {
+  $.each(coords, function(index, val) {
+    var row = $("<tr/>").append($("<td/>", {text : index+1}));
+    var entries = ["lat","lon","alt"];
+    for (var i = 0; i < entries.length; i++) {
+      var ent = $("<td/>").append($("<input/>", 
+        {
+          id : "wpt-" + (index+1).toString() + "-" + entries[i],
+          type : "number",
+          value : val[i],
+          class : "form-control"
+        }));
+      row.append(ent);
+    }
+    $("#waypoint-editor tbody").append(row);
+  });
+}
+
+function updateWptInfo(e) {
+  var elem = $(e.target);
+  var re = /wpt-(\d+)-(.*)/g;
+  var res = re.exec(elem.attr("id"));
+  if (res) {
+    $("#map-canvas").copterMap('updateWaypoint', parseInt(res[1],10)-1, res[2], parseFloat(elem.val()));
+  }
 }
 
 /**
@@ -132,6 +164,13 @@ $(document).ready(function () {
   $("#waypoints-pattern").change(function() {
     var pattern = $("#waypoints-pattern option:selected").val();
     $("#map-canvas").copterMap('hideMarkers', "all").copterMap('showMarkers', pattern);
+  });
+  
+  $('#waypoint-editor').on('change', 'input', updateWptInfo);
+  
+  $("#map-canvas").on("wptUpdated", function(e) {
+    $("#waypoint-editor tbody").empty();
+    $("#map-canvas").copterMap('getActiveMarkerCoordinates', updateWptEditor, true);
   });
 
   /* Update the camera mode */

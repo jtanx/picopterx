@@ -21,6 +21,7 @@ namespace php picopter
 struct coordDeg {
 	1: double lat,
 	2: double lon,
+	3: double alt,
 }
 
 struct attitude {
@@ -51,8 +52,6 @@ service webInterface {
 	string		requestSettings();
 	bool		updateSettings(1: string settings);
 	
-	coordDeg	requestNextWaypoint();
 	bool		updateUserPosition(1: coordDeg wpt);
 	bool		updateWaypoints(1: list<coordDeg> wpts);
-	bool		resetWaypoints();
 }

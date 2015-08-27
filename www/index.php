@@ -114,8 +114,24 @@
               Status unknown.
             </div>
           </div>
+          
+          <!-- Waypoint editing -->
+          <div id="waypoint-editor" class="well hidden">
+            <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Lat</th>
+                <th>Lon</th>
+                <th>Alt</th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+            </table>
+          </div>
         </div>
-
+        
         <!-- Sidebar contents -->
         <div id="right-sidebar-jump" class="nav-jump"></div>
         <div class="col-md-3" id="right-sidebar">
@@ -259,6 +275,11 @@
                   <a href="#" class="btn btn-default btn-block btn-control" onclick='toggleFlightPath()'>Toggle Flight Path</a>
                   <a href="#" class="btn btn-default btn-block btn-control" onclick='clearFlightPath()'>Clear Flight Path</a>
                 </p>
+                <p>Jump to:</p>
+                <div class="btn-group btn-group-justified">
+                  <a href="#" class="btn btn-default btn-control" onclick='jumpTo("copter")'>Copter</a>
+                  <a href="#" class="btn btn-default btn-control" onclick='jumpTo("user")'>User</a>
+                </div>
               </div>
             </div>
           </div>
