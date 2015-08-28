@@ -248,8 +248,11 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
         heightAboveTarget = 4;
     }
 
+
     //taking Euler chained rotations:
+    //The camera defaults to down position.
     double a;
+    /*
     a = DEG2RAD(imu_data->roll);
     cv::Matx33d Rbx(1,      0,       0,
                    0, cos(a), -sin(a),
@@ -264,22 +267,29 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
                    sin(a),  cos(a), 0,
                         0,       0, 1);
     cv::Matx33d Rbody = Rbx*Rby*Rbz;    
+    */
 
+    
+    a = DEG2RAD(current->gimbal.pitch);     //this might be reversed sign
+    cv::Matx33d Rgx(1,      0,       0,     //trying to map top of image to +alt with +pitch on gimbal
+                    0,  cos(a), sin(a),
+                    0, -sin(a), cos(a));
 
-    a = current->gimbal.roll;
-    cv::Matx33d Rgx(1,      0,       0,
-                   0, cos(a), -sin(a),
-                   0, sin(a),  cos(a));
-
-    a = current->gimbal.pitch;
+    /*
+    //a = DEG2RAD(current->gimbal.yaw);     //facing down, yaw operates between X and Z
+    a=0;
     cv::Matx33d Rgy(cos(a), 0, -sin(a),
-                        0, 1,       0,
-                   sin(a), 0,  cos(a));
-    a = current->gimbal.yaw;
+                         0, 1,       0,
+                    sin(a), 0,  cos(a));
+
+    //a = DEG2RAD(current->gimbal.roll);    //facing down, roll operates between X and Y
+    a=0;
     cv::Matx33d Rgz(cos(a), -sin(a), 0,
-                   sin(a),  cos(a), 0,
-                        0,       0, 1);
-    cv::Matx33d Rgimbal = Rgx*Rgy*Rgz;    
+                    sin(a),  cos(a), 0,
+                         0,       0, 1);
+    */
+    //cv::Matx33d Rgimbal = Rgx*Rgy*Rgz;    
+    cv::Matx33d Rgimbal = Rgx;    //cut this back to the complexity we had before
 
     /*
     lidar dist;
@@ -308,7 +318,8 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     //3D vector of the target on the image plane
     cv::Vec3d RelCam(object->position.x, object->position.y, L);
     //3D vector of the target in global rotations, relative to the copter
-    cv::Vec3d RelBody = Rbody * Rgimbal * RelCam;
+    cv::Vec3d RelBody = Rgimbal * RelCam;
+    //cv::Vec3d RelBody = Rbody * Rgimbal * RelCam;
 
     //Angles from image normal
     double theta = atan(RelCam[1]/RelCam[2]); //y angle
@@ -332,12 +343,13 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
         RelBody *= k;
     }
 
+    //These coorinates are a bit crazy.
     //object->offset.y = forwardPosition;
     //object->offset.x = lateralPosition;
     //object->offset.z = heightAboveTarget;
 
-    object->offset.y = RelBody[0];
-    object->offset.x = RelBody[1];
+    object->offset.x = RelBody[0];
+    object->offset.y = RelBody[1];
     object->offset.z = RelBody[2];
 
 
