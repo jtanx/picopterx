@@ -250,7 +250,6 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
 
 
     //taking Euler chained rotations:
-    //The camera defaults to down position.
     double a;
     /*
     a = DEG2RAD(imu_data->roll);
@@ -270,10 +269,11 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     */
 
     
+    //The camera defaults to down position.
     a = DEG2RAD(current->gimbal.pitch);     //this might be reversed sign
-    cv::Matx33d Rgx(1,      0,       0,     //trying to map top of image to +alt with +pitch on gimbal
-                    0,  cos(a), sin(a),
-                    0, -sin(a), cos(a));
+    cv::Matx33d Rgx(1,      0,       0,     //lateral not affected
+                    0, cos(a),  sin(a),     //positive depth into image plane is +forward at +pitch
+                    0, sin(a), -cos(a));    //positive depth into image plane is -alt at gimal zero, +imageY is +alt at +pitch
 
     /*
     //a = DEG2RAD(current->gimbal.yaw);     //facing down, yaw operates between X and Z
