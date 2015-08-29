@@ -6,12 +6,14 @@ set (SOURCE
 	 object_tracker.cpp
 	 user_tracker.cpp
 	 env_mapping.cpp
+	 pathplan.cpp
 )
 set (HEADERS
 	 ${PI_INCLUDE}/waypoints.h
 	 ${PI_INCLUDE}/object_tracker.h
 	 ${PI_INCLUDE}/user_tracker.h
 	 ${PI_INCLUDE}/env_mapping.h
+	 ${PI_INCLUDE}/pathplan.h
 )
 
 #Compile as a static library
@@ -19,3 +21,5 @@ add_library (picopter_modules STATIC ${HEADERS} ${SOURCE})
 
 #Link to base module
 target_link_libraries(picopter_modules LINK_PRIVATE picopter_base)
+#Link to OGDF
+target_link_libraries(picopter_modules LINK_PRIVATE ${OGDF_LIBRARIES})

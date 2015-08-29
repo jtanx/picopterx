@@ -52,6 +52,11 @@ include_directories (${LIBGPS_INCLUDE_DIRS})
 link_directories (${LIBGPS_LIBRARY_DIRS})
 set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
 
+#Check for OGDF
+pkg_check_modules (OGDF ogdf REQUIRED)
+include_directories (${OGDF_INCLUDE_DIRS})
+link_directories (${OGDF_INCLUDE_DIRS})
+
 #Optional libraries (tcmalloc; from google perftools)
 CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
 CHECK_LIBRARY_EXISTS(profiler malloc "" HAVE_LIBPROFILER)
