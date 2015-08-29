@@ -307,6 +307,8 @@ namespace picopter {
                 stream << "Tracking an object."; break;
             case STATE_TRACKING_USER:
                 stream << "Tracking user."; break;
+            case STATE_ENV_MAPPING:
+                stream << "Performing environmental mapping."; break;
         }
         return stream;
     }

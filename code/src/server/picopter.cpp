@@ -115,6 +115,22 @@ public:
 
     bool beginUserMappingThread()
     {
+        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
+            // ALREADY RUNNING
+            return false;
+        } else if (m_fc->cam == NULL || m_fc->lidar == NULL) {
+            return false; //Cannot run without camera and LIDAR
+        } else {
+            Log(LOG_DEBUG, "Running environmental mapping!");
+            std::shared_ptr<FlightTask> mapper = 
+                std::make_shared<EnvironmentalMapping>(m_opts);
+            if (!m_fc->RunTask(TASK_ENVIRONMENTAL_MAPPING, mapper, NULL)) {
+                return false;
+            }
+        }
+        return true;
+
+        /*
         if (m_camera_thread.joinable()) {
             m_camera_stop = true;
             m_camera_thread.join();
@@ -142,6 +158,7 @@ public:
             Log(LOG_DEBUG, "USER MAPPING");
         }
         return true;
+        */
     }
 
     bool beginObjectTrackingThread(const int32_t method)

@@ -43,7 +43,9 @@ namespace picopter {
         /** Tracking a found object **/
         STATE_TRACKING_LOCKED,
         /** Tracking a user **/
-        STATE_TRACKING_USER
+        STATE_TRACKING_USER,
+        /** Performing environmental mapping **/
+        STATE_ENV_MAPPING
     } ControllerState;
     
     /**
@@ -61,7 +63,9 @@ namespace picopter {
         /** Track the user using coordinates supplied by them (e.g. phone). **/
         TASK_USER_TRACKING,
         /** Waypoints special case: Spiral up/down pattern. **/
-        TASK_SPIRAL_SEARCH
+        TASK_SPIRAL_SEARCH,
+        /**Environmental mapping **/
+        TASK_ENVIRONMENTAL_MAPPING,
     } TaskIdentifier;
     
     /**
