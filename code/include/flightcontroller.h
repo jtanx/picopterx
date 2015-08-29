@@ -14,6 +14,7 @@
 #include "imu_feed.h"
 #include "flightboard.h"
 #include "camera_stream.h"
+#include "lidar.h"
 
 namespace picopter {
     /* Forward declaration of the flight task class */
@@ -97,6 +98,8 @@ namespace picopter {
             Buzzer* const &buzzer;
             /** A pointer to the Camera stream instance.**/
             CameraStream* const &cam;
+            /** A pointer to the LIDAR instance. **/
+            Lidar* const &lidar;
         private:
             /** Holds the sleep interval in ms. **/
             static const int SLEEP_PERIOD = 200;
@@ -110,6 +113,8 @@ namespace picopter {
             FlightBoard *m_fb;
             /** Holds the Camera stream instance. **/
             CameraStream *m_camera;
+            /** Holds the LIDAR instance. **/
+            Lidar *m_lidar;
             
             /** Indicates if all operations should be stopped. **/
             std::atomic<bool> m_stop;

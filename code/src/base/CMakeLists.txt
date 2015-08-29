@@ -17,6 +17,7 @@ set (SOURCE
 	 camera_stream.cpp
 	 mavcommsserial.cpp
 	 mavcommstcp.cpp
+	 lidar.cpp
 )
 set (HEADERS
 	 flightboard-private.h
@@ -37,6 +38,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/PID.h
 	 ${PI_INCLUDE}/camera_stream.h
 	 ${PI_INCLUDE}/mavcommslink.h
+	 ${PI_INCLUDE}/lidar.h
 )
 
 #Compile as a static library

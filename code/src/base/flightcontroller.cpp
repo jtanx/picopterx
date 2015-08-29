@@ -63,6 +63,7 @@ FlightController::FlightController(Options *opts)
 , gps(m_gps)
 , buzzer(m_buzzer)
 , cam(m_camera)
+, lidar(m_lidar)
 , m_stop{false}
 , m_state{STATE_STOPPED}
 , m_task_id{TASK_NONE}
@@ -71,6 +72,7 @@ FlightController::FlightController(Options *opts)
     m_buzzer = new Buzzer();
     
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
+    InitialiseItem("LIDAR", m_lidar, opts, m_buzzer, false, 1);
     //InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
     //m_gps = gps;
     m_imu = m_fb->GetIMUInstance();    
@@ -102,6 +104,7 @@ FlightController::~FlightController() {
     //delete m_imu; //Part of the FlightBoard now
     //delete m_gps; //Part of the FlightBoard now
     delete m_buzzer;
+    delete m_lidar;
 }
 
 /**
