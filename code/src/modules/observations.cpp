@@ -22,20 +22,22 @@ double getSameProbability(Observation* observation){
 return 0;
 }
 
-//calculate the centre and covariance widths of this object
-DistribParams getDistribParams(){                         
-
-    DistribParams D = {0};
-    return D;
-}
-
 //add another sighting to this object
 void Observations::appendObservation(Observation* observation){     
     sightings.push_back(observation);
     //for(int i=0; i<_distrib_coeffs; i++){
     //    distrib.coeffs[i] += observation->distrib.coeffs[i];
     //}
+    location = combineDistribs(location, observation->location);
+    velocity = combineDistribs(velocity, observation->velocity);
 }
+void Observations::updateObject(){
+    double timestep = 1;
+    location = vectorSum(location, stretchDistrib(velocity, timestep));
+    velocity = vectorSum(velocity, stretchDistrib(acceleration, timestep));
+    //acceleration = vectorSum(acceleration, something);
+}
+
 
 //remove an observation from this object
 void Observations::removeObservation(Observation* observation){     
@@ -82,11 +84,15 @@ DistribParams getDistribParams(Distrib A){
 //combine two distributions (as though statistically independent)
 Distrib combineDistribs(Distrib A, Distrib B){
     Distrib C;
-    //so easy in polynomial form, much harder in vector form
+    //so easy in polynomial form.
     //for(int i=0; i<_distrib_coeffs; i++){
     //    C.coeffs[i] = A.coeffs[i] + B.coeffs[i];
-    //}
-    return C;
+    //}                                                          
+    C.axes = A.axes + B.axes;
+    C.location = C.axes.inv() * (A.axes * A.location + B.axes * B.location);    //takes two lines to prove
+    //you can see here how if B is a zero matrix, it fully cancels out of this equation.
+    //If no velocity or acceleration data is returned by a given sensor, the variance matrix is set to zero
+    return A;
 }
 
 //translate a distrib struct from the origin
@@ -118,12 +124,12 @@ Distrib rotateDistrib(Distrib A, double yaw, double pitch, double roll){
         sin(a),  cos(a), 0 , 
              0,       0, 1 ); 
 
-
-    D.axes = Rx.inv() * Ry.inv() * Rz.inv() * A.axes * Rz * Ry * Rx;    //I think
+//    D.axes = Rx.inv() * Ry.inv() * Rz.inv() * A.axes * Rz * Ry * Rx;
+    D.axes = Rx.t() * Ry.t() * Rz.t() * A.axes * Rz * Ry * Rx;    //makes more sense as transposes
     D.location = A.location;
     return D;
 }
-//stretch a distrib struct about the origin, only along the 
+//stretch a distrib struct about the origin
 Distrib stretchDistrib(Distrib A, double sx, double sy, double sz){
     Distrib D;
 
@@ -136,4 +142,21 @@ Distrib stretchDistrib(Distrib A, double sx, double sy, double sz){
     D.axes = S.inv() * S.inv() * A.axes;    //increase the size
 
     return D;
+}
+
+
+    
+    //we want the convolution of e^((x-l).t()*A*(x-l)), e^((x-l).t()*B*(x-l))
+Distrib vectorSum(Distrib A, Distrib B){
+     Distrib C;
+    //DistribParams Pa = getDistribParams(A);
+    //DistribParams Pb = getDistribParams(B);
+
+    C.location = A.location + B.location;
+    
+    C.axes = (A.axes + B.axes) * (1/4); //completely the wrong operator!
+    //needs to be replaced by a solution to the convolution. 
+
+
+    return A;
 }

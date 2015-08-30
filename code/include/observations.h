@@ -5,6 +5,11 @@
 
 
 /*
+    I want a computationally efficient model for uncertainty.
+    If I wanted an accurrate model for uncertainty, I'd use a voxel system with block density following probability density gradient
+        Such a system (I expect) would chew on truly vast quantities of memory and computing power
+    This code runs on an ellipsoidal gaussian structure
+
     a 3d gaussian elliptical structure: (treat as a probability density function PDF)
         p = e^-(ax^2 + by^2 + cz^2 + dyz + ezx + fxy + g)
     The semi-major axes are encoded with
@@ -19,6 +24,20 @@
 
 */
 
+
+/*
+Partial implementation and generalisation to 3D of:
+    Representation and Estimation of Spatial Uncertainty
+    Randall C. Smith and Peter Cheeseman
+    The International Journal of Robotics Research 1986; 5; 56
+    DOI: 10.1177/027836498600500404
+
+Motivated by investigation into the monocular case of:
+    IEEE JOURNAL OF ROBOTICS AND AUTOMATION, VOL. RA-3, NO. 3, JUNE 1987
+    Error Modeling in Stereo Navigation
+
+
+*/
 
 #ifndef _PICOPTERX_OBSERVATIONS_H
 #define _PICOPTERX_OBSERVATIONS_H
@@ -38,6 +57,8 @@ namespace picopter {
         cv::Matx31d location;   //offset from origin column vector
         //double coeffs[10];
     } Distrib;
+    //empty measurements will just be zeroed out. A zero matrix represents infinite variance and covariance
+    //zero coefficients in the polynomial case, zeroed matrix in the vector case
 
     //parameters to construct the elliptic structure above
     typedef struct DistribParams {
@@ -45,6 +66,7 @@ namespace picopter {
         double sigma_x, sigma_y, sigma_z;
         double yaw, pitch, roll;
     } DistribParams;
+
 
     //where the observation came from
     typedef enum Source {   //should probably be a collection of booleans instead of splitting sensor values
@@ -57,15 +79,19 @@ namespace picopter {
     } Source;
     //ObjectInfo    //detections from the camera stream (grouped into single objects)
 
+    //The specific measurement of the object.  These might get flushed to disk if we ever get that far.
     typedef struct Observation {
         //location of copter +uncertainty
         //time
         //IMU data (including velocity)
-        //3D probability density function (elliptical normal)
-        Distrib distrib;
+        //3D probability density function (ellipsoidal normal )
+        Distrib location;
         //sensor pack the detection came from
         Source source;
-
+        //velocity information if it is available
+        Distrib velocity;   
+        //acceleration information if it is available
+        Distrib acceleration;
         //information from camera detection defined in camera_stream
         ObjectInfo* camDetection;
         //something for lidar data
@@ -73,27 +99,32 @@ namespace picopter {
 
     } Observation;
 
-    Distrib generatedistrib(DistribParams params);             //generate an distrib struct from a primitive and operators
-    DistribParams getdistribParams(Distrib A);                  //calculate the centre and covariance widths of this object
+    Distrib generatedistrib(DistribParams params);                              //generate an distrib struct from a primitive and operators
+    DistribParams getdistribParams(Distrib A);                                  //calculate the centre and covariance widths of this object
 
-    Distrib combineDistribs(Distrib A, Distrib B);         //combine two distrib distributions (as though statistically independent)
-    Distrib translateDistrib(Distrib A, double x, double y, double z);      //translate an distrib struct from the origin
-    Distrib rotateDistrib(Distrib A, double yaw, double pitch, double roll);       //translate an distrib struct about the origin
-    Distrib stretchDistrib(Distrib A, double sx, double sy, double sz);         //stretch an distrib struct about the origin
-
-
+    Distrib combineDistribs(Distrib A, Distrib B);                              //combine two distrib distributions (as though statistically independent)
+    Distrib translateDistrib(Distrib A, double x, double y, double z);          //translate a distrib struct from the origin
+    Distrib rotateDistrib(Distrib A, double yaw, double pitch, double roll);    //rotate a distrib struct about the origin
+    Distrib stretchDistrib(Distrib A, double sx, double sy, double sz);         //stretch a distrib struct about the origin
+    inline Distrib stretchDistrib(Distrib A, double s){                         //overload
+        return stretchDistrib(A,s,s,s);}                                              
+    Distrib vectorSum(Distrib A, Distrib B);                                    //move the centre of A by a distance described by B.
+    //one per distinct object.
     class Observations {
         public:
             Observations();
             double getSameProbability(Observation* observation);    //estimate the probability the given observation is of the same object
-            void appendObservation(Observation* observation);     //add another sighting to this object
-            void removeObservation(Observation* observation);     //remove an observation from this object
+            void appendObservation(Observation* observation);       //add another sighting to this object
+            void removeObservation(Observation* observation);       //remove an observation from this object
+            void updateObject();                                    //update the location and velocity with the time.
 
         private:
-            Distrib distrib;    //cumulative distrib
-            std::vector<Observation*> sightings;
-
-
+            std::vector<Observation*> sightings;                    //the collection of sightings associated with this object
+            Distrib location;                                       //cumulative uncertainty distribution
+            Distrib velocity;                                       //the current distribution for velocity. distrib will be translated and inflated by this much per unit of time.
+            Distrib acceleration;                                   //the current distribution for acceleration. velocity will be translated and inflated by this much per unit of time.
+            //acceleration won't be measured by most sensors, so we'll just leave this at some reasonable value
+            //for chasing the buggy, we'll set this as a flat-ish circle on the origin
     };
 }
 
