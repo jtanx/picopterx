@@ -269,11 +269,11 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     cv::Matx33d Rbody = Rbx*Rby*Rbz;    
     */
 
-    
-    a = DEG2RAD(current->gimbal.pitch);     //this might be reversed sign
+    a = 50;
+    //a = DEG2RAD(current->gimbal.pitch);     //this might be reversed sign
     cv::Matx33d Rgx(1,      0,       0,     //trying to map top of image to +alt with +pitch on gimbal
-                    0,  cos(a), sin(a),
-                    0, -sin(a), cos(a));
+                    0,  cos(a), -sin(a),
+                    0,  sin(a), cos(a));
 
     /*
     //a = DEG2RAD(current->gimbal.yaw);     //facing down, yaw operates between X and Z
@@ -322,13 +322,13 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     //cv::Vec3d RelBody = Rbody * Rgimbal * RelCam;
 
     //Angles from image normal
-    double theta = atan(RelCam[1]/RelCam[2]); //y angle
-    double phi   = atan(RelCam[0]/RelCam[2]); //x angle
+    //double theta = atan(RelCam[1]/RelCam[2]); //y angle
+    //double phi   = atan(RelCam[0]/RelCam[2]); //x angle
     
     //Tilt - in radians from vertical
     //double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
     //double gimbalTilt = current->gimbal.pitch;
-    double objectAngleY = DEG2RAD(current->gimbal.pitch) + theta;
+    //double objectAngleY = DEG2RAD(current->gimbal.pitch) + theta;
     //double forwardPosition = tan(objectAngleY) * heightAboveTarget;
 
     //double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
@@ -353,9 +353,11 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     object->offset.z = RelBody[2];
 
 
-    Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
+//    Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
+    Log(LOG_DEBUG, "HAT: %.1f m, Gimbal: %.2fdeg, FP: %.2fm, LP: %.2fm",
 //        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
-        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), object->offset.y, object->offset.x);
+//        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), object->offset.y, object->offset.x);
+        -object->offset.z, current->gimbal.pitch, object->offset.y, object->offset.x);
 }
 
 

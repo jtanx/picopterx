@@ -118,7 +118,7 @@ public:
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
             return false;
-        } else if (m_fc->cam == NULL || m_fc->lidar == NULL) {
+        } else if (false /*m_fc->cam == NULL || m_fc->lidar == NULL*/) {
             return false; //Cannot run without camera and LIDAR
         } else {
             Log(LOG_DEBUG, "Running environmental mapping!");
