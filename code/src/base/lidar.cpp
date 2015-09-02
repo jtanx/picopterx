@@ -32,6 +32,7 @@ Lidar::Lidar(Options *opts)
         throw std::invalid_argument("Cannot connect to LIDAR-Lite.");
     }
     m_worker = std::thread(&Lidar::Worker, this);
+    Log(LOG_INFO, "LIDAR intialised!");
 }
 
 /**
@@ -59,6 +60,7 @@ void Lidar::Worker() {
     while (wiringPiI2CWriteReg8(LIDARLITE_ADDRESS, 
         MEASURE_REGISTER, MEASURE_VALUE) < 0 && !m_stop) {
         sleep_for(milliseconds(100));
+	//Log(LOG_DEBUG, "WAITING FOR LIDARLITE");
     }
     
     while (!m_stop) {
