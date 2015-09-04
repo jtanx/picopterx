@@ -51,12 +51,13 @@ void Observations::removeObservation(Observation* observation){
 //generate an distrib struct from a primitive and operators
 Distrib generateDistrib(DistribParams params){
     //primitive is a, spherical distribution sigma=1
+    // = e^-(0.5x^2 + 0.5y^2 + 0.5 z^2 + 0yz + 0xz + 0yx + 0x + 0y + 0z + 0);
     Matx33d axes ( 
         0.5, 0, 0,
         0, 0.5, 0,
         0, 0, 0.5);
     Matx31d location (0,0,0);
-    Distrib primitive = {axes,location};// = {0.5,0.5,0.5, 0,0,0, 0,0,0, 0};
+    Distrib primitive = {axes,location};
 //    for (int i = 0; i < 3; i++) {
 //        primitive.coeffs[i] = 0.5;
 //    }
@@ -81,7 +82,7 @@ DistribParams getDistribParams(Distrib A){
     return D;
 }
 
-//combine two distributions (as though statistically independent)
+//combine two distributions (as though statistically independent, so beware of biases)
 Distrib combineDistribs(Distrib A, Distrib B){
     Distrib C;
     //so easy in polynomial form.
@@ -91,7 +92,7 @@ Distrib combineDistribs(Distrib A, Distrib B){
     C.axes = A.axes + B.axes;
     C.location = C.axes.inv() * (A.axes * A.location + B.axes * B.location);    //takes two lines to prove
     //you can see here how if B is a zero matrix, it fully cancels out of this equation.
-    //If no velocity or acceleration data is returned by a given sensor, the variance matrix is set to zero
+    //If no velocity or acceleration data is returned by a given sensor, the variance matrix is set to zeroes
     return A;
 }
 
@@ -129,7 +130,8 @@ Distrib rotateDistrib(Distrib A, double yaw, double pitch, double roll){
     D.location = A.location;
     return D;
 }
-//stretch a distrib struct about the origin
+
+//stretch a distrib struct about the origin by a ratio
 Distrib stretchDistrib(Distrib A, double sx, double sy, double sz){
     Distrib D;
 
@@ -143,20 +145,20 @@ Distrib stretchDistrib(Distrib A, double sx, double sy, double sz){
 
     return D;
 }
-
-
     
-    //we want the convolution of e^((x-l).t()*A*(x-l)), e^((x-l).t()*B*(x-l))
+    //we want the convolution of e^((x-l1).t()*A*(x-l1)), e^((x-l2).t()*B*(x-l2))
+    //The translation of one Distrib by another. Can be used to encode velocity uncertainty
 Distrib vectorSum(Distrib A, Distrib B){
      Distrib C;
-    //DistribParams Pa = getDistribParams(A);
+    //DistribParams Pa = getDistribParams(A);   //could have generated this from human-readable parameters
     //DistribParams Pb = getDistribParams(B);
 
     C.location = A.location + B.location;
-    
-    C.axes = (A.axes + B.axes) * (1/4); //completely the wrong operator!
+    //C.axes = (A.axes + B.axes) * (1/4); //completely the wrong operator!
     //needs to be replaced by a solution to the convolution. 
 
+    C.axes = (A.axes.inv() + B.axes.inv()).inv();   //a better guess
 
-    return A;
+    return C;
 }
+
