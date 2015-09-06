@@ -56,4 +56,5 @@ service webInterface {
 	
 	bool		updateUserPosition(1: coordDeg wpt);
 	bool		updateWaypoints(1: list<coordDeg> wpts);
+	bool		updateExclusions(1: list<list<coordDeg>> zones);
 }

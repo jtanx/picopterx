@@ -158,12 +158,14 @@ L.NumberedDivIconRed = L.Icon.extend({
             }
             instance.updateBounds();
             instance.updateWptPath();
+            instance.updateExclusions();
           });
         }
 
         marker.on('drag', function(e) {
           instance.updateBounds();
           instance.updateWptPath();
+          instance.updateExclusions();
           $(instance).trigger("wptUpdated");
         });
       };
@@ -195,6 +197,15 @@ L.NumberedDivIconRed = L.Icon.extend({
           "<br>At: " + detection.lat + ", " + detection.lon +
           "<br>Detection altitude: " +
           detection.alt + "m");
+      }
+      
+      /**
+       * Add a new exclusion zone.
+       */
+      this.addExclusionZone = function() {
+        data.excIndex++;
+        data.excMarkers.length = data.excIndex;
+        data.excMarkers[data.excIndex] = [];
       }
       
       /**
@@ -299,12 +310,20 @@ L.NumberedDivIconRed = L.Icon.extend({
         if (data.pattern === "manual") {
           instance.clearMarkers(data.wptMarkers);
           instance.updateWptPath();
-        } else if (data.pattern == "lawnmower") {
+        } else if (data.pattern === "lawnmower") {
           instance.clearMarkers(data.rctMarkers);
           instance.updateBounds();
-        } else if (data.pattern == "spiral") {
+        } else if (data.pattern === "spiral") {
           instance.clearMarkers(data.splMarkers);
           instance.updateBounds();
+        } else if (data.pattern === "exclusion") {
+          for (var i = 0; i < data.excMarkers.length; i++) {
+            instance.clearMarkers(data.excMarkers[i]);
+          }
+          data.excMarkers.length = 1;
+          data.excMarkers[0].length = 0;
+          data.excIndex = 0;
+          instance.updateExclusions();
         }
       }
 
@@ -318,10 +337,8 @@ L.NumberedDivIconRed = L.Icon.extend({
           var newdata = [];
           if (typeof data != 'undefined') {
             $.each(data, function(index, val) {
-              lat = val.getLatLng().lat;
-              lng = val.getLatLng().lng;
-              alt = val.alt;
-              newdata.push([lat,lng, alt]);
+              var ll = val.getLatLng();
+              newdata.push([ll.lat,ll.lng, val.alt]);
             });
           }
           return newdata;
@@ -339,6 +356,27 @@ L.NumberedDivIconRed = L.Icon.extend({
       };
       
       /**
+       * Retrieve the list of exclusion zones.
+       * @param [in] callback The callback receiving the exclusion zones.
+       */
+      this.getExclusionZones = function(callback) {
+        var pkg = [];
+        for (var i = 0; i < data.excMarkers.length; i++) {
+          var zone = [];
+          for (var j = 0; j < data.excMarkers[i].length; j++) {
+            var ll = data.excMarkers[i][j].getLatLng();
+            zone.push([ll.lat, ll.lng, 0]);
+          }
+          if (zone.length > 0) {
+            pkg.push(zone);
+          }
+        }
+        
+        //Always call callback. No exclusion zones may be what's required.
+        callback(pkg);
+      }
+      
+      /**
        * Updates a waypoint position and information
        * @param [in] index The zero-index of the marker/waypoint.
        * @param [in] type The type of the value to update (lat/lon/alt)
@@ -353,6 +391,8 @@ L.NumberedDivIconRed = L.Icon.extend({
             markers === data.rctMarkers;
           } else if (data.pattern === "spiral") {
             markers = data.splMarkers;
+          } else if (data.pattern === "exclusion") {
+            markers = data.excMarkers[data.excIndex];
           }
           
           if (markers && index < markers.length) {
@@ -402,6 +442,21 @@ L.NumberedDivIconRed = L.Icon.extend({
           instance.toggleEditMarkers(data.rctMarkers, data.editMode);
         } else if (pattern === "spiral") {
           instance.toggleEditMarkers(data.splMarkers, data.editMode);
+        } else if (pattern === "exclusion") {
+          var nm = [];
+          //Make marker list contiguous (don't allow for empty marker lists)
+          for (var i = 0; i < data.excMarkers.length; i++) {
+            if (data.excMarkers[i].length > 0) {
+              instance.toggleEditMarkers(data.excMarkers[i], data.editMode);
+              nm.push(data.excMarkers[i]);
+            }
+          }
+          if (nm.length === 0) {
+            nm.length = 1;
+            nm[0] = [];
+          }
+          data.excMarkers = nm;
+          data.excIndex = nm.length-1;
         }
         data.pattern = pattern;
       }
@@ -434,6 +489,28 @@ L.NumberedDivIconRed = L.Icon.extend({
               {color : "#FF3300", weight : 1}
             ).addTo(data.map);
           }
+        }
+      };
+      
+      /**
+       * Updates the exclusion zone polygons that are displayed.
+       */
+      this.updateExclusions = function() {
+        instance.removeMapLayer(data.map, data, 'exclusionZones');
+        var lls = [];
+        
+        for (var i = 0; i < data.excMarkers.length; i++) {
+          var ll = [];
+          for (var j = 0; j < data.excMarkers[i].length; j++) {
+            ll.push(data.excMarkers[i][j].getLatLng());
+          }
+          lls.push(ll);
+        }
+        
+        if (typeof L.multiPolygon === "undefined") {
+          data.exclusionZones = L.polygon(lls, {'color' : "#AA2233", 'fillColor' : "#FF0055"}).addTo(data.map);
+        } else {
+          data.exclusionZones = L.multiPolygon(lls, {'color' : "#AA2233", 'fillColor' : "#FF0055"}).addTo(data.map);
         }
       };
 
@@ -469,9 +546,13 @@ L.NumberedDivIconRed = L.Icon.extend({
           hide(data.wptMarkers, data.map);
           hide(data.rctMarkers, data.map);
           hide(data.splMarkers, data.map);
+          for (var i = 0; i < data.excMarkers.length; i++)
+            hide(data.excMarkers[i], data.map);
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
           instance.removeMapLayer(data.map, data, 'boundRegion');
           instance.removeMapLayer(data.map, data, 'upperBoundRegion');
+          for (var i = 0; i < data.exclusionZones.length; i++)
+            instance.removeMapLayer(data.map, data, 'exclusionZones');
         } else if (pattern === "manual") {
           hide(data.wptMarkers, data.map);
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
@@ -482,6 +563,10 @@ L.NumberedDivIconRed = L.Icon.extend({
           hide(data.splMarkers, data.map);
           instance.removeMapLayer(data.map, data, 'boundRegion');
           instance.removeMapLayer(data.map, data, 'upperBoundRegion');
+        } else if (pattern === "exclusion") {
+          for (var i = 0; i < data.excMarkers.length; i++)
+            hide(data.excMarkers[i], data.map);
+          instance.removeMapLayer(data.map, data, 'exclusionZones');
         }
       };
 
@@ -499,13 +584,24 @@ L.NumberedDivIconRed = L.Icon.extend({
         data.pattern = pattern;
         if (pattern === "manual") {
           show(data.wptMarkers, data.map);
+          instance.toggleEditMarkers(data.wptMarkers, data.editMode);
           instance.updateWptPath();
         } else if (pattern === "lawnmower") {
           show(data.rctMarkers, data.map);
+          instance.toggleEditMarkers(data.rctMarkers, data.editMode);
           instance.updateBounds();
         } else if (pattern === "spiral") {
           show(data.splMarkers, data.map);
+          instance.toggleEditMarkers(data.splMarkers, data.editMode);
           instance.updateBounds();
+        } else if (pattern === "exclusion") {
+          if (data.editMode) {
+            for (var i = 0; i < data.excMarkers.length; i++) {
+              show(data.excMarkers[i], data.map);
+              instance.toggleEditMarkers(data.excMarkers[i], data.editMode);
+            }
+          }
+          instance.updateExclusions();
         }
         $(instance).trigger("wptUpdated");
       };
@@ -518,8 +614,15 @@ L.NumberedDivIconRed = L.Icon.extend({
        */
       this.removeMapLayer = function(map, obj, item) {
         if (obj[item]) {
-          map.removeLayer(obj[item]);
-          obj[item] = undefined;
+          if (obj[item].constructor === Array) {
+            for (var i = 0; i < obj[item].length; i++) {
+              map.removeLayer(obj[item][i]);
+            }
+            obj[item].length = 0;
+          } else {
+            map.removeLayer(obj[item]);
+            obj[item] = undefined;
+          }
         }
       }
 
@@ -537,9 +640,12 @@ L.NumberedDivIconRed = L.Icon.extend({
           rctMarkers : [],
           splMarkers : [],
           dctMarkers : [],
+          excMarkers : [[]],
           paths : {},
           editMode : false,
-          pattern : undefined
+          pattern : undefined,
+          exclusionZones : [],
+          excIndex : 0
         }, options);
         $(instance).data("copterMap", data);
 
@@ -563,6 +669,9 @@ L.NumberedDivIconRed = L.Icon.extend({
                 instance.addNumberedMarker(data.splMarkers, pos.latlng, true);
               }
               instance.updateBounds();
+            } else if (data.pattern === "exclusion") {
+              instance.addNumberedMarker(data.excMarkers[data.excIndex], pos.latlng, true);
+              instance.updateExclusions();
             }
             $(instance).trigger("wptUpdated");
           }

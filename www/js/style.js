@@ -47,12 +47,27 @@ function clearFlightPath() {
   $("#map-canvas").copterMap('clearCopterPath');
 }
 
+/**
+ * Enable waypoints editing.
+ */
 function waypointsEdit() {
   var pattern = $("#waypoints-pattern option:selected").val();
   $("#map-canvas").copterMap('toggleEditMode', pattern);
   $("#wpt-begin-container").toggleClass('hidden');
   $("#wpt-editalert").toggleClass('hidden');
   $("#waypoint-editor").toggleClass('hidden');
+  if (pattern === "exclusion") {
+    $("#wpt-exclconfig").toggleClass('hidden');
+  }
+}
+
+
+/**
+ * Add a new exclusion zone.
+ * @return Return_Description
+ */
+function addExclusionZone() {
+  $("#map-canvas").copterMap('addExclusionZone');
 }
 
 /**
@@ -167,6 +182,7 @@ $(document).ready(function () {
   $("#waypoints-pattern").change(function() {
     var pattern = $("#waypoints-pattern option:selected").val();
     $("#wpt-spiralconfig").toggleClass("hidden", pattern !== "spiral");
+    $("#wpt-exclconfig").toggleClass("hidden", pattern !== "exclusion" || $("#wpt-editalert").hasClass('hidden'));
     $("#map-canvas").copterMap('hideMarkers', "all").copterMap('showMarkers', pattern);
   });
   

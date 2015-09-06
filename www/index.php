@@ -197,6 +197,7 @@
                   <label><input type="checkbox" id="wpt-spiraldir"> Face outwards</label>
                 </div>
                 <div class="btn-group btn-group-justified">
+                  <a href="#" class="btn btn-success btn-control hidden" id="wpt-exclconfig" onclick='addExclusionZone()'>Add</a>
                   <a href="#" class="btn btn-default btn-control" onclick='waypointsEdit()'>Edit</a>
                   <a href="#" class="btn btn-default btn-control" onclick='waypointsClear()'>Clear</a>
                 </div>

@@ -117,6 +117,31 @@
           print "updateWaypoint failed.\n";
         }
         break;
+        
+      case "updateExclusions":
+        if (isset($source["data"])) {
+          $zones = array();
+
+          foreach ($source["data"] as $zone) {
+            $zlist = array();
+            foreach($zone as $i) {
+              $wp = new \picopter\coordDeg();
+              $wp->lat = $i[0];
+              $wp->lon = $i[1];
+              $wp->alt = $i[2];
+              array_push($zlist, $wp);
+            }
+            if (sizeof($zlist) > 0) {
+              array_push($zones, $zlist);
+            }
+          }
+
+          $ans = $client->updateExclusions($zones);
+          print count($zones) . " exclusion zones added.\n";
+        } else {
+          print "updateExclusions failed.\n";
+        }
+        break;
 
       case "resetWaypoints":
         $ans = $client->resetWaypoints();
