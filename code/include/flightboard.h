@@ -55,13 +55,9 @@ namespace picopter {
             bool IsArmed();
             void Stop();
 
-            //void SetLocalPosition(Coord4D pt);
-            //void SetGlobalPosition(Coord4D pt);
-            //void SetSpeed(Coord4D sp);
-            //void SetAccel(Coord3D acc);
             bool DoGuidedTakeoff(int alt);
             bool DoReturnToLaunch();
-            bool SetGuidedWaypoint(int seq, float radius, float wait, float lat, float lon, float alt, bool relative_alt);
+            bool SetGuidedWaypoint(int seq, float radius, float wait, navigation::Coord3D pt, bool relative_alt);
             bool SetRegionOfInterest(navigation::Coord3D roi);
             bool UnsetRegionOfInterest();
             bool SetWaypointSpeed(int sp);

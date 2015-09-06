@@ -30,7 +30,7 @@ namespace picopter {
             /** Condition to signal the worker thread to wake up **/
             std::condition_variable m_signaller;
             /** The current user location **/
-            navigation::Coord2D m_wpt;
+            navigation::Coord3D m_wpt;
             /** Indicates that there is a new user location for the worker thread **/
             bool m_wpt_available;
             /** Indicates whether or not we've finished running **/

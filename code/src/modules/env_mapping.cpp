@@ -29,7 +29,7 @@ EnvironmentalMapping::~EnvironmentalMapping() {
 void EnvironmentalMapping::GotoLocation(FlightController *fc, Coord3D l, bool relative_alt) {
     GPSData d;
     double wp_distance, wp_alt_delta;     
-    fc->fb->SetGuidedWaypoint(0, 3, 0, l.lat, l.lon, l.alt, relative_alt);
+    fc->fb->SetGuidedWaypoint(0, 3, 0, l, relative_alt);
     
     do {
         fc->gps->GetLatest(&d);

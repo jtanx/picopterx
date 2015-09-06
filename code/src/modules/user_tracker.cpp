@@ -63,8 +63,7 @@ void UserTracker::Run(FlightController *fc, void *opts) {
     while (!fc->CheckForStop()) {
         m_signaller.wait_for(lock, seconds(1), [this,fc]{return m_wpt_available || fc->CheckForStop();});
         if (m_wpt_available) {
-            fc->fb->SetGuidedWaypoint(seq++, 1,
-                0, m_wpt.lat, m_wpt.lon, 0, true);
+            fc->fb->SetGuidedWaypoint(seq++, 1, 0, m_wpt, true);
             m_wpt_available = false;
         }
     }
@@ -79,7 +78,9 @@ void UserTracker::Run(FlightController *fc, void *opts) {
  */
 void UserTracker::UpdateUserPosition(Coord2D wpt) {
     std::unique_lock<std::mutex> lock(m_worker_mutex);
-    m_wpt = wpt;
+    m_wpt.lat = wpt.lat;
+    m_wpt.lon = wpt.lon;
+    m_wpt.alt = 0;
     m_wpt_available = true;
     lock.unlock();
     m_signaller.notify_one();

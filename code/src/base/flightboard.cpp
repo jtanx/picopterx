@@ -295,14 +295,12 @@ bool FlightBoard::DoReturnToLaunch() {
  * @param [in] seq The sequence id of this waypoint.
  * @param [in] radius Acceptance radius (in m) of being at the waypoint.
  * @param [in] wait The wait time (in s) at the waypoint.
- * @param [in] lat The latitude of the waypoint.
- * @param [in] lon The longitude of the waypoint.
- * @param [in] alt The altitude of the waypoint.
+ * @param [in] pt The coordinate of the waypoint.
  * @param [in] relative_alt Whether or not the altitude specified is relative
  *             to the current altitude.
  * @return true iff the waypoint was sent.
  */
-bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, float lat, float lon, float alt, bool relative_alt) {
+bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, navigation::Coord3D pt, bool relative_alt) {
     mavlink_mission_item_t mi = {0};
     mavlink_message_t msg;
     std::lock_guard<std::mutex> lock(m_output_mutex);
@@ -317,9 +315,9 @@ bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, float lat
     mi.param2 = radius; //Acceptance radius in m
     mi.param3 = 0; //Pass through the waypoint; ignored by ArduPilot
     mi.param4 = 0; //Desired yaw angle on completion; ignored by ArduPilot
-    mi.x = lat;
-    mi.y = lon;
-    mi.z = (relative_alt ? (m_gps->GetLatestRelAlt() + alt) : alt);
+    mi.x = pt.lat;
+    mi.y = pt.lon;
+    mi.z = (relative_alt ? (m_gps->GetLatestRelAlt() + pt.alt) : pt.alt);
     
     if (std::isnan(mi.z) || mi.z <= 0) {
         Log(LOG_WARNING, "Waypoint %d: Invalid altitude (%.2f m)", seq, mi.z);

@@ -276,8 +276,7 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             next_point.pt.alt = next_point.pt.alt >= m_waypoint_alt_minimum ? 
                 std::min(next_point.pt.alt, 100.0) : 0;
             fc->fb->SetGuidedWaypoint(req_seq++, m_waypoint_radius,
-                m_waypoint_idle / 1000.0f, next_point.pt.lat, next_point.pt.lon,
-                next_point.pt.alt, next_point.pt.alt == 0);
+                m_waypoint_idle / 1000.0f, next_point.pt, next_point.pt.alt == 0);
             fc->fb->SetWaypointSpeed(3);
             if (next_point.has_roi) {
                 fc->fb->SetRegionOfInterest(next_point.roi);
