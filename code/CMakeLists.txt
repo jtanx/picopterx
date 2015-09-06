@@ -53,8 +53,8 @@ link_directories (${LIBGPS_LIBRARY_DIRS})
 set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
 
 #Optional libraries (tcmalloc; from google perftools)
-CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
-CHECK_LIBRARY_EXISTS(profiler malloc "" HAVE_LIBPROFILER)
+#CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
+#CHECK_LIBRARY_EXISTS(profiler malloc "" HAVE_LIBPROFILER)
 
 if (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
 	#We want to link tcmalloc and the profiler to *everything*
