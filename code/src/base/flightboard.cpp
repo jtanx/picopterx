@@ -34,11 +34,14 @@ FlightBoard::FlightBoard(Options *opts)
 , m_last_heartbeat(999)
 , m_currentData{}
 , m_shutdown{false}
-, m_waypoints_mode{false}
+, m_disable_local{false}
 , m_system_id(0)
 , m_component_id(0)
 , m_flightboard_id(128) //Arbitrary value 0-255
 , m_is_auto_mode{false}
+, m_is_rtl{false}
+, m_is_in_air{false}
+, m_is_armed{false}
 , m_handler_table{}
 {
     if (opts) {
@@ -101,8 +104,14 @@ void FlightBoard::InputLoop() {
                     
                     //Skip heartbeats that aren't from the copter
                     if (heartbeat.type != MAV_TYPE_GCS) {
-                        m_is_auto_mode = static_cast<bool>(heartbeat.custom_mode == GUIDED);
-                        LogSimple(LOG_DEBUG, "Heartbeat! Mode: %d, %d, %d, %d", heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, (int)m_is_auto_mode);
+                        m_is_auto_mode = (heartbeat.custom_mode == GUIDED);
+                        m_is_rtl = (heartbeat.custom_mode == RTL);
+                        m_is_in_air = (heartbeat.system_status == MAV_STATE_ACTIVE);
+                        m_is_armed = static_cast<bool>(
+                            heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED);
+                        LogSimple(LOG_DEBUG, "Heartbeat! Mode: %d, %d, %d, %d, %d", 
+                        heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, 
+                        heartbeat.system_status, (int)m_is_auto_mode);
                         
                         if (m_last_heartbeat >= m_heartbeat_timeout) {
                             mavlink_message_t smsg;
@@ -135,6 +144,11 @@ void FlightBoard::InputLoop() {
                     mavlink_msg_command_ack_decode(&msg, &ack);
                     Log(LOG_DEBUG, "COMMAND: %d, RESULT: %d", ack.command, ack.result);
                 } break;
+                //case MAVLINK_MSG_ID_VFR_HUD: {
+                //    mavlink_vfr_hud_t vfr;
+                //    mavlink_msg_vfr_hud_decode(&msg, &vfr);
+                //    Log(LOG_DEBUG, "Alt: %.1f m", vfr.alt);
+                //} break;
                 //case MAVLINK_MSG_ID_MISSION_ITEM_REACHED: {
                 //    Log(LOG_DEBUG, "MID REACHED!!!!!");
                 //} break;
@@ -199,7 +213,7 @@ void FlightBoard::OutputLoop() {
     yaw_sp.command = MAV_CMD_CONDITION_YAW;
 
     while (!m_shutdown) {
-        if (!m_waypoints_mode && m_is_auto_mode) {
+        if (!m_disable_local && m_is_auto_mode) {
             std::lock_guard<std::mutex> lock(m_output_mutex);
             //Log(LOG_DEBUG, "SENDING");
             float yaw = DEG2RAD(m_imu->GetLatestYaw());
@@ -230,6 +244,50 @@ void FlightBoard::OutputLoop() {
         }
         sleep_for(milliseconds(100));
     }
+}
+
+/**
+ * Performs a takeoff.
+ * This command will only work if the copter is in guided mode and
+ * the motors are already armed. The flightboard will not automatically
+ * arm the motors.
+ * @param [in] alt Height, in m above ground to takeoff to.
+ * @return true iff the message was sent.
+ */
+bool FlightBoard::DoGuidedTakeoff(int alt) {
+    if (m_is_auto_mode && !m_is_in_air && m_is_armed) {
+        mavlink_command_long_t cmd = {};
+        mavlink_message_t msg;
+        
+        //Cannot be sending 'set position' messages when taking off!
+        m_disable_local = true;
+        
+        cmd.target_system = m_system_id;
+        cmd.target_component = m_component_id;
+        cmd.command = MAV_CMD_NAV_TAKEOFF;
+        cmd.param7 = std::max(alt, 0);
+        
+        mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
+        m_link->WriteMessage(&msg);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Send a return-to-launch (RTL) failsafe message to the copter.
+ * @return true iff the message was sent.
+ */
+bool FlightBoard::DoReturnToLaunch() {
+    mavlink_command_long_t cmd = {};
+    mavlink_message_t msg;
+    
+    Log(LOG_WARNING, "SENDING RETURN TO LAUNCH");
+    Stop();
+    cmd.command = MAV_CMD_NAV_RETURN_TO_LAUNCH;
+    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
+    m_link->WriteMessage(&msg);
+    return true;
 }
 
 /**
@@ -268,7 +326,7 @@ bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, float lat
         return false;        
     }
     
-    m_waypoints_mode = true;
+    m_disable_local = true;
     mavlink_msg_mission_item_encode(m_system_id, m_flightboard_id, &msg, &mi);
     m_link->WriteMessage(&msg);
     return true;
@@ -284,7 +342,7 @@ bool FlightBoard::SetRegionOfInterest(Coord3D roi) {
     mavlink_command_long_t cmd = {0};
     mavlink_message_t msg;
     //std::lock_guard<std::mutex> lock(m_output_mutex);
-    //m_waypoints_mode = true;
+    //m_disable_local = true;
     
     cmd.target_system = m_system_id;
     cmd.target_component = m_component_id;
@@ -318,7 +376,7 @@ bool FlightBoard::SetWaypointSpeed(int sp) {
     mavlink_command_long_t cmd = {0};
     mavlink_message_t msg;
     //std::lock_guard<std::mutex> lock(m_output_mutex);
-    //m_waypoints_mode = true;
+    //m_disable_local = true;
     
     cmd.target_system = m_system_id;
     cmd.target_component = m_component_id;
@@ -341,6 +399,30 @@ bool FlightBoard::IsAutoMode() {
 }
 
 /**
+ * Indicates if the copter is in RTL mode.
+ * @return true iff in RTL mode.
+ */
+bool FlightBoard::IsRTL() {
+    return m_is_rtl;
+}
+
+/**
+ * Indicates if the copter is active and in the air (flying)
+ * @return true iff active.
+ */
+bool FlightBoard::IsInAir() {
+    return m_is_in_air;
+}
+
+/**
+ * Indicates if the copter has its motors armed.
+ * @return true iff motors are armed.
+ */
+bool FlightBoard::IsArmed() {
+    return m_is_armed;
+}
+
+/**
  * Stops the hexacopter.
  * Note: Stopping refers to making it hold its current position.
  * Sets all speeds and the gimbal angle to 0.
@@ -349,7 +431,7 @@ void FlightBoard::Stop() {
     std::lock_guard<std::mutex> lock(m_output_mutex);
     FlightData fd_zero = {0};
     m_currentData = fd_zero;
-    m_waypoints_mode = false;
+    m_disable_local = false;
 }
 
 /**
@@ -406,6 +488,7 @@ void FlightBoard::SetData(FlightData *d) {
     m_currentData.rudder = picopter::clamp(d->rudder, -100, 100);
     m_currentData.gimbal = d->gimbal;
     //m_currentData.gimbal = picopter::clamp(d->gimbal, 0, 90);
+    m_disable_local = false;
 }
 
 
@@ -416,6 +499,7 @@ void FlightBoard::SetData(FlightData *d) {
 void FlightBoard::SetAileron(int speed) {
     std::lock_guard<std::mutex> lock(m_output_mutex);
     m_currentData.aileron = picopter::clamp(speed, -100, 100);
+    m_disable_local = false;
 }
 
 /**
@@ -426,6 +510,7 @@ void FlightBoard::SetElevator(int speed) {
     std::lock_guard<std::mutex> lock(m_output_mutex);
     //Elevator speed is inverted.
     m_currentData.elevator = picopter::clamp(speed, -100, 100);
+    m_disable_local = false;
 }
 
 /**
@@ -435,6 +520,7 @@ void FlightBoard::SetElevator(int speed) {
 void FlightBoard::SetRudder(int speed) {
     std::lock_guard<std::mutex> lock(m_output_mutex);
     m_currentData.rudder = picopter::clamp(speed, -100, 100);
+    m_disable_local = false;
 }
 
 /**
@@ -445,4 +531,5 @@ void FlightBoard::SetGimbal(GimbalAngle pose) {
     std::lock_guard<std::mutex> lock(m_output_mutex);
     //m_currentData.gimbal = picopter::clamp(pose, 0, 90);
     m_currentData.gimbal = pose;//
+    m_disable_local = false;
 }

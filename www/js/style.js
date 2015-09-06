@@ -215,4 +215,12 @@ $(document).ready(function () {
       $("#cal-val").val(vals[2]);
     }
   });
+  
+  
+  $('#takeoff-modal').on('click', '.pic-doit', function(e) {
+    var alt = parseInt($("#takeoff-alt").val(), 10);
+    if (alt > 0) {
+      takeOff(alt);
+    }
+  });
 });

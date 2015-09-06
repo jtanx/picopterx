@@ -56,7 +56,22 @@ function getDetectedObjects() {
  *  Send the all stop command
  */
 function allStop() {
-  ajaxSend('allStop');
+  return ajaxSend('allStop');
+}
+
+/**
+ * Perform a take-off.
+ * @param [in] alt The altitude above ground to take-off to.
+ */
+function takeOff(alt) {
+  return ajaxSend('beginTakeoff', alt);
+}
+
+/**
+ * Perform a return to launch (RTL).
+ */
+function returnToLaunch() {
+  return ajaxSend('beginReturnToLaunch');
 }
 
 /**

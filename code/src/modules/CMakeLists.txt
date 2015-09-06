@@ -6,12 +6,14 @@ set (SOURCE
 	 object_tracker.cpp
 	 user_tracker.cpp
 	 env_mapping.cpp
+	 utility.cpp
 )
 set (HEADERS
 	 ${PI_INCLUDE}/waypoints.h
 	 ${PI_INCLUDE}/object_tracker.h
 	 ${PI_INCLUDE}/user_tracker.h
 	 ${PI_INCLUDE}/env_mapping.h
+	 ${PI_INCLUDE}/utility.h
 )
 
 #Compile as a static library

@@ -50,12 +50,17 @@ namespace picopter {
             IMU* GetIMUInstance();
             
             bool IsAutoMode();
+            bool IsRTL();
+            bool IsInAir();
+            bool IsArmed();
             void Stop();
 
             //void SetLocalPosition(Coord4D pt);
             //void SetGlobalPosition(Coord4D pt);
             //void SetSpeed(Coord4D sp);
             //void SetAccel(Coord3D acc);
+            bool DoGuidedTakeoff(int alt);
+            bool DoReturnToLaunch();
             bool SetGuidedWaypoint(int seq, float radius, float wait, float lat, float lon, float alt, bool relative_alt);
             bool SetRegionOfInterest(navigation::Coord3D roi);
             bool UnsetRegionOfInterest();
@@ -89,8 +94,8 @@ namespace picopter {
             MAVCommsLink *m_link;
             /** The shutdown signal **/
             std::atomic<bool> m_shutdown;
-            /** Whether or not we are setting waypoints **/
-            std::atomic<bool> m_waypoints_mode;
+            /** Whether or not to disable local position sending **/
+            std::atomic<bool> m_disable_local;
             /** Output worker mutex **/
             std::mutex m_output_mutex;
             /** Message receiving thread **/
@@ -107,6 +112,12 @@ namespace picopter {
             std::atomic<double> m_current_yaw;
             /** Are we in auto (Guided) mode? **/
             std::atomic<bool> m_is_auto_mode;
+            /** Are we in RTL mode? **/
+            std::atomic<bool> m_is_rtl;
+            /** Are we flying? **/
+            std::atomic<bool> m_is_in_air;
+            /** Are the motors armed? **/
+            std::atomic<bool> m_is_armed;
             /** The event handler table **/
             EventHandler m_handler_table[256];
 

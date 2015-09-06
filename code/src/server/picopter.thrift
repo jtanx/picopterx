@@ -31,6 +31,8 @@ struct attitude {
 }
 
 service webInterface {
+	bool		beginTakeoff(1: i32 alt);
+	bool		beginReturnToLaunch();
 	bool		beginWaypointsThread(1: i32 mode);
 	bool		beginUserTrackingThread();
 	bool		beginObjectTrackingThread(1: i32 method);

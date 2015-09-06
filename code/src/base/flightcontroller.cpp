@@ -55,6 +55,7 @@ void InitialiseItem(const char *what, Item* &pt, Options *opts, Buzzer *b, bool 
 /**
  * The flight controller constructor.
  * Initialises all members as necessary.
+ * @param opts A pointer to options, if any (NULL for defaults)
  * @throws std::invalid_argument if a required component fails to initialise.
  */
 FlightController::FlightController(Options *opts)
@@ -158,6 +159,9 @@ bool FlightController::ReloadSettings(Options *opts) {
  * @return The current state.
  */
 ControllerState FlightController::GetCurrentState() {
+    if (m_fb->IsRTL()) {
+        return STATE_RTL;
+    }
     return m_state.load(std::memory_order_relaxed);
 }
 
@@ -289,6 +293,8 @@ namespace picopter {
         switch(fc.GetCurrentState()) {
             case STATE_STOPPED:
                 stream << "All stop. Standing by."; break;
+            case STATE_RTL:
+                stream << "All stop. RTL mode."; break;
             case STATE_GPS_WAIT_FOR_FIX:
                 stream << "Waiting for a GPS fix."; break;
             case STATE_AWAITING_AUTH:
@@ -309,6 +315,10 @@ namespace picopter {
                 stream << "Tracking user."; break;
             case STATE_ENV_MAPPING:
                 stream << "Performing environmental mapping."; break;
+            case STATE_UTILITY_AWAITING_ARM:
+                stream << "Awaiting motor arming."; break;
+            case STATE_UTILITY_TAKEOFF:
+                stream << "Performing takeoff."; break;
         }
         return stream;
     }

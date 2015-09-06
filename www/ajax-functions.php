@@ -85,6 +85,19 @@
         $ans = $client->allStop();
         print "allStop " . $b[$ans];
         break;
+      
+      case "beginTakeoff":
+        if (isset($source["data"])) {
+          $alt = intval($source["data"]);
+          $ans = $client->beginTakeoff($alt);
+          print "beginTakeoff " . $b[$ans];
+          break;
+        }
+        
+      case "beginReturnToLaunch":
+        $ans = $client->beginReturnToLaunch();
+        print "beginReturnToLaunch " . $b[$ans];
+        break;
 
       case "updateWaypoints":
         if (isset($source["data"])) {

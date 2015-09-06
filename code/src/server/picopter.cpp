@@ -56,6 +56,27 @@ public:
             m_camera_thread.join();
         }
     }
+    
+    bool beginTakeoff(int alt)
+    {
+        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
+            //ALREADY RUNNING
+            return false;
+        } else {
+            std::shared_ptr<FlightTask> utl = std::make_shared<UtilityModule>(
+                m_opts, UtilityModule::UTILITY_TAKEOFF);
+            if (!m_fc->RunTask(TASK_UTILITY, utl, reinterpret_cast<void*>(alt))) {
+                return false;
+            }
+            return true;
+        }
+    }
+    
+    bool beginReturnToLaunch()
+    {
+        m_fc->Stop();
+        return m_fc->fb->DoReturnToLaunch();
+    }
 
     bool beginWaypointsThread(int mode)
     {

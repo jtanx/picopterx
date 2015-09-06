@@ -26,6 +26,8 @@ namespace picopter {
     typedef enum ControllerState{
         /** All stopped and not running anything. **/
         STATE_STOPPED,
+        /** In RTL mode. **/
+        STATE_RTL,
         /** Waiting for a GPS fix. **/
         STATE_GPS_WAIT_FOR_FIX,
         /** Awaiting user authorisation (the auto mode switch). **/
@@ -45,7 +47,11 @@ namespace picopter {
         /** Tracking a user **/
         STATE_TRACKING_USER,
         /** Performing environmental mapping **/
-        STATE_ENV_MAPPING
+        STATE_ENV_MAPPING,
+        /** Awaiting motor arming **/
+        STATE_UTILITY_AWAITING_ARM,
+        /** Performing a take-off **/
+        STATE_UTILITY_TAKEOFF,
     } ControllerState;
     
     /**
@@ -64,8 +70,10 @@ namespace picopter {
         TASK_USER_TRACKING,
         /** Waypoints special case: Spiral up/down pattern. **/
         TASK_SPIRAL_SEARCH,
-        /**Environmental mapping **/
+        /** Environmental mapping **/
         TASK_ENVIRONMENTAL_MAPPING,
+        /** Utility task **/
+        TASK_UTILITY
     } TaskIdentifier;
     
     /**
