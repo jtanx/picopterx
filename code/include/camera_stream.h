@@ -11,6 +11,9 @@
 #include "common.h"
 #include "navigation.h"
 #include <opencv2/opencv.hpp>
+#ifdef IS_ON_PI
+#  include "omxcv.h"
+ #endif
 
 #define STREAM_FILE "/mnt/ramdisk/out.jpg"
 /** The size of the threshold lookup (number of colour bins per channel) **/
@@ -125,6 +128,10 @@ namespace picopter {
             int INPUT_WIDTH, INPUT_HEIGHT, PROCESS_WIDTH, PROCESS_HEIGHT;
             int STREAM_WIDTH, STREAM_HEIGHT, PIXEL_SKIP, PIXEL_THRESHOLD;
             int LEARN_SIZE;
+
+#ifdef IS_ON_PI
+            omxcv::OmxCv *m_enc;
+#endif
 
             void ProcessImages(void);
             void DrawFramerate(cv::Mat& img);

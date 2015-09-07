@@ -55,3 +55,8 @@ target_link_libraries(picopter_base LINK_PRIVATE ${OpenCV_LIBS})
 if (WIRINGPI_FOUND)
 	target_link_libraries(picopter_base LINK_PRIVATE wiringPi)
 endif (WIRINGPI_FOUND)
+
+#Link to omxcv, if present
+if (IS_ON_PI)
+	target_link_libraries(picopter_base LINK_PRIVATE omxcv)
+endif (IS_ON_PI)
