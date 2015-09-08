@@ -150,6 +150,7 @@ public:
             // ALREADY RUNNING
             return false;
         } else if (m_fc->cam == NULL || m_fc->lidar == NULL) {
+            Log(LOG_WARNING, "Not running mapping without camera and LIDAR!");
             return false; //Cannot run without camera and LIDAR
         } else {
             Log(LOG_DEBUG, "Running environmental mapping!");

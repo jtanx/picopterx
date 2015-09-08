@@ -90,7 +90,7 @@ CameraStream::CameraStream(Options *opts)
 
 
 #ifdef IS_ON_PI
-    m_enc = new OmxCv(PICOPTER_HOME_LOCATION "/save.mkv", INPUT_WIDTH, INPUT_HEIGHT);
+    m_enc = new OmxCv(PICOPTER_HOME_LOCATION "/save.mkv", INPUT_WIDTH, INPUT_HEIGHT, 800);
 #endif
 
     //Start the worker thread.
