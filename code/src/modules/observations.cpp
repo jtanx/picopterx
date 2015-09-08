@@ -11,6 +11,8 @@
 
 using namespace picopter;
 using namespace cv;
+
+
 Observations::Observations() {
 
 }
@@ -31,8 +33,7 @@ void Observations::appendObservation(Observation* observation){
     location = combineDistribs(location, observation->location);
     velocity = combineDistribs(velocity, observation->velocity);
 }
-void Observations::updateObject(){
-    double timestep = 1;
+void Observations::updateObject(TIME_TYPE timestep){
     location = vectorSum(location, stretchDistrib(velocity, timestep));
     velocity = vectorSum(velocity, stretchDistrib(acceleration, timestep));
     //acceleration = vectorSum(acceleration, something);
@@ -88,7 +89,7 @@ Distrib combineDistribs(Distrib A, Distrib B){
     //so easy in polynomial form.
     //for(int i=0; i<_distrib_coeffs; i++){
     //    C.coeffs[i] = A.coeffs[i] + B.coeffs[i];
-    //}                                                          
+    //}
     C.axes = A.axes + B.axes;
     C.location = C.axes.inv() * (A.axes * A.location + B.axes * B.location);    //takes two lines to prove
     //you can see here how if B is a zero matrix, it fully cancels out of this equation.
@@ -127,7 +128,7 @@ Distrib rotateDistrib(Distrib A, double yaw, double pitch, double roll){
 
 //    D.axes = Rx.inv() * Ry.inv() * Rz.inv() * A.axes * Rz * Ry * Rx;
     D.axes = Rx.t() * Ry.t() * Rz.t() * A.axes * Rz * Ry * Rx;    //makes more sense as transposes
-    D.location = A.location;
+    D.location = Rz * Ry * Rx * A.location;
     return D;
 }
 
@@ -149,16 +150,20 @@ Distrib stretchDistrib(Distrib A, double sx, double sy, double sz){
     //we want the convolution of e^((x-l1).t()*A*(x-l1)), e^((x-l2).t()*B*(x-l2))
     //The translation of one Distrib by another. Can be used to encode velocity uncertainty
 Distrib vectorSum(Distrib A, Distrib B){
-     Distrib C;
-    //DistribParams Pa = getDistribParams(A);   //could have generated this from human-readable parameters
-    //DistribParams Pb = getDistribParams(B);
-
+    Distrib C;
     C.location = A.location + B.location;
-    //C.axes = (A.axes + B.axes) * (1/4); //completely the wrong operator!
-    //needs to be replaced by a solution to the convolution. 
-
-    C.axes = (A.axes.inv() + B.axes.inv()).inv();   //a better guess
-
+    C.axes = (A.axes.inv() + B.axes.inv()).inv();
     return C;
 }
 
+    //estimate the velocity from two locations and a time difference
+    //estimate the acceleration from two velocities and a time difference
+    //This is basicaly the same as the vectorSum. These won't make reversible transformations
+Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep){
+    Distrib estVel;
+    estVel.location = newLoc.location - oldLoc.location;    //difference in position
+    estVel.axes = (newLoc.axes.inv() + oldLoc.axes.inv()).inv();    //change in variance is same as vectorSum
+
+    estVel = stretchDistrib(estVel, 1/timestep);
+    return estVel;
+}
