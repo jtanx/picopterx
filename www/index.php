@@ -40,6 +40,7 @@
             <li class="active"><a aria-expanded="true" href="#sidebar-waypoints" data-toggle="tab">Waypoints</a></li>
             <li><a aria-expanded="false" href="#sidebar-tracking" data-toggle="tab">Tracking</a></li>
             <li><a aria-expanded="false" href="#sidebar-mapping" data-toggle="tab">Mapping</a></li>
+            <!--<li><a aria-expanded="false" href="#sidebar-general" data-toggle="tab">General</a></li>-->
             <li class="dropdown">
             <a aria-expanded="false" class="dropdown-toggle" data-toggle="dropdown" href="#">
               Options <span class="caret"></span>
@@ -50,6 +51,47 @@
               </ul>
             </li>
           </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modals -->
+    <!-- Take-off modal -->
+    <div class="modal fade" id="takeoff-modal" tabindex="-1" role="dialog" aria-labelledby="takeoff-modal-label">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="takeoff-modal-label">Take-off</h4>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="takeoff-alt" class="control-label">Takeoff altitude (m)</label>
+              <input class="form-control" id="takeoff-alt" type="number" step="1" min="0" value="5">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary pic-doit" data-dismiss="modal">Begin</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- RTL modal -->
+    <div class="modal fade" id="rtl-modal" tabindex="-1" role="dialog" aria-labelledby="rtl-modal-label">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="rtl-modal-label">RTL confirmation</h4>
+          </div>
+          <div class="modal-body">
+            Are you sure that you want to perform an RTL?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+            <button type="button" class="btn btn-danger pic-doit" data-dismiss="modal" onclick='returnToLaunch()'>Yes</button>
+          </div>
         </div>
       </div>
     </div>
@@ -148,18 +190,26 @@
                     <option value="manual" selected="selected">Manual</option>
                     <option value="lawnmower">Lawnmower</option>
                     <option value="spiral">Spiral</option>
+                    <option value="exclusion">Exclusion zones</option>
                   </select>
                 </div>
                 <div class="checkbox hidden" id="wpt-spiralconfig">
                   <label><input type="checkbox" id="wpt-spiraldir"> Face outwards</label>
                 </div>
                 <div class="btn-group btn-group-justified">
+                  <a href="#" class="btn btn-success btn-control hidden" id="wpt-exclconfig" onclick='addExclusionZone()'>Add</a>
                   <a href="#" class="btn btn-default btn-control" onclick='waypointsEdit()'>Edit</a>
                   <a href="#" class="btn btn-default btn-control" onclick='waypointsClear()'>Clear</a>
                 </div>
-                <p id="wpt-begin-container">
-                  <a href="#" class="btn btn-warning btn-block btn-control" onclick="beginWaypoints()">Begin Flight</a>
-                </p>
+                
+                <div class="btn-group btn-block" id="wpt-begin-container">
+                  <a href="#" class="btn btn-warning btn-block-dropdown" onclick="beginWaypoints()">Begin Flight</a>
+                  <a aria-expanded="false" href="#" class="btn btn-warning dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></a>
+                  <ul class="dropdown-menu">
+                    <li><a href="#" data-toggle="modal" data-target="#takeoff-modal">Take off</a></li>
+                    <li><a href="#" data-toggle="modal" data-target="#rtl-modal">Return to launch (RTL)</a></li>
+                  </ul>
+                </div>
                 <div id="wpt-editalert" class="alert alert-info hidden" id="status-bar">
                   Edit mode engaged - click on the map to modify waypoints.
                 </div>
@@ -268,6 +318,23 @@
                 </div>
               </div>
             </div>
+            <!-- General control sidebar -->
+            <!--
+            <div id="sidebar-general" class="tab-pane panel panel-primary">
+              <div class="panel-heading">
+                <h3 class="panel-title">General copter control</h3>
+              </div>
+              <div class="panel-body">
+                <div class="btn-group btn-block">
+                  <a href="#" class="btn btn-warning btn-block-dropdown" data-toggle="modal" data-target="#takeoff-modal">Take off</a>
+                  <a aria-expanded="false" href="#" class="btn btn-warning dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></a>
+                  <ul class="dropdown-menu">
+                    <li><a href="#" data-toggle="modal" data-target="#rtl-modal">Return to launch (RTL)</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            -->
             <!-- Interface settings sidebar -->
             <div id="sidebar-interface" class="tab-pane panel panel-primary">
               <div class="panel-heading">

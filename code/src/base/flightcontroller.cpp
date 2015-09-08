@@ -55,6 +55,7 @@ void InitialiseItem(const char *what, Item* &pt, Options *opts, Buzzer *b, bool 
 /**
  * The flight controller constructor.
  * Initialises all members as necessary.
+ * @param opts A pointer to options, if any (NULL for defaults)
  * @throws std::invalid_argument if a required component fails to initialise.
  */
 FlightController::FlightController(Options *opts)
@@ -63,6 +64,7 @@ FlightController::FlightController(Options *opts)
 , gps(m_gps)
 , buzzer(m_buzzer)
 , cam(m_camera)
+, lidar(m_lidar)
 , m_stop{false}
 , m_state{STATE_STOPPED}
 , m_task_id{TASK_NONE}
@@ -71,6 +73,7 @@ FlightController::FlightController(Options *opts)
     m_buzzer = new Buzzer();
     
     InitialiseItem("flight board", m_fb, opts, m_buzzer, true, 3);
+    InitialiseItem("LIDAR", m_lidar, opts, m_buzzer, false, 1);
     //InitialiseItem("GPS", gps, opts, m_buzzer, true, 3);
     //m_gps = gps;
     m_imu = m_fb->GetIMUInstance();    
@@ -102,6 +105,7 @@ FlightController::~FlightController() {
     //delete m_imu; //Part of the FlightBoard now
     //delete m_gps; //Part of the FlightBoard now
     delete m_buzzer;
+    delete m_lidar;
 }
 
 /**
@@ -155,6 +159,9 @@ bool FlightController::ReloadSettings(Options *opts) {
  * @return The current state.
  */
 ControllerState FlightController::GetCurrentState() {
+    if (m_fb->IsRTL()) {
+        return STATE_RTL;
+    }
     return m_state.load(std::memory_order_relaxed);
 }
 
@@ -195,45 +202,6 @@ bool FlightController::Sleep(int ms) {
     }
     
     return !stop;
-}
-
-/**
- * Infer the current bearing by moving forwards and using the GPS heading.
- * @param ret The return location (bearing in radians).
- * @param move_time The time spent moving forwards in ms (default is 5000ms).
- * @return true iff the bearing could be inferred.
- */
-bool FlightController::InferBearing(double *ret, int move_time) {
-    GPSData start, end;
-    double dist_moved;
-    
-    Log(LOG_INFO, "Inferring the current bearing...");
-    SetCurrentState(STATE_INFER_BEARING);
-    
-    m_fb->Stop();
-    if (!m_gps->WaitForFix(200)) {
-        Log(LOG_INFO, "Bearing inferral failed - no GPS fix.");
-        SetCurrentState(STATE_STOPPED);
-        return false;
-    }
-    
-    m_gps->GetLatest(&start);   
-    m_fb->SetElevator(40);
-    Sleep(move_time);
-    m_fb->Stop();
-    m_gps->GetLatest(&end);
-    
-    if ((dist_moved = navigation::CoordDistance(start.fix, end.fix)) < 1.0) {
-        Log(LOG_INFO, "Bearing inferral failed - did not move far enough (%.1f m)", dist_moved);
-        SetCurrentState(STATE_STOPPED);
-        return false;
-    }
-    
-    Log(LOG_INFO, "The inferred bearing is: %.2f deg (%.2f deg, %.2f m)", 
-        end.fix.heading, navigation::CoordBearing(start.fix, end.fix), dist_moved);
-    *ret = end.fix.heading;
-    SetCurrentState(STATE_STOPPED);
-    return true;
 }
 
 /**
@@ -286,6 +254,8 @@ namespace picopter {
         switch(fc.GetCurrentState()) {
             case STATE_STOPPED:
                 stream << "All stop. Standing by."; break;
+            case STATE_RTL:
+                stream << "All stop. RTL mode."; break;
             case STATE_GPS_WAIT_FOR_FIX:
                 stream << "Waiting for a GPS fix."; break;
             case STATE_AWAITING_AUTH:
@@ -304,6 +274,12 @@ namespace picopter {
                 stream << "Tracking an object."; break;
             case STATE_TRACKING_USER:
                 stream << "Tracking user."; break;
+            case STATE_ENV_MAPPING:
+                stream << "Performing environmental mapping."; break;
+            case STATE_UTILITY_AWAITING_ARM:
+                stream << "Awaiting motor arming."; break;
+            case STATE_UTILITY_TAKEOFF:
+                stream << "Performing takeoff."; break;
         }
         return stream;
     }

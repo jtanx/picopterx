@@ -31,6 +31,8 @@ struct attitude {
 }
 
 service webInterface {
+	bool		beginTakeoff(1: i32 alt);
+	bool		beginReturnToLaunch();
 	bool		beginWaypointsThread(1: i32 mode);
 	bool		beginUserTrackingThread();
 	bool		beginObjectTrackingThread(1: i32 method);
@@ -54,4 +56,5 @@ service webInterface {
 	
 	bool		updateUserPosition(1: coordDeg wpt);
 	bool		updateWaypoints(1: list<coordDeg> wpts);
+	bool		updateExclusions(1: list<list<coordDeg>> zones);
 }

@@ -56,7 +56,22 @@ function getDetectedObjects() {
  *  Send the all stop command
  */
 function allStop() {
-  ajaxSend('allStop');
+  return ajaxSend('allStop');
+}
+
+/**
+ * Perform a take-off.
+ * @param [in] alt The altitude above ground to take-off to.
+ */
+function takeOff(alt) {
+  return ajaxSend('beginTakeoff', alt);
+}
+
+/**
+ * Perform a return to launch (RTL).
+ */
+function returnToLaunch() {
+  return ajaxSend('beginReturnToLaunch');
 }
 
 /**
@@ -64,20 +79,25 @@ function allStop() {
  */
 function beginWaypoints() {
   $("#map-canvas").copterMap('getActiveMarkerCoordinates', function (pattern, coords) {
-    if (coords.length > 0 && pattern === "manual") {
-      ajaxSend('updateWaypoints', coords).success(function () {
-        ajaxSend('beginWaypoints', 0);
-      });
-    } else if (coords.length == 2&& pattern == "lawnmower") {
-      ajaxSend('updateWaypoints', coords).success(function () {
-        ajaxSend('beginWaypoints', 1);
-      });
-    } else if (coords.length >= 2 && pattern == "spiral") {
-      ajaxSend('updateWaypoints', coords).success(function () {
-        var mode = $("#wpt-spiraldir").is(":checked") ? 3 : 2;
-        ajaxSend('beginWaypoints', mode);
-      });
-    }
+    $("#map-canvas").copterMap('getExclusionZones', function(zones) {
+      var mode;
+      
+      if (coords.length > 0 && pattern === "manual") {
+        mode = 0;
+      } else if (coords.length == 2&& pattern == "lawnmower") {
+        mode = 1;
+      } else if (coords.length >= 2 && pattern == "spiral") {
+        mode = $("#wpt-spiraldir").is(":checked") ? 3 : 2;
+      }
+      
+      if (typeof mode !== "undefined") {
+        ajaxSend('updateWaypoints', coords).success(function () {
+          ajaxSend('updateExclusions', zones).success(function () {
+            ajaxSend('beginWaypoints', mode);
+          });
+        });
+      }
+    });
   });
 }
 

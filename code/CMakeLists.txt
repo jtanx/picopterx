@@ -27,6 +27,15 @@ execute_process (COMMAND git  show -s --format=%ci HEAD
 				 OUTPUT_VARIABLE PICOPTER_DATE
 )
 
+#OS checks
+if (WIN32 AND NOT CYGWIN)
+	message (FATAL_ERROR "${Red}Windows is not supported. Sorry.${ColourReset}")
+elseif (CYGWIN)
+	message (WARNING "${Yellow}Cygwin is unsupported. YMMV.${ColourReset}")
+elseif (APPLE)
+	message (WARNING "${Yellow}OS X is unsupported. YMMV. Use of clang strongly discouraged.${ColourReset}")
+endif()
+
 #Set src and include folders
 set (PI_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set (PI_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -43,7 +52,7 @@ set (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 include_directories (${PI_THIRD_PARTY}/mavlink)
 
 #Find prerequisite packages
-find_package (OpenCV REQUIRED)
+find_package (OpenCV 2.4 REQUIRED)
 include_directories (${OpenCV_INCLUDE_DIR})
 
 #Check for gpsd
@@ -53,8 +62,8 @@ link_directories (${LIBGPS_LIBRARY_DIRS})
 set (IS_REAL_LIBGPS ${LIBGPS_FOUND})
 
 #Optional libraries (tcmalloc; from google perftools)
-CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
-CHECK_LIBRARY_EXISTS(profiler malloc "" HAVE_LIBPROFILER)
+#CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_LIBTCMALLOC)
+#CHECK_LIBRARY_EXISTS(profiler malloc "" HAVE_LIBPROFILER)
 
 if (HAVE_LIBTCMALLOC AND HAVE_LIBPROFILER)
 	#We want to link tcmalloc and the profiler to *everything*
@@ -112,6 +121,9 @@ else ()
 	if (NOT WIRINGPI_FOUND)
 		message (FATAL_ERROR "${Red}Building on the RPi without wiringPi${ColourReset}")
 	endif (NOT WIRINGPI_FOUND)
+	add_subdirectory (${PI_THIRD_PARTY}/omxcv)
+	include_directories (${omxcv_SOURCE_DIR})
+	link_directories (/opt/vc/lib /opt/vc/src/hello_pi/libs/ilclient)
 endif ()
 
 if (NOT LIBGPS_FOUND)
@@ -132,16 +144,8 @@ set (CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COMPILE_FLAGS}")
 set (CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_LINK_FLAGS}")
 
 #Pretty filenames (see log.h) and log filepath
-if (NOT MSYS AND NOT CYGWIN)
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(abspath $<))\"'")
-	set (PICOPTER_HOME_LOCATION $ENV{HOME})
-else ()
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(shell cygpath -m $(abspath $<)))\"'")
-	execute_process (COMMAND cygpath -m ~
-					 OUTPUT_STRIP_TRAILING_WHITESPACE
-					 OUTPUT_VARIABLE PICOPTER_HOME_LOCATION
-	)
-endif()
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(subst ${CMAKE_SOURCE_DIR}/src/,,$(abspath $<))\"'")
+set (PICOPTER_HOME_LOCATION $ENV{HOME})
 
 if (NOT PICOPTER_HOME_LOCATION)
 	set (PICOPTER_HOME_LOCATION "/home/pi")

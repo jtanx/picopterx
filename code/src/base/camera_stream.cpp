@@ -17,6 +17,10 @@ using std::chrono::duration_cast;
 using std::chrono::seconds;
 using std::chrono::milliseconds;
 
+#ifdef IS_ON_PI
+    using omxcv::OmxCv;
+#endif
+
 const std::vector<cv::Scalar> CameraStream::m_colours {
     cv::Scalar(255, 0, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 0, 255),
     cv::Scalar(255, 255, 0), cv::Scalar(0, 255, 255), cv::Scalar(255, 0, 255)
@@ -84,6 +88,11 @@ CameraStream::CameraStream(Options *opts)
     opts->SetFamily("GLOBAL");
     m_demo_mode = opts->GetBool("DEMO_MODE", false);
 
+
+#ifdef IS_ON_PI
+    m_enc = new OmxCv(PICOPTER_HOME_LOCATION "/save.mkv", INPUT_WIDTH, INPUT_HEIGHT, 800);
+#endif
+
     //Start the worker thread.
     m_worker_thread = std::async(std::launch::async,
         &CameraStream::ProcessImages, this);
@@ -98,6 +107,10 @@ CameraStream::~CameraStream() {
     if (m_worker_thread.valid()) {
         m_worker_thread.wait();
     }
+
+#ifdef IS_ON_PI
+    delete m_enc;
+#endif
 
     if (m_demo_mode) {
         //Gtk is crap so this doesn't actually do much.
@@ -314,6 +327,9 @@ void CameraStream::ProcessImages() {
             cv::waitKey(1);
         }
 
+#ifdef IS_ON_PI
+        m_enc->Encode(image);
+#endif
         //Stream image
         //Only write the image out for web streaming every 5th frame
         if ((frame_counter % 5) == 0) {
