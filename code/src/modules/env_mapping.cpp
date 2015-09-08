@@ -26,10 +26,11 @@ EnvironmentalMapping::~EnvironmentalMapping() {
 
 }
 
-void EnvironmentalMapping::GotoLocation(FlightController *fc, Coord3D l, bool relative_alt) {
+void EnvironmentalMapping::GotoLocation(FlightController *fc, Coord3D l, Coord3D roi, bool relative_alt) {
     GPSData d;
     double wp_distance, wp_alt_delta;     
     fc->fb->SetGuidedWaypoint(0, 3, 0, l, relative_alt);
+    fc->fb->SetRegionOfInterest(roi);
     
     do {
         fc->gps->GetLatest(&d);
@@ -60,13 +61,13 @@ void EnvironmentalMapping::Run(FlightController *fc, void *opts) {
     //double alt  = fc->gps->GetLatestRelAlt();
     GPSData d;
     fc->gps->GetLatest(&d);
-    Coord3D centre = {d.fix.lat, d.fix.lon, d.fix.alt};
+    Coord3D centre = {d.fix.lat, d.fix.lon, d.fix.alt - d.fix.groundalt};
 
     fc->fb->SetRegionOfInterest(centre);
     for (int j=0; j<3; j+=1) {
         for (int i=0; i<360 && !fc->CheckForStop(); i=i+5) {
             Coord3D location = CoordAddOffset(centre, 5/*start_radius*/, i);
-            GotoLocation(fc, location, false);
+            GotoLocation(fc, location, centre, false);
             Log(LOG_DEBUG, "%d", i);
             //Log(LOG_DEBUG, "%.7f, %.7f", centre.lat, centre.lon);    
             std::string path = std::string(PICOPTER_HOME_LOCATION "/pics/mappingimages") +"_" +

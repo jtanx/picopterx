@@ -24,7 +24,7 @@ namespace picopter {
             std::atomic<bool> m_finished;
 
 
-            void GotoLocation(FlightController *fc, navigation::Coord3D l, bool relative_alt);
+            void GotoLocation(FlightController *fc, navigation::Coord3D l, navigation::Coord3D roi, bool relative_alt);
             /** Copy constructor (disabled) **/
             EnvironmentalMapping(const EnvironmentalMapping &other);
             /** Assignment operator (disabled) **/
