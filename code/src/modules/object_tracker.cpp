@@ -410,7 +410,8 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *cou
         //trackz = m_pidz.Compute();
     }
     
-    //course->rudder = trackw;
+    //TODO: course->z? This controls altitude.
+    //To change yaw, use fb->SetYaw(bearing_or_offset, is_relative)
     course->x = trackx;
     course->y = tracky;
     //Fix the angle for now...

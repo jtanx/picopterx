@@ -20,7 +20,6 @@ set (SOURCE
 	 lidar.cpp
 )
 set (HEADERS
-	 flightboard-private.h
 	 ${PI_INCLUDE}/common.h
 	 ${PI_INCLUDE}/log.h
 	 ${PI_INCLUDE}/datalog.h

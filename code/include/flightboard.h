@@ -18,8 +18,6 @@ namespace picopter {
     class GPS;
     /* Forward declaration of the IMU class */
     class IMU;
-    
-    typedef navigation::EulerAngle GimbalAngle;
 
     /**
      * Controls the actuation of the hexacopter.
@@ -40,15 +38,17 @@ namespace picopter {
             bool IsRTL();
             bool IsInAir();
             bool IsArmed();
+            
             void Stop();
-
             bool DoGuidedTakeoff(int alt);
             bool DoReturnToLaunch();
+            
             bool SetGuidedWaypoint(int seq, float radius, float wait, navigation::Coord3D pt, bool relative_alt);
             bool SetWaypointSpeed(int sp);
             bool SetBodyVel(navigation::Vec3D v);
-            bool SetBodyPos(navigation::Point3D p);
+            bool SetBodyPos(navigation::Vec3D p);
             bool SetYaw(int bearing, bool relative);
+            
             bool SetRegionOfInterest(navigation::Coord3D roi);
             bool UnsetRegionOfInterest();
 
@@ -97,6 +97,8 @@ namespace picopter {
             std::atomic<bool> m_is_in_air;
             /** Are the motors armed? **/
             std::atomic<bool> m_is_armed;
+            /** Watchdog counter on sending relative commands. **/
+            int m_rel_watchdog;
             /** The current gimbal position **/
             navigation::EulerAngle m_gimbal;
             /** The event handler table **/
