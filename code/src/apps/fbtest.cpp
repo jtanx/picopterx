@@ -6,6 +6,7 @@
 #include "picopter.h"
 
 using namespace picopter;
+using namespace picopter::navigation;
 
 int main(int argc, char *argv[]) {
     LogInit();
@@ -20,11 +21,13 @@ int main(int argc, char *argv[]) {
             if (sscanf(buf, "%d %d", &channel, &pct) == 2) {
                 switch(channel) {
                     case 0:
-                        fc.fb->SetAileron(pct); break;
+                        fc.fb->SetBodyVel(Vec3D{pct/100.0*4, 0, 0}); break;
                     case 1:
-                        fc.fb->SetElevator(pct); break;
+                        fc.fb->SetBodyVel(Vec3D{0, pct/100.0*4, 0});break;
                     case 2:
-                        fc.fb->SetRudder(pct); break;
+                        fc.fb->SetBodyVel(Vec3D{0, 0, pct/100.0*4});break;
+                    case 3:
+                        fc.fb->SetYaw(pct*20/100, true); break;
                 }
             }
         }

@@ -9,7 +9,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 extern "C" {
-    #include <pixhawk/mavlink.h>
+    #include <ardupilotmega/mavlink.h>
     // Auto Pilot Modes enumeration
     enum autopilot_modes {
         STABILIZE =     0,  // manual airframe angle with manual throttle

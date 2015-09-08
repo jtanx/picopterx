@@ -70,6 +70,12 @@ namespace picopter {
             double magnitude() { return std::sqrt(x*x + y*y + z*z); };
         } Point3D;
         
+        /** 2D vector (alias) **/
+        typedef struct Point2D Vec2D;
+        
+        /** 3D vector (alias) **/
+        typedef struct Point3D Vec3D;
+        
         /**
          * Holds a set of Euler angles.
          */
