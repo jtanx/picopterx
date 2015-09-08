@@ -41,21 +41,21 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
 
-    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 50);
-    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 22);
-    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 22);
+    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 0.2);
+    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 0.2);
+    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 0.2);
     //double TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
-    TRACK_TauIw = opts->GetReal("TRACK_TauIw", 5);
-    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 5);
-    TRACK_TauIy = opts->GetReal("TRACK_TauIy", 5);
+    TRACK_TauIw = opts->GetReal("TRACK_TauIw", 1.0);
+    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 1.0);
+    TRACK_TauIy = opts->GetReal("TRACK_TauIy", 1.0);
     //double TRACK_TauIz = opts->GetReal("TRACK_TauIz", 5);
-    TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.000); //0.004 caused oscillation
-    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.000);//0.008);//0.008);
-    TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.000);
+    TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.0005); //0.004 caused oscillation
+    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.0005);//0.008);//0.008);
+    TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.0005);
     //double TRACK_TauDz = opts->GetReal("TRACK_TauDz", 0.004);//0.008);
-    TRACK_SPEED_LIMIT_W = opts->GetInt("TRACK_SPEED_LIMIT_W", 40);
-    TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 50);
-    TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 50);
+    TRACK_SPEED_LIMIT_W = opts->GetInt("TRACK_SPEED_LIMIT_W", 20);
+    TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 4);
+    TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 4);
     //int TRACK_SPEED_LIMIT_Z = opts->GetInt("TRACK_SPEED_LIMIT_Z", 50);
     TRACK_SETPOINT_W = opts->GetReal("TRACK_SETPOINT_W", 0);
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
@@ -143,7 +143,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     //Point2D input_limits = {m_camwidth/2.0, m_camheight/2.0};
 
     std::vector<ObjectInfo> locations;
-    FlightData course;
+    Vec3D course{};
+    EulerAngle gimbal;
     GPSData gps_position;
     IMUData imu_data;
     auto last_fix = steady_clock::now() - seconds(2);
@@ -154,7 +155,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         auto sleep_time = microseconds((int)(1000000*update_rate));
 
         fc->cam->GetDetectedObjects(&locations);
-        fc->fb->GetData(&course);
+        fc->fb->GetGimbalPose(&gimbal);
         fc->gps->GetLatest(&gps_position);
         fc->imu->GetLatest(&imu_data);
         //Do we have an object?
@@ -166,14 +167,14 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
             
-            EstimatePositionFromImageCoords(&gps_position, &course, &imu_data, &detected_object);
+            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object);
 
             if (!m_observation_mode) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, true);
-                fc->fb->SetData(&course);
+                fc->fb->SetBodyVel(course);
             }
-            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: (%03.1f, %03.1f, %03.1f)\r",
-                course.aileron, course.elevator, course.rudder, course.gimbal.roll, course.gimbal.pitch, course.gimbal.yaw);
+            LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
+                course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
             last_fix = steady_clock::now();
             had_fix = true;
         } else if (had_fix && steady_clock::now() - last_fix < seconds(2)) {
@@ -188,10 +189,10 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             //Determine trajectory to track the object (PID control)
             if (!m_observation_mode) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, false);
-                fc->fb->SetData(&course);
+                fc->fb->SetBodyVel(course);
             }
-            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: (%03.1f, %03.1f, %03.1f)\r",
-                course.aileron, course.elevator, course.rudder, course.gimbal.roll, course.gimbal.pitch, course.gimbal.yaw);
+            LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
+                course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
         } else {
             //Object lost; we should do a search pattern (TBA)
             SetCurrentState(fc, STATE_TRACKING_SEARCHING);
@@ -232,10 +233,10 @@ bool ObjectTracker::Finished() {
  * 
  * @todo Review the use of the LIDAR-Lite for distance sensing.
  * @param [in] pos The current position of the copter.
- * @param [in] current The current outputs of the copter (for gimbal angle).
+ * @param [in] gimbal The current gimbal angle.
  * @param [in,out] object The detected object.
  */
-void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *current, IMUData *imu_data, ObjectInfo *object) {
+void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object) {
     double heightAboveTarget = std::max(pos->fix.alt - pos->fix.groundalt, 0.0);
     
     if (std::isnan(heightAboveTarget)) {
@@ -270,19 +271,19 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
 
     
     //The camera defaults to down position.
-    a = DEG2RAD(current->gimbal.pitch);     //this might be reversed sign
+    a = DEG2RAD(gimbal->pitch);     //this might be reversed sign
     cv::Matx33d Rgx(1,      0,       0,     //lateral not affected
                     0, cos(a),  sin(a),     //positive depth into image plane is +forward at +pitch
                     0, sin(a), -cos(a));    //positive depth into image plane is -alt at gimal zero, +imageY is +alt at +pitch
 
     /*
-    //a = DEG2RAD(current->gimbal.yaw);     //facing down, yaw operates between X and Z
+    //a = DEG2RAD(gimbal->yaw);     //facing down, yaw operates between X and Z
     a=0;
     cv::Matx33d Rgy(cos(a), 0, -sin(a),
                          0, 1,       0,
                     sin(a), 0,  cos(a));
 
-    //a = DEG2RAD(current->gimbal.roll);    //facing down, roll operates between X and Y
+    //a = DEG2RAD(gimbal->roll);    //facing down, roll operates between X and Y
     a=0;
     cv::Matx33d Rgz(cos(a), -sin(a), 0,
                     sin(a),  cos(a), 0,
@@ -327,8 +328,8 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
     
     //Tilt - in radians from vertical
     //double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
-    //double gimbalTilt = current->gimbal.pitch;
-    double objectAngleY = DEG2RAD(current->gimbal.pitch) + theta;
+    //double gimbalTilt = gimbal->pitch;
+    double objectAngleY = DEG2RAD(gimbal->pitch) + theta;
     //double forwardPosition = tan(objectAngleY) * heightAboveTarget;
 
     //double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
@@ -366,17 +367,17 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, FlightData *cu
  * @param [in] object The detected object.
  * @param [in] has_fix Indicates if we have a fix on the object or not.
  */
-void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData *course, ObjectInfo *object, bool has_fix) {
+void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *course, ObjectInfo *object, bool has_fix) {
     double trackx, tracky, trackw;
     
     if (!has_fix) {
         //Decay the speed
-        trackx = course->aileron * 0.995;
-        tracky = course->elevator * 0.995;
-        trackw = course->rudder * 0.995;
+        trackx = course->x * 0.995;
+        tracky = course->y * 0.995;
+        //trackw = course->rudder * 0.995;
     } else {
         //Zero the course commands
-        memset(course, 0, sizeof(FlightData));
+        memset(course, 0, sizeof(Vec3D));
         
         double desiredSlope = 0.8;    //Maintain about the same camera angle 
         double desiredForwardPosition = object->offset.z/desiredSlope;
@@ -397,7 +398,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
         double objectDistance = std::sqrt(object->offset.x*object->offset.x + object->offset.y*object->offset.y);
         double distanceError = desiredForwardPosition-objectDistance;
         m_pidw.SetProcessValue(-phi);
-        m_pidx.SetProcessValue(-(object->offset.x/objectDistance) * std::abs(distanceError));  //the place we want to put the copter, relative to the copter.
+        m_pidx.SetProcessValue((object->offset.x/objectDistance) * std::abs(distanceError));  //the place we want to put the copter, relative to the copter.
         m_pidy.SetProcessValue((object->offset.y/objectDistance) * distanceError);
         //m_pidz.SetProcessValue(  //throttle controller not used
 
@@ -409,9 +410,10 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, FlightData
         //trackz = m_pidz.Compute();
     }
     
-    //course->rudder = trackw;
-    course->aileron = trackx;
-    course->elevator = tracky;
+    //TODO: course->z? This controls altitude.
+    //To change yaw, use fb->SetYaw(bearing_or_offset, is_relative)
+    course->x = trackx;
+    course->y = tracky;
     //Fix the angle for now...
     //course->gimbal = 50;
     fc->cam->SetTrackingArrow({trackx/TRACK_SPEED_LIMIT_X,

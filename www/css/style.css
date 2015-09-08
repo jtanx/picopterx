@@ -10,6 +10,11 @@ body {
   padding-bottom: 70px;
 }
 
+/* For block-style dropdowns */
+.btn-block-dropdown {
+  width: calc(100% - 42px);
+}
+
 /* For the 'All Stop' button colour */
 .nav-tabs > li > a.nav-primary {
   background-color: #008CBA !important;

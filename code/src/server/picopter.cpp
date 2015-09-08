@@ -33,12 +33,22 @@ std::unique_ptr<picopter::FlightController> g_fc(nullptr);
 class webInterfaceHandler : virtual public webInterfaceIf
 {
 private:
+    /** User-specified options **/
     Options *m_opts;
+    /** Our flight controller **/
     const std::unique_ptr<picopter::FlightController> &m_fc;
+    
+    /** Our list of waypoints **/
     std::deque<Waypoints::Waypoint> m_pts;
+    /** Our list of exclusion zones **/
+    std::deque<std::deque<Waypoints::Waypoint>> m_zones;
+    /** A handle to our user tracker (if any) to update the user position. **/
     std::shared_ptr<FlightTask> m_user_tracker;
+    /** Thread to take pictures (may be unused now) **/
     std::thread m_camera_thread;
+    /** Flag to stop camera picture thread (may be unused now) **/
     std::atomic<bool> m_camera_stop;
+    /** The image sequence number for picture taking (may be unused now) **/
     int m_camera_sequence;
 public:
     webInterfaceHandler(Options *opts, std::unique_ptr<picopter::FlightController> &fc)
@@ -55,6 +65,27 @@ public:
         if (m_camera_thread.joinable()) {
             m_camera_thread.join();
         }
+    }
+    
+    bool beginTakeoff(int alt)
+    {
+        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
+            //ALREADY RUNNING
+            return false;
+        } else {
+            std::shared_ptr<FlightTask> utl = std::make_shared<UtilityModule>(
+                m_opts, UtilityModule::UTILITY_TAKEOFF);
+            if (!m_fc->RunTask(TASK_UTILITY, utl, reinterpret_cast<void*>(alt))) {
+                return false;
+            }
+            return true;
+        }
+    }
+    
+    bool beginReturnToLaunch()
+    {
+        m_fc->Stop();
+        return m_fc->fb->DoReturnToLaunch();
     }
 
     bool beginWaypointsThread(int mode)
@@ -115,6 +146,23 @@ public:
 
     bool beginUserMappingThread()
     {
+        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
+            // ALREADY RUNNING
+            return false;
+        } else if (m_fc->cam == NULL || m_fc->lidar == NULL) {
+            Log(LOG_WARNING, "Not running mapping without camera and LIDAR!");
+            return false; //Cannot run without camera and LIDAR
+        } else {
+            Log(LOG_DEBUG, "Running environmental mapping!");
+            std::shared_ptr<FlightTask> mapper = 
+                std::make_shared<EnvironmentalMapping>(m_opts);
+            if (!m_fc->RunTask(TASK_ENVIRONMENTAL_MAPPING, mapper, NULL)) {
+                return false;
+            }
+        }
+        return true;
+
+        /*
         if (m_camera_thread.joinable()) {
             m_camera_stop = true;
             m_camera_thread.join();
@@ -142,6 +190,7 @@ public:
             Log(LOG_DEBUG, "USER MAPPING");
         }
         return true;
+        */
     }
 
     bool beginObjectTrackingThread(const int32_t method)
@@ -320,6 +369,23 @@ public:
         }
         //printf("updateWaypoints\n");
         return true;
+    }
+    
+    bool updateExclusions(const std::vector< std::vector<coordDeg> > & zones) {
+        Log(LOG_INFO, "Updating exclusion zones");
+        
+        //TODO: Update with Richard's actual code.
+        int i = 1;
+        m_zones.clear();
+        for (std::vector<coordDeg> z : zones) {
+            int j = 1;
+            for (coordDeg v : z) {
+                Log(LOG_INFO, "%d:%d: (%.6f, %.6f, %.1f)",
+                    i, j++, v.lat, v.lon, v.alt);
+            }
+            i++;
+        }
+        return false;
     }
 };
 

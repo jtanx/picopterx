@@ -18,22 +18,6 @@ namespace picopter {
     class GPS;
     /* Forward declaration of the IMU class */
     class IMU;
-    
-    typedef navigation::EulerAngle GimbalAngle;
-    
-    /**
-     * Contains information about the actuation of the hexacopter
-     */
-    typedef struct FlightData {
-        /** Aileron speed, -100 to 100 **/
-        int aileron;
-        /** Elevator speed, -100 to 100 **/
-        int elevator;
-        /** Rudder speed, -100 to 100 **/
-        int rudder;
-        /** Gimbal angle, full Euler angles **/
-        GimbalAngle gimbal;
-    } FlightData;
 
     /**
      * Controls the actuation of the hexacopter.
@@ -48,25 +32,25 @@ namespace picopter {
             
             GPS* GetGPSInstance();
             IMU* GetIMUInstance();
+            void GetGimbalPose(navigation::EulerAngle *p);
             
             bool IsAutoMode();
+            bool IsRTL();
+            bool IsInAir();
+            bool IsArmed();
+            
             void Stop();
-
-            //void SetLocalPosition(Coord4D pt);
-            //void SetGlobalPosition(Coord4D pt);
-            //void SetSpeed(Coord4D sp);
-            //void SetAccel(Coord3D acc);
-            bool SetGuidedWaypoint(int seq, float radius, float wait, float lat, float lon, float alt, bool relative_alt);
+            bool DoGuidedTakeoff(int alt);
+            bool DoReturnToLaunch();
+            
+            bool SetGuidedWaypoint(int seq, float radius, float wait, navigation::Coord3D pt, bool relative_alt);
+            bool SetWaypointSpeed(int sp);
+            bool SetBodyVel(navigation::Vec3D v);
+            bool SetBodyPos(navigation::Vec3D p);
+            bool SetYaw(int bearing, bool relative);
+            
             bool SetRegionOfInterest(navigation::Coord3D roi);
             bool UnsetRegionOfInterest();
-            bool SetWaypointSpeed(int sp);
-            
-            void GetData(FlightData *d);
-            void SetData(FlightData *d);
-            void SetAileron(int speed);
-            void SetElevator(int speed);
-            void SetRudder(int speed);
-            void SetGimbal(GimbalAngle pose);
 
             int RegisterHandler(int msgid, EventHandler handler);
             void DeregisterHandler(int handlerid);
@@ -83,16 +67,16 @@ namespace picopter {
             GPS *m_gps;
             /** Our IMU instance (separate class to handle IMU data parsing) **/
             IMU *m_imu;
-            /** Holds current flight data **/
-            FlightData m_currentData;
             /** The MAVLink data connection **/
             MAVCommsLink *m_link;
             /** The shutdown signal **/
             std::atomic<bool> m_shutdown;
-            /** Whether or not we are setting waypoints **/
-            std::atomic<bool> m_waypoints_mode;
+            /** Whether or not to disable local position sending **/
+            std::atomic<bool> m_disable_local;
             /** Output worker mutex **/
             std::mutex m_output_mutex;
+            /** Gimbal mutex **/
+            std::mutex m_gimbal_mutex;
             /** Message receiving thread **/
             std::thread m_input_thread;
             /** Message sending thread **/
@@ -107,6 +91,16 @@ namespace picopter {
             std::atomic<double> m_current_yaw;
             /** Are we in auto (Guided) mode? **/
             std::atomic<bool> m_is_auto_mode;
+            /** Are we in RTL mode? **/
+            std::atomic<bool> m_is_rtl;
+            /** Are we flying? **/
+            std::atomic<bool> m_is_in_air;
+            /** Are the motors armed? **/
+            std::atomic<bool> m_is_armed;
+            /** Watchdog counter on sending relative commands. **/
+            int m_rel_watchdog;
+            /** The current gimbal position **/
+            navigation::EulerAngle m_gimbal;
             /** The event handler table **/
             EventHandler m_handler_table[256];
 

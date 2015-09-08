@@ -72,7 +72,12 @@ function statusWorker(hud) {
     data: data,
     timeout: 2000,
     success: function(data) {
-      $("#status-bar").text(data.status).removeClass("alert-danger alert-warning").addClass("alert-success");
+      $("#status-bar").text(data.status).removeClass("alert-danger alert-warning alert-success");
+      if (data.status.indexOf("RTL") > -1) {
+        $("#status-bar").addClass("alert-warning");
+      } else {
+        $("#status-bar").addClass("alert-success");
+      }
       $("#map-canvas").copterMap('updateCopterPosition', data.lat, data.lon);
       hud.yaw.setHeading(data.yaw);
       hud.att.setRoll(data.roll);

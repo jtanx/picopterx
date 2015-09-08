@@ -5,3 +5,6 @@
 [submodule "code/third_party/mavlink"]
 	path = code/third_party/mavlink
 	url = https://github.com/mavlink/c_library
+[submodule "code/third_party/omxcv"]
+	path = code/third_party/omxcv
+	url = https://github.com/jtanx/omxcv

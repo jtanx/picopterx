@@ -14,6 +14,7 @@
 #include "imu_feed.h"
 #include "flightboard.h"
 #include "camera_stream.h"
+#include "lidar.h"
 
 namespace picopter {
     /* Forward declaration of the flight task class */
@@ -25,6 +26,8 @@ namespace picopter {
     typedef enum ControllerState{
         /** All stopped and not running anything. **/
         STATE_STOPPED,
+        /** In RTL mode. **/
+        STATE_RTL,
         /** Waiting for a GPS fix. **/
         STATE_GPS_WAIT_FOR_FIX,
         /** Awaiting user authorisation (the auto mode switch). **/
@@ -42,7 +45,13 @@ namespace picopter {
         /** Tracking a found object **/
         STATE_TRACKING_LOCKED,
         /** Tracking a user **/
-        STATE_TRACKING_USER
+        STATE_TRACKING_USER,
+        /** Performing environmental mapping **/
+        STATE_ENV_MAPPING,
+        /** Awaiting motor arming **/
+        STATE_UTILITY_AWAITING_ARM,
+        /** Performing a take-off **/
+        STATE_UTILITY_TAKEOFF,
     } ControllerState;
     
     /**
@@ -60,7 +69,11 @@ namespace picopter {
         /** Track the user using coordinates supplied by them (e.g. phone). **/
         TASK_USER_TRACKING,
         /** Waypoints special case: Spiral up/down pattern. **/
-        TASK_SPIRAL_SEARCH
+        TASK_SPIRAL_SEARCH,
+        /** Environmental mapping **/
+        TASK_ENVIRONMENTAL_MAPPING,
+        /** Utility task **/
+        TASK_UTILITY
     } TaskIdentifier;
     
     /**
@@ -83,8 +96,7 @@ namespace picopter {
             bool WaitForAuth();
             bool ReloadSettings(Options *opts);
             bool RunTask(TaskIdentifier tid, std::shared_ptr<FlightTask> task, void *opts);
-            bool InferBearing(double *ret, int move_time=5000);
-
+            
             friend std::ostream& operator<<(std::ostream &stream, FlightController &fc);
             
             /** A pointer to the flight board controller instance. **/
@@ -97,6 +109,8 @@ namespace picopter {
             Buzzer* const &buzzer;
             /** A pointer to the Camera stream instance.**/
             CameraStream* const &cam;
+            /** A pointer to the LIDAR instance. **/
+            Lidar* const &lidar;
         private:
             /** Holds the sleep interval in ms. **/
             static const int SLEEP_PERIOD = 200;
@@ -110,6 +124,8 @@ namespace picopter {
             FlightBoard *m_fb;
             /** Holds the Camera stream instance. **/
             CameraStream *m_camera;
+            /** Holds the LIDAR instance. **/
+            Lidar *m_lidar;
             
             /** Indicates if all operations should be stopped. **/
             std::atomic<bool> m_stop;

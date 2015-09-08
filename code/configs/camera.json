@@ -1,6 +1,6 @@
 {
 	"CAMERA_STREAM" : {
-		"INPUT_WIDTH" : 1280,
-		"INPUT_HEIGHT" : 720
+		"INPUT_WIDTH" : 640,
+		"INPUT_HEIGHT" : 580
 	}
 }

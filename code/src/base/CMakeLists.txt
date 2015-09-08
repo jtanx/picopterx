@@ -17,9 +17,9 @@ set (SOURCE
 	 camera_stream.cpp
 	 mavcommsserial.cpp
 	 mavcommstcp.cpp
+	 lidar.cpp
 )
 set (HEADERS
-	 flightboard-private.h
 	 ${PI_INCLUDE}/common.h
 	 ${PI_INCLUDE}/log.h
 	 ${PI_INCLUDE}/datalog.h
@@ -37,6 +37,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/PID.h
 	 ${PI_INCLUDE}/camera_stream.h
 	 ${PI_INCLUDE}/mavcommslink.h
+	 ${PI_INCLUDE}/lidar.h
 )
 
 #Compile as a static library
@@ -53,3 +54,8 @@ target_link_libraries(picopter_base LINK_PRIVATE ${OpenCV_LIBS})
 if (WIRINGPI_FOUND)
 	target_link_libraries(picopter_base LINK_PRIVATE wiringPi)
 endif (WIRINGPI_FOUND)
+
+#Link to omxcv, if present
+if (IS_ON_PI)
+	target_link_libraries(picopter_base LINK_PRIVATE omxcv)
+endif (IS_ON_PI)
