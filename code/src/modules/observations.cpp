@@ -19,10 +19,17 @@ Observations::Observations() {
 
 
 //estimate the probability the given observation is of the same object
-double getSameProbability(Observation* observation){    
+//return the integral of  e^((x-l1).t()*A*(x-l1)) * e^((x-l2).t()*B*(x-l2))
+double Observations::getSameProbability(Observation* observation){ 
+    Distrib C;
+    C.axes = (location.axes.inv() + observation->location.axes.inv()).inv();
+    C.vect = location.vect - observation->location.vect;
+    double retval = ((C.vect).t() * (C.axes * C.vect))(0,0);
 
-return 0;
+
+return retval;
 }
+
 
 //add another sighting to this object
 void Observations::appendObservation(Observation* observation){     
@@ -57,8 +64,8 @@ Distrib generateDistrib(DistribParams params){
         0.5, 0, 0,
         0, 0.5, 0,
         0, 0, 0.5);
-    Matx31d location (0,0,0);
-    Distrib primitive = {axes,location};
+    Matx31d vect (0,0,0);
+    Distrib primitive = {axes,vect};
 //    for (int i = 0; i < 3; i++) {
 //        primitive.coeffs[i] = 0.5;
 //    }
@@ -77,9 +84,9 @@ Distrib generateDistrib(DistribParams params){
 DistribParams getDistribParams(Distrib A){
     DistribParams D;
     //sigma values are the eigenvalues
-    D.x = -A.location(0,0);
-    D.y = -A.location(1,0);
-    D.y = -A.location(2,0);
+    D.x = -A.vect(0,0);
+    D.y = -A.vect(1,0);
+    D.y = -A.vect(2,0);
     return D;
 }
 
@@ -91,7 +98,7 @@ Distrib combineDistribs(Distrib A, Distrib B){
     //    C.coeffs[i] = A.coeffs[i] + B.coeffs[i];
     //}
     C.axes = A.axes + B.axes;
-    C.location = C.axes.inv() * (A.axes * A.location + B.axes * B.location);    //takes two lines to prove
+    C.vect = C.axes.inv() * (A.axes * A.vect + B.axes * B.vect);    //takes two lines to prove
     //you can see here how if B is a zero matrix, it fully cancels out of this equation.
     //If no velocity or acceleration data is returned by a given sensor, the variance matrix is set to zeroes
     return A;
@@ -102,7 +109,7 @@ Distrib translateDistrib(Distrib A, double x, double y, double z){
     cv::Matx31d offset(x,y,z);
     Distrib D;
     D.axes = A.axes;
-    D.location = A.location - offset;
+    D.vect = A.vect - offset;
     return D;
 }
 
@@ -128,7 +135,7 @@ Distrib rotateDistrib(Distrib A, double yaw, double pitch, double roll){
 
 //    D.axes = Rx.inv() * Ry.inv() * Rz.inv() * A.axes * Rz * Ry * Rx;
     D.axes = Rx.t() * Ry.t() * Rz.t() * A.axes * Rz * Ry * Rx;    //makes more sense as transposes
-    D.location = Rz * Ry * Rx * A.location;
+    D.vect = Rz * Ry * Rx * A.vect;
     return D;
 }
 
@@ -141,7 +148,7 @@ Distrib stretchDistrib(Distrib A, double sx, double sy, double sz){
         0, sy, 0,
         0, 0, sz);
 
-    D.location = S * A.location;    //increase distance from origin
+    D.vect = S * A.vect;    //increase distance from origin
     D.axes = S.inv() * S.inv() * A.axes;    //increase the size
 
     return D;
@@ -151,7 +158,7 @@ Distrib stretchDistrib(Distrib A, double sx, double sy, double sz){
     //The translation of one Distrib by another. Can be used to encode velocity uncertainty
 Distrib vectorSum(Distrib A, Distrib B){
     Distrib C;
-    C.location = A.location + B.location;
+    C.vect = A.vect + B.vect;
     C.axes = (A.axes.inv() + B.axes.inv()).inv();
     return C;
 }
@@ -161,7 +168,7 @@ Distrib vectorSum(Distrib A, Distrib B){
     //This is basicaly the same as the vectorSum. These won't make reversible transformations
 Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep){
     Distrib estVel;
-    estVel.location = newLoc.location - oldLoc.location;    //difference in position
+    estVel.vect = newLoc.vect - oldLoc.vect;    //difference in position
     estVel.axes = (newLoc.axes.inv() + oldLoc.axes.inv()).inv();    //change in variance is same as vectorSum
 
     estVel = stretchDistrib(estVel, 1/timestep);

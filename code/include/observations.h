@@ -47,6 +47,8 @@ Motivated by investigation into the monocular case of:
 #include "camera_stream.h"
 #include <opencv2/opencv.hpp>
 
+#define TIME_TYPE uint32_t
+
 namespace picopter {
 
     //a 3d gaussian elliptical structure
@@ -54,7 +56,7 @@ namespace picopter {
     const int _distrib_coeffs = 10;
     typedef struct Distrib {
         cv::Matx33d axes;   //eigenvectors are the semi-major axes, eigenvalues are the sigma=1 widths
-        cv::Matx31d location;   //offset from origin column vector
+        cv::Matx31d vect;   //offset from origin column vector
         //double coeffs[10];
     } Distrib;
     //empty measurements will just be zeroed out. A zero matrix represents infinite variance and covariance
@@ -109,6 +111,9 @@ namespace picopter {
     inline Distrib stretchDistrib(Distrib A, double s){                         //overload
         return stretchDistrib(A,s,s,s);}                                              
     Distrib vectorSum(Distrib A, Distrib B);                                    //move the centre of A by a distance described by B.
+    Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep);     //find the step from one distrib to another.
+
+
     //one per distinct object.
     class Observations {
         public:
@@ -116,7 +121,7 @@ namespace picopter {
             double getSameProbability(Observation* observation);    //estimate the probability the given observation is of the same object
             void appendObservation(Observation* observation);       //add another sighting to this object
             void removeObservation(Observation* observation);       //remove an observation from this object
-            void updateObject();                                    //update the location and velocity with the time.
+            void updateObject(TIME_TYPE timestep);                  //update the location and velocity with the time.
 
         private:
             std::vector<Observation*> sightings;                    //the collection of sightings associated with this object
