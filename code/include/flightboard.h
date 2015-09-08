@@ -61,6 +61,7 @@ namespace picopter {
             bool SetRegionOfInterest(navigation::Coord3D roi);
             bool UnsetRegionOfInterest();
             bool SetWaypointSpeed(int sp);
+            bool SetYaw(int bearing, bool relative);
             
             void GetData(FlightData *d);
             void SetData(FlightData *d);

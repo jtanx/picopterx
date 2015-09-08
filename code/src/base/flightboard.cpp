@@ -142,7 +142,8 @@ void FlightBoard::InputLoop() {
                 case MAVLINK_MSG_ID_COMMAND_ACK: {
                     mavlink_command_ack_t ack;
                     mavlink_msg_command_ack_decode(&msg, &ack);
-                    Log(LOG_DEBUG, "COMMAND: %d, RESULT: %d", ack.command, ack.result);
+                    if (ack.result != 0 || ack.command != 115)
+                        Log(LOG_DEBUG, "COMMAND: %d, RESULT: %d", ack.command, ack.result);
                 } break;
                 //case MAVLINK_MSG_ID_VFR_HUD: {
                 //    mavlink_vfr_hud_t vfr;
@@ -203,42 +204,31 @@ void FlightBoard::InputLoop() {
 
 void FlightBoard::OutputLoop() {
     mavlink_message_t msg;
-    //mavlink_set_attitude_target_t sp = {0};
-    //auto now = steady_clock::now();
-    mavlink_set_position_target_local_ned_t sp = {0};
+    mavlink_set_position_target_local_ned_t sp = {};
     sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY;
     sp.coordinate_frame = MAV_FRAME_BODY_OFFSET_NED;
-    //mavlink_set_actuator_control_target_t sp = {0};
-    mavlink_command_long_t yaw_sp = {0};
-    yaw_sp.command = MAV_CMD_CONDITION_YAW;
 
     while (!m_shutdown) {
         if (!m_disable_local && m_is_auto_mode) {
             std::lock_guard<std::mutex> lock(m_output_mutex);
-            //Log(LOG_DEBUG, "SENDING");
-            float yaw = DEG2RAD(m_imu->GetLatestYaw());
-            float px = std::cos(yaw);
-            float py = std::sin(yaw);
+            
+            //We always need to set yaw in case a ROI was set;
+            //If a ROI was set, it will attempt to track that, which we don't want.
+            int yaw_off = (m_currentData.rudder * 20) / 100;
+            SetYaw(yaw_off, true);
+            
             sp.target_system = m_system_id;
             sp.target_component = m_component_id;
-            sp.vx = (4 * (m_currentData.elevator * px - m_currentData.aileron * py)) / 100.0; //Max speed is 4 m/s along one axis
-            sp.vy = (4 * (m_currentData.aileron * px + m_currentData.elevator * py)) / 100.0;
+            //I don't know why this seems reversed.
+            //Contrary to MAVLink specs, by specifying MAV_FRAME_BODY_OFFSET_NED,
+            //the command is interpreted in body coordinates, which ArduCopter
+            //then translates itself (at least in ArduCopter 3.3-rc10)
+            sp.vx = 4 * m_currentData.elevator / 100.0;
+            sp.vy = 4 * m_currentData.aileron / 100.0;
             
             mavlink_msg_set_position_target_local_ned_encode(m_system_id, m_flightboard_id, &msg, &sp);
             //Log(LOG_DEBUG, "px: %.2f, py: %.2f, A: %d, E: %d, R: %d, vx: %.2f, vy: %.2f", px, py, m_currentData.aileron, m_currentData.elevator, m_currentData.rudder, sp.vx, sp.vy);
             m_link->WriteMessage(&msg);
-            
-            if (m_currentData.rudder != 0) {
-                Log(LOG_DEBUG, "MOVING RUDDER");
-                yaw_sp.target_system = m_system_id;
-                yaw_sp.target_component = m_component_id;
-                yaw_sp.param1 = std::fabs(m_currentData.rudder * 15/100.0); //Yaw in deg (relative)
-                yaw_sp.param2 = 0; //std::fabs(m_currentData.rudder * 30/100.0); //Yaw rate in deg/s
-                yaw_sp.param3 = m_currentData.rudder < 0 ? -1 : 1; //Yaw direction (CCW or CW)
-                yaw_sp.param4 = 1; //Relative
-                mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &yaw_sp);
-                m_link->WriteMessage(&msg);
-            }
         } else {
             //Log(LOG_DEBUG, "SLEEPING");
         }
@@ -357,7 +347,8 @@ bool FlightBoard::SetRegionOfInterest(Coord3D roi) {
 /**
  * Unsets the region of interest. This stops the copter from tracking
  * a particular region of interest. It is a convenience function to calling
- * SetRegionOfInterest with the ROI set to (0,0,0).
+ * SetRegionOfInterest with the ROI set to (0,0,0). It also re-enables
+ * auto-yaw control.
  * @return true iff the message was sent.
  */
 bool FlightBoard::UnsetRegionOfInterest() {
@@ -383,6 +374,30 @@ bool FlightBoard::SetWaypointSpeed(int sp) {
     cmd.param2 = sp;
     
     mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
+    m_link->WriteMessage(&msg);
+    return true;
+}
+
+/**
+ * Sets the direction that the copter should be facing.
+ * This method disables 'auto yaw'. To re-enable auto-yaw, call
+ * UnsetRegionOfInterest.
+ * @param [in] bearing The bearing (0-360deg), or offset (deg) if relative.
+ * @param [in] relative The 'bearing' should be treated as an offset to
+ *                      the current bearing.
+ * @return true iff the command was sent.
+ */
+bool FlightBoard::SetYaw(int bearing, bool relative) {
+    mavlink_message_t msg;
+    mavlink_command_long_t yaw_sp = {};
+    yaw_sp.command = MAV_CMD_CONDITION_YAW;
+    yaw_sp.target_system = m_system_id;
+    yaw_sp.target_component = m_component_id;
+    yaw_sp.param1 = bearing; //Bearing in deg
+    yaw_sp.param2 = 0; //Yaw rate in deg/s
+    yaw_sp.param3 = 0; //Yaw direction (CCW or CW)
+    yaw_sp.param4 = relative ? 1 : 0; //Relative
+    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &yaw_sp);
     m_link->WriteMessage(&msg);
     return true;
 }
