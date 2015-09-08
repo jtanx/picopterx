@@ -41,21 +41,21 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
 
-    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 50);
-    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 22);
-    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 22);
+    TRACK_Kpw = opts->GetReal("TRACK_Kpw", 0.2);
+    TRACK_Kpx = opts->GetReal("TRACK_Kpx", 0.2);
+    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 0.2);
     //double TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
-    TRACK_TauIw = opts->GetReal("TRACK_TauIw", 5);
-    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 5);
-    TRACK_TauIy = opts->GetReal("TRACK_TauIy", 5);
+    TRACK_TauIw = opts->GetReal("TRACK_TauIw", 1.0);
+    TRACK_TauIx = opts->GetReal("TRACK_TauIx", 1.0);
+    TRACK_TauIy = opts->GetReal("TRACK_TauIy", 1.0);
     //double TRACK_TauIz = opts->GetReal("TRACK_TauIz", 5);
-    TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.000); //0.004 caused oscillation
-    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.000);//0.008);//0.008);
-    TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.000);
+    TRACK_TauDw = opts->GetReal("TRACK_TauDw", 0.0005); //0.004 caused oscillation
+    TRACK_TauDx = opts->GetReal("TRACK_TauDx", 0.0005);//0.008);//0.008);
+    TRACK_TauDy = opts->GetReal("TRACK_TauDy", 0.0005);
     //double TRACK_TauDz = opts->GetReal("TRACK_TauDz", 0.004);//0.008);
-    TRACK_SPEED_LIMIT_W = opts->GetInt("TRACK_SPEED_LIMIT_W", 40);
-    TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 50);
-    TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 50);
+    TRACK_SPEED_LIMIT_W = opts->GetInt("TRACK_SPEED_LIMIT_W", 20);
+    TRACK_SPEED_LIMIT_X = opts->GetInt("TRACK_SPEED_LIMIT_X", 4);
+    TRACK_SPEED_LIMIT_Y = opts->GetInt("TRACK_SPEED_LIMIT_Y", 4);
     //int TRACK_SPEED_LIMIT_Z = opts->GetInt("TRACK_SPEED_LIMIT_Z", 50);
     TRACK_SETPOINT_W = opts->GetReal("TRACK_SETPOINT_W", 0);
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
@@ -173,7 +173,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, true);
                 fc->fb->SetBodyVel(course);
             }
-            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: (%03.1f, %03.1f, %03.1f)\r",
+            LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
             last_fix = steady_clock::now();
             had_fix = true;
@@ -191,7 +191,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, false);
                 fc->fb->SetBodyVel(course);
             }
-            LogSimple(LOG_DEBUG, "A: %03d E: %03d R: %03d G: (%03.1f, %03.1f, %03.1f)\r",
+            LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
         } else {
             //Object lost; we should do a search pattern (TBA)
@@ -398,7 +398,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *cou
         double objectDistance = std::sqrt(object->offset.x*object->offset.x + object->offset.y*object->offset.y);
         double distanceError = desiredForwardPosition-objectDistance;
         m_pidw.SetProcessValue(-phi);
-        m_pidx.SetProcessValue(-(object->offset.x/objectDistance) * std::abs(distanceError));  //the place we want to put the copter, relative to the copter.
+        m_pidx.SetProcessValue((object->offset.x/objectDistance) * std::abs(distanceError));  //the place we want to put the copter, relative to the copter.
         m_pidy.SetProcessValue((object->offset.y/objectDistance) * distanceError);
         //m_pidz.SetProcessValue(  //throttle controller not used
 
