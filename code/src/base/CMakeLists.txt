@@ -2,6 +2,7 @@
 
 #Set the included files
 set (SOURCE
+	 common.cpp
 	 log.cpp
 	 datalog.cpp
 	 opts.cpp

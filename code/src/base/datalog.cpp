@@ -40,7 +40,7 @@ static const char* FileTimestamp() {
     if (!initted) {
         struct tm ts = GetTimestamp();
         snprintf(buf, 20, "%04d%02d%02dT%02d%02d%02d",
-                 ts.tm_year+1900, ts.tm_mon, ts.tm_mday,
+                 ts.tm_year+1900, ts.tm_mon+1, ts.tm_mday,
                  ts.tm_hour, ts.tm_min, ts.tm_sec);
         initted = true;
     }

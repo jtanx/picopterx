@@ -88,9 +88,11 @@ CameraStream::CameraStream(Options *opts)
     opts->SetFamily("GLOBAL");
     m_demo_mode = opts->GetBool("DEMO_MODE", false);
 
-
 #ifdef IS_ON_PI
-    m_enc = new OmxCv(PICOPTER_HOME_LOCATION "/save.mkv", INPUT_WIDTH, INPUT_HEIGHT, 800);
+    std::string f = GenerateFilename(
+        PICOPTER_HOME_LOCATION "/videos", "save", ".mkv");
+    Log(LOG_INFO, "Saving video to %s", f.c_str());
+    m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, 800);
 #endif
 
     //Start the worker thread.

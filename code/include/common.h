@@ -35,6 +35,8 @@ namespace picopter {
     inline T clamp(const T& n, const T& lower, const T& upper) {
         return std::max(lower, std::min(n, upper));
     }
+    
+    std::string GenerateFilename(const char *folder, const char *name, const char *ext);
 }
 
 #endif // _PICOPTERX_COMMON_H
