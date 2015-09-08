@@ -205,45 +205,6 @@ bool FlightController::Sleep(int ms) {
 }
 
 /**
- * Infer the current bearing by moving forwards and using the GPS heading.
- * @param ret The return location (bearing in radians).
- * @param move_time The time spent moving forwards in ms (default is 5000ms).
- * @return true iff the bearing could be inferred.
- */
-bool FlightController::InferBearing(double *ret, int move_time) {
-    GPSData start, end;
-    double dist_moved;
-    
-    Log(LOG_INFO, "Inferring the current bearing...");
-    SetCurrentState(STATE_INFER_BEARING);
-    
-    m_fb->Stop();
-    if (!m_gps->WaitForFix(200)) {
-        Log(LOG_INFO, "Bearing inferral failed - no GPS fix.");
-        SetCurrentState(STATE_STOPPED);
-        return false;
-    }
-    
-    m_gps->GetLatest(&start);   
-    m_fb->SetElevator(40);
-    Sleep(move_time);
-    m_fb->Stop();
-    m_gps->GetLatest(&end);
-    
-    if ((dist_moved = navigation::CoordDistance(start.fix, end.fix)) < 1.0) {
-        Log(LOG_INFO, "Bearing inferral failed - did not move far enough (%.1f m)", dist_moved);
-        SetCurrentState(STATE_STOPPED);
-        return false;
-    }
-    
-    Log(LOG_INFO, "The inferred bearing is: %.2f deg (%.2f deg, %.2f m)", 
-        end.fix.heading, navigation::CoordBearing(start.fix, end.fix), dist_moved);
-    *ret = end.fix.heading;
-    SetCurrentState(STATE_STOPPED);
-    return true;
-}
-
-/**
  * Runs a given task, if no task is currently being run.
  * @param tid The task identifier of the task to be run.
  * @param task The task instance to be run.

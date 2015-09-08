@@ -96,8 +96,7 @@ namespace picopter {
             bool WaitForAuth();
             bool ReloadSettings(Options *opts);
             bool RunTask(TaskIdentifier tid, std::shared_ptr<FlightTask> task, void *opts);
-            bool InferBearing(double *ret, int move_time=5000);
-
+            
             friend std::ostream& operator<<(std::ostream &stream, FlightController &fc);
             
             /** A pointer to the flight board controller instance. **/

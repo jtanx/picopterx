@@ -1,21 +1,18 @@
 /**
  * @file flightboard.cpp
- * @brief Controls the output to the flight board.
- * Calculates the correct PWM pulse width to be sent to the PWM drivers
- * for the aileron, elevator and rudder, as well as camera gimbal.
- * Uses wiringPi and a GPIO pin for driving the buzzer with software based PWM.
+ * @brief Controls the output to the flight board (Pixhawk).
+ * Requires the Pixhawk to be running ArduCopter 3.3-rc10 or later.
+ * Control is performed via the MAVLink interface.
  */
 
 #include "common.h"
 #include "flightboard.h"
-#include "flightboard-private.h"
 #include "navigation.h"
 #include "gps_mav.h"
 #include "imu_feed.h"
 
 using namespace picopter::navigation;
 using picopter::FlightBoard;
-using picopter::FlightData;
 using picopter::GPS;
 using picopter::IMU;
 using std::this_thread::sleep_for;
@@ -32,7 +29,6 @@ using std::chrono::duration_cast;
 FlightBoard::FlightBoard(Options *opts)
 : m_heartbeat_timeout(HEARTBEAT_TIMEOUT_DEFAULT)
 , m_last_heartbeat(999)
-, m_currentData{}
 , m_shutdown{false}
 , m_disable_local{false}
 , m_system_id(0)
@@ -42,6 +38,8 @@ FlightBoard::FlightBoard(Options *opts)
 , m_is_rtl{false}
 , m_is_in_air{false}
 , m_is_armed{false}
+, m_rel_watchdog(0)
+, m_gimbal{}
 , m_handler_table{}
 {
     if (opts) {
@@ -74,6 +72,7 @@ FlightBoard::FlightBoard() : FlightBoard(NULL) {}
  * Destructor.
  */
 FlightBoard::~FlightBoard() {
+    SetBodyVel(Vec3D{});
     Stop();
     m_shutdown = true;
     m_input_thread.join();
@@ -83,14 +82,36 @@ FlightBoard::~FlightBoard() {
     delete m_link;
 }
 
+/**
+ * Get a hold of the GPS instance.
+ * Must not be freed by the user.
+ * @return The GPS instance.
+ */
 GPS* FlightBoard::GetGPSInstance() {
     return m_gps;
 }
 
+/**
+ * Get ahold of the IMU instance.
+ * Must not be freed by the user.
+ * @return The IMU instance.
+ */
 IMU* FlightBoard::GetIMUInstance() {
     return m_imu;
 }
 
+/**
+ * Retrieve the gimbal pose.
+ * @param [out] p The gimbal pose, in degrees.
+ */
+void FlightBoard::GetGimbalPose(EulerAngle *p) {
+    std::lock_guard<std::mutex> lock(m_gimbal_mutex);
+    *p = m_gimbal;
+}
+
+/**
+ * Input loop to process MAVLink messages received from the copter (Pixhawk).
+ */
 void FlightBoard::InputLoop() {
     auto last_heartbeat = steady_clock::now() - seconds(m_heartbeat_timeout);
     mavlink_message_t msg;
@@ -131,58 +152,29 @@ void FlightBoard::InputLoop() {
                         last_heartbeat = steady_clock::now();
                     }
                 } break;
-                case MAVLINK_MSG_ID_SYS_STATUS: {
-                    mavlink_sys_status_t status;
-                    mavlink_msg_sys_status_decode(&msg, &status);
-                    //LogSimple(LOG_DEBUG, "BATTERY: %.2fV, Draw: %.2fA, Remain: %3d%%",
-                    //    status.voltage_battery*1e-3,
-                    //    status.current_battery*1e-2,
-                    //    status.battery_remaining);
-                } break;
+                //case MAVLINK_MSG_ID_SYS_STATUS: {
+                //    mavlink_sys_status_t status;
+                //    mavlink_msg_sys_status_decode(&msg, &status);
+                //    LogSimple(LOG_DEBUG, "BATTERY: %.2fV, Draw: %.2fA, Remain: %3d%%",
+                //        status.voltage_battery*1e-3,
+                //        status.current_battery*1e-2,
+                //        status.battery_remaining);
+                //} break;
                 case MAVLINK_MSG_ID_COMMAND_ACK: {
                     mavlink_command_ack_t ack;
                     mavlink_msg_command_ack_decode(&msg, &ack);
                     if (ack.result != 0 || ack.command != 115)
                         Log(LOG_DEBUG, "COMMAND: %d, RESULT: %d", ack.command, ack.result);
                 } break;
-                //case MAVLINK_MSG_ID_VFR_HUD: {
-                //    mavlink_vfr_hud_t vfr;
-                //    mavlink_msg_vfr_hud_decode(&msg, &vfr);
-                //    Log(LOG_DEBUG, "Alt: %.1f m", vfr.alt);
-                //} break;
-                //case MAVLINK_MSG_ID_MISSION_ITEM_REACHED: {
-                //    Log(LOG_DEBUG, "MID REACHED!!!!!");
-                //} break;
-                //case MAVLINK_MSG_ID_GLOBAL_POSITION_INT: {
-                //    mavlink_global_position_int_t pos;
-                //    mavlink_msg_global_position_int_decode(&msg, &pos);
-                //    LogSimple(LOG_DEBUG, "Lat: %.2f, Lon: %.2f, RelAlt: %.2f, Brng: %.2f, (%.1f,%.1f,%.1f)",
-                //    pos.lat*1e-7, pos.lon*1e-7, pos.relative_alt*1e-3, pos.hdg*1e-2,
-                //    pos.vx*1e-2,pos.vy*1e-2,pos.vz*1e-2);
-                //} break;
-                //case MAVLINK_MSG_ID_GPS_RAW_INT: {
-                //    mavlink_gps_raw_int_t gps;
-                //    printf("GPS!\n");
-                //    mavlink_msg_gps_raw_int_decode(&msg, &gps);
-                //    printf("Lat: %.2f, Lon: %.2f, Alt: %.2fm\n",
-                //        gps.lat * 1e-7, gps.lon * 1e-7, gps.alt / 1000.0);
-                //} break;
-                //case MAVLINK_MSG_ID_ATTITUDE: {
-                //    mavlink_attitude_t att;
-                //    mavlink_msg_attitude_decode(&msg, &att);
-                //    m_current_yaw = att.yaw;
-                //    LogSimple(LOG_DEBUG, "YAW: %.2f", RAD2DEG(att.yaw));
-                //    LogSimple(LOG_DEBUG, "Roll: %.2f, Pitch: %.2f, Yaw: %.2f",
-                //        RAD2DEG(att.roll), RAD2DEG(att.pitch), RAD2DEG(att.yaw));
-                //} break;
-                //case MAVLINK_MSG_ID_PARAM_VALUE: {
-                //    mavlink_param_value_t param;
-                //    mavlink_msg_param_value_decode(&msg, &param);
-                //    LogSimple(LOG_DEBUG, "%.16s", param.param_id);
-                //} break;
-                //default: {
-                //    LogSimple(LOG_DEBUG, "MSGID: %d\n", msg.msgid);
-                //} break;
+                case MAVLINK_MSG_ID_MOUNT_STATUS: {
+                    mavlink_mount_status_t mnt;
+                    mavlink_msg_mount_status_decode(&msg, &mnt);
+                    std::lock_guard<std::mutex> lock(m_gimbal_mutex);
+                    m_gimbal.pitch = mnt.pointing_a/100.0;
+                    m_gimbal.roll = mnt.pointing_b/100.0;
+                    m_gimbal.yaw = mnt.pointing_c/100.0;
+                    Log(LOG_DEBUG, "GOT MOUNT! %1f, %.1f, %.1f", m_gimbal.pitch, m_gimbal.roll, m_gimbal.yaw);
+                } break;
             }
             
             //Call the event handler, if any.
@@ -202,35 +194,39 @@ void FlightBoard::InputLoop() {
     }
 }
 
+/**
+ * Redundant safety loop to send an 'all stop' command continuously when
+ * the copter is in guided mode and is not actively sending commands.
+ * Note: ArduCopter already imposes a 2s safety limit, so this is an extra
+ * safety on top of that. This only engages for when relative commands are sent.
+ */
 void FlightBoard::OutputLoop() {
-    mavlink_message_t msg;
-    mavlink_set_position_target_local_ned_t sp = {};
-    sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY;
-    sp.coordinate_frame = MAV_FRAME_BODY_OFFSET_NED;
-
+    int last_watchdog = 0;
+    int skip_counter = 100;
+    
     while (!m_shutdown) {
         if (!m_disable_local && m_is_auto_mode) {
             std::lock_guard<std::mutex> lock(m_output_mutex);
             
-            //We always need to set yaw in case a ROI was set;
-            //If a ROI was set, it will attempt to track that, which we don't want.
-            int yaw_off = (m_currentData.rudder * 20) / 100;
-            SetYaw(yaw_off, true);
-            
-            sp.target_system = m_system_id;
-            sp.target_component = m_component_id;
-            //I don't know why this seems reversed.
-            //Contrary to MAVLink specs, by specifying MAV_FRAME_BODY_OFFSET_NED,
-            //the command is interpreted in body coordinates, which ArduCopter
-            //then translates itself (at least in ArduCopter 3.3-rc10)
-            sp.vx = 4 * m_currentData.elevator / 100.0;
-            sp.vy = 4 * m_currentData.aileron / 100.0;
-            
-            mavlink_msg_set_position_target_local_ned_encode(m_system_id, m_flightboard_id, &msg, &sp);
-            //Log(LOG_DEBUG, "px: %.2f, py: %.2f, A: %d, E: %d, R: %d, vx: %.2f, vy: %.2f", px, py, m_currentData.aileron, m_currentData.elevator, m_currentData.rudder, sp.vx, sp.vy);
-            m_link->WriteMessage(&msg);
-        } else {
-            //Log(LOG_DEBUG, "SLEEPING");
+            //Must send a relative command at least at 1Hz
+            if (last_watchdog >= m_rel_watchdog) {
+                if (last_watchdog > m_rel_watchdog || skip_counter++ > 10) {
+                    mavlink_message_t msg;
+                    mavlink_set_position_target_local_ned_t sp = {};
+                    sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY;
+                    sp.coordinate_frame = MAV_FRAME_BODY_OFFSET_NED;
+                    sp.target_system = m_system_id;
+                    sp.target_component = m_component_id;   
+ 
+                    //Log(LOG_DEBUG, "SAFETY");
+                    mavlink_msg_set_position_target_local_ned_encode(
+                        m_system_id, m_flightboard_id, &msg, &sp);
+                    m_link->WriteMessage(&msg);
+                }
+            } else {
+                skip_counter = 0;
+            }
+            last_watchdog = m_rel_watchdog;
         }
         sleep_for(milliseconds(100));
     }
@@ -291,33 +287,144 @@ bool FlightBoard::DoReturnToLaunch() {
  * @return true iff the waypoint was sent.
  */
 bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, navigation::Coord3D pt, bool relative_alt) {
-    mavlink_mission_item_t mi = {0};
-    mavlink_message_t msg;
-    std::lock_guard<std::mutex> lock(m_output_mutex);
-    
-    mi.target_system = m_system_id;
-    mi.target_component = m_component_id;
-    mi.seq = seq;
-    mi.frame = MAV_FRAME_GLOBAL_RELATIVE_ALT;
-    mi.command = MAV_CMD_NAV_WAYPOINT;
-    mi.current = 2; //ArduCopter magic number for 'guided mode' waypoint
-    mi.param1 = 0; //Hold time in s; we do this ourselves
-    mi.param2 = radius; //Acceptance radius in m
-    mi.param3 = 0; //Pass through the waypoint; ignored by ArduPilot
-    mi.param4 = 0; //Desired yaw angle on completion; ignored by ArduPilot
-    mi.x = pt.lat;
-    mi.y = pt.lon;
-    mi.z = (relative_alt ? (m_gps->GetLatestRelAlt() + pt.alt) : pt.alt);
-    
-    if (std::isnan(mi.z) || mi.z <= 0) {
-        Log(LOG_WARNING, "Waypoint %d: Invalid altitude (%.2f m)", seq, mi.z);
-        return false;        
+    if (m_is_auto_mode) {
+        mavlink_mission_item_t mi = {0};
+        mavlink_message_t msg;
+        std::lock_guard<std::mutex> lock(m_output_mutex);
+        
+        mi.target_system = m_system_id;
+        mi.target_component = m_component_id;
+        mi.seq = seq;
+        mi.frame = MAV_FRAME_GLOBAL_RELATIVE_ALT;
+        mi.command = MAV_CMD_NAV_WAYPOINT;
+        mi.current = 2; //ArduCopter magic number for 'guided mode' waypoint
+        mi.param1 = 0; //Hold time in s; we do this ourselves
+        mi.param2 = radius; //Acceptance radius in m
+        mi.param3 = 0; //Pass through the waypoint; ignored by ArduPilot
+        mi.param4 = 0; //Desired yaw angle on completion; ignored by ArduPilot
+        mi.x = pt.lat;
+        mi.y = pt.lon;
+        mi.z = (relative_alt ? (m_gps->GetLatestRelAlt() + pt.alt) : pt.alt);
+        
+        if (std::isnan(mi.z) || mi.z <= 0) {
+            Log(LOG_WARNING, "Waypoint %d: Invalid altitude (%.2f m)", seq, mi.z);
+            return false;        
+        }
+        
+        m_disable_local = true; //Disable watchdog
+        mavlink_msg_mission_item_encode(m_system_id, m_flightboard_id, &msg, &mi);
+        m_link->WriteMessage(&msg);
+        return true;
     }
-    
-    m_disable_local = true;
-    mavlink_msg_mission_item_encode(m_system_id, m_flightboard_id, &msg, &mi);
-    m_link->WriteMessage(&msg);
-    return true;
+    return false;
+}
+
+/**
+ * Changes the maximum speed at which the copter moves to waypoints.
+ * @param [in] sp The speed to move at, in m/s.
+ * @return true iff the message was sent.
+ */
+bool FlightBoard::SetWaypointSpeed(int sp) {
+    if (m_is_auto_mode) {
+        mavlink_command_long_t cmd = {0};
+        mavlink_message_t msg;
+        //std::lock_guard<std::mutex> lock(m_output_mutex);
+        //m_disable_local = true;
+        
+        cmd.target_system = m_system_id;
+        cmd.target_component = m_component_id;
+        cmd.command = MAV_CMD_DO_CHANGE_SPEED;
+        //All parameters are unused by ArduCopter except this one.
+        cmd.param2 = sp;
+        
+        mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
+        m_link->WriteMessage(&msg);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Sets the velocity of the copter, relative to its frame.
+ * This command must be sent at a rate faster than 1Hz to maintain movement.
+ * @param [in] v The velocity vector. NB: Components are limited to +/- 4m/s
+ *               for safety reasons. Altitude is limited to +/- 2m/s.
+ *               x: Movement left/right, y: Movement: forwards/backwards.
+ *               z: Movement up/down (up positive, down negative).
+ * @return true iff the message was sent.
+ */
+bool FlightBoard::SetBodyVel(Vec3D v) {
+    if (m_is_auto_mode) {
+        std::lock_guard<std::mutex> lock(m_output_mutex);
+        mavlink_message_t msg;
+        mavlink_set_position_target_local_ned_t sp = {};
+        sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY;
+        sp.coordinate_frame = MAV_FRAME_BODY_OFFSET_NED;
+        sp.target_system = m_system_id;
+        sp.target_component = m_component_id;   
+       
+        //For some reason, x and y coords are flipped.
+        sp.vx = picopter::clamp(v.y, -4.0, 4.0);
+        sp.vy = picopter::clamp(v.x, -4.0, 4.0);
+        sp.vz = -picopter::clamp(v.z, -2.0, 2.0); //NED coords; flipped alt.
+        
+        //Safety: Try not to allow it to drop below 2m altitude above ground.
+        if (m_gps->GetLatestRelAlt() < 2.0) {
+            Log(LOG_WARNING, "1m safety deadband activated!!!");
+            sp.vz = std::min(sp.vz, 0.0f);
+        }
+        
+        m_disable_local = false; //Enable watchdog
+        m_rel_watchdog++; //Increment the watchdog counter
+        SetYaw(0, true); //Lock yaw
+        mavlink_msg_set_position_target_local_ned_encode(
+            m_system_id, m_flightboard_id, &msg, &sp);
+        m_link->WriteMessage(&msg);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Sets the position of the copter, relative to its frame.
+ * This command must be sent at a rate faster than 1Hz to maintain movement.
+ * Position control seems much more damped than velocity control.
+ * @param [in] v The position offset. NB: Components are limited to +/- 10m
+ *               for safety reasons. Altitude is limited to +/- 2m.
+ *               x: Movement left/right, y: Movement: forwards/backwards.
+ *               z: Movement up/down (up positive, down negative).
+ * @return true iff the message was sent.
+ */
+bool FlightBoard::SetBodyPos(Vec3D p) {
+    if (m_is_auto_mode) {
+        std::lock_guard<std::mutex> lock(m_output_mutex);
+        mavlink_message_t msg;
+        mavlink_set_position_target_local_ned_t sp = {};
+        sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION;
+        sp.coordinate_frame = MAV_FRAME_BODY_OFFSET_NED;
+        sp.target_system = m_system_id;
+        sp.target_component = m_component_id;
+       
+        //For some reason, x and y coords are flipped.
+        sp.x = picopter::clamp(p.y, -10.0, 10.0);
+        sp.y = picopter::clamp(p.x, -10.0, 10.0);
+        sp.z = -picopter::clamp(p.z, -2.0, 2.0); //NED coords; flipped alt.
+        
+        //Safety: Try not to allow it to drop below 2m altitude above ground.
+        if (m_gps->GetLatestRelAlt() < 2.0) {
+            Log(LOG_WARNING, "1m safety deadband activated!!!");
+            sp.z = std::min(sp.z, 0.0f);
+        }
+        
+        m_disable_local = false; //Enable watchdog
+        m_rel_watchdog++; //Increment the watchdog counter
+        SetYaw(0, true); //Lock yaw
+        mavlink_msg_set_position_target_local_ned_encode(
+            m_system_id, m_flightboard_id, &msg, &sp);
+        m_link->WriteMessage(&msg);
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -327,21 +434,24 @@ bool FlightBoard::SetGuidedWaypoint(int seq, float radius, float wait, navigatio
  * @return true iff the message was sent.
  */
 bool FlightBoard::SetRegionOfInterest(Coord3D roi) {
-    mavlink_command_long_t cmd = {0};
-    mavlink_message_t msg;
-    //std::lock_guard<std::mutex> lock(m_output_mutex);
-    //m_disable_local = true;
-    
-    cmd.target_system = m_system_id;
-    cmd.target_component = m_component_id;
-    cmd.command = MAV_CMD_DO_SET_ROI;
-    cmd.param5 = roi.lat;
-    cmd.param6 = roi.lon;
-    cmd.param7 = roi.alt;
-    
-    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
-    m_link->WriteMessage(&msg);
-    return true;
+    if (m_is_auto_mode) {
+        mavlink_command_long_t cmd = {0};
+        mavlink_message_t msg;
+        //std::lock_guard<std::mutex> lock(m_output_mutex);
+        //m_disable_local = true;
+        
+        cmd.target_system = m_system_id;
+        cmd.target_component = m_component_id;
+        cmd.command = MAV_CMD_DO_SET_ROI;
+        cmd.param5 = roi.lat;
+        cmd.param6 = roi.lon;
+        cmd.param7 = roi.alt;
+        
+        mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
+        m_link->WriteMessage(&msg);
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -357,28 +467,6 @@ bool FlightBoard::UnsetRegionOfInterest() {
 }
 
 /**
- * Changes the maximum speed at which the copter moves to waypoints.
- * @param [in] sp The speed to move at, in m/s.
- * @return true iff the message was sent.
- */
-bool FlightBoard::SetWaypointSpeed(int sp) {
-    mavlink_command_long_t cmd = {0};
-    mavlink_message_t msg;
-    //std::lock_guard<std::mutex> lock(m_output_mutex);
-    //m_disable_local = true;
-    
-    cmd.target_system = m_system_id;
-    cmd.target_component = m_component_id;
-    cmd.command = MAV_CMD_DO_CHANGE_SPEED;
-    //All parameters are unused by ArduCopter except this one.
-    cmd.param2 = sp;
-    
-    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &cmd);
-    m_link->WriteMessage(&msg);
-    return true;
-}
-
-/**
  * Sets the direction that the copter should be facing.
  * This method disables 'auto yaw'. To re-enable auto-yaw, call
  * UnsetRegionOfInterest.
@@ -388,18 +476,21 @@ bool FlightBoard::SetWaypointSpeed(int sp) {
  * @return true iff the command was sent.
  */
 bool FlightBoard::SetYaw(int bearing, bool relative) {
-    mavlink_message_t msg;
-    mavlink_command_long_t yaw_sp = {};
-    yaw_sp.command = MAV_CMD_CONDITION_YAW;
-    yaw_sp.target_system = m_system_id;
-    yaw_sp.target_component = m_component_id;
-    yaw_sp.param1 = bearing; //Bearing in deg
-    yaw_sp.param2 = 0; //Yaw rate in deg/s
-    yaw_sp.param3 = 0; //Yaw direction (CCW or CW)
-    yaw_sp.param4 = relative ? 1 : 0; //Relative
-    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &yaw_sp);
-    m_link->WriteMessage(&msg);
-    return true;
+    if (m_is_auto_mode) {
+        mavlink_message_t msg;
+        mavlink_command_long_t yaw_sp = {};
+        yaw_sp.command = MAV_CMD_CONDITION_YAW;
+        yaw_sp.target_system = m_system_id;
+        yaw_sp.target_component = m_component_id;
+        yaw_sp.param1 = std::abs(bearing); //Bearing in deg
+        yaw_sp.param2 = 0; //Yaw rate in deg/s
+        yaw_sp.param3 = bearing < 0 ? -1 : 1; //Yaw direction (CCW or CW)
+        yaw_sp.param4 = relative ? 1 : 0; //Relative
+        mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &yaw_sp);
+        m_link->WriteMessage(&msg);
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -442,9 +533,8 @@ bool FlightBoard::IsArmed() {
  */
 void FlightBoard::Stop() {
     std::lock_guard<std::mutex> lock(m_output_mutex);
-    FlightData fd_zero = {0};
-    m_currentData = fd_zero;
     m_disable_local = false;
+    m_rel_watchdog = 0;
 }
 
 /**
@@ -479,70 +569,4 @@ void FlightBoard::DeregisterHandler(int handlerid) {
     if (handlerid >= 0 && handlerid <= 255) {
         m_handler_table[handlerid] = nullptr;
     }
-}
-
-/**
- * Returns a copy of the current flight data.
- * @param d A pointer to the output location.
- */
-void FlightBoard::GetData(FlightData *d) {
-    std::lock_guard<std::mutex> lock(m_output_mutex);
-    *d = m_currentData;
-}
-
-/**
- * Sets the flight data and actuates the hexacopter.
- * @param d Specifies the flight data for how the hexacopter should be actuated.
- */
-void FlightBoard::SetData(FlightData *d) {
-    std::lock_guard<std::mutex> lock(m_output_mutex);
-    m_currentData.aileron = picopter::clamp(d->aileron, -100, 100);
-    m_currentData.elevator = picopter::clamp(d->elevator, -100, 100);
-    m_currentData.rudder = picopter::clamp(d->rudder, -100, 100);
-    m_currentData.gimbal = d->gimbal;
-    //m_currentData.gimbal = picopter::clamp(d->gimbal, 0, 90);
-    m_disable_local = false;
-}
-
-
-/**
- * Sets the aileron speed.
- * @param speed The aileron speed, as a percentage (-100% to 100%)
- */
-void FlightBoard::SetAileron(int speed) {
-    std::lock_guard<std::mutex> lock(m_output_mutex);
-    m_currentData.aileron = picopter::clamp(speed, -100, 100);
-    m_disable_local = false;
-}
-
-/**
- * Sets the elevator speed.
- * @param speed The elevator speed, as a percentage (-100% to 100%)
- */
-void FlightBoard::SetElevator(int speed) {
-    std::lock_guard<std::mutex> lock(m_output_mutex);
-    //Elevator speed is inverted.
-    m_currentData.elevator = picopter::clamp(speed, -100, 100);
-    m_disable_local = false;
-}
-
-/**
- * Sets the rudder speed.
- * @param speed The rudder speed, as a percentage (-100% to 100%)
- */
-void FlightBoard::SetRudder(int speed) {
-    std::lock_guard<std::mutex> lock(m_output_mutex);
-    m_currentData.rudder = picopter::clamp(speed, -100, 100);
-    m_disable_local = false;
-}
-
-/**
- * Sets the gimbal angle.
- * @param pos The gimbal angle, in degrees (0 to 90)
- */
-void FlightBoard::SetGimbal(GimbalAngle pose) {
-    std::lock_guard<std::mutex> lock(m_output_mutex);
-    //m_currentData.gimbal = picopter::clamp(pose, 0, 90);
-    m_currentData.gimbal = pose;//
-    m_disable_local = false;
 }
