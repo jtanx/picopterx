@@ -209,6 +209,22 @@ namespace picopter {
         }
         
         /**
+         * Add a vector in NED frame to the coordinate.
+         * @param [in] c The coordinate to offset.
+         * @param [in] v The vector (units in metres).
+         * @return The offset coordinate.
+         */
+        template <typename Coord, typename Vect>
+        Coord CoordAddOffset(Coord c, Vect v) {
+            double offset_x = v.x / (1000.0 * RADIUS_OF_EARTH * cos(DEG2RAD(c.lat)));
+            double offset_y = v.y / (1000.0 * RADIUS_OF_EARTH);
+            
+            c.lat += RAD2DEG(offset_y);
+            c.lon += RAD2DEG(offset_x);
+            return c;
+        }
+        
+        /**
          * Converts a coordinate/zoom level into the corresonding tile number.
          * @param [in] from The coordinate of the tile.
          * @see http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Zoom_levels
@@ -224,6 +240,23 @@ namespace picopter {
             ret.y = static_cast<int>((1.0 - log(tan(rlat) + (1/cos(rlat)))/M_PI)/2.0 * n);
             ret.zoom = zoom;
             return ret;
+        }
+        
+        /**
+         * Rotates from our body coordinates to NED coordinates.
+         * @param [in] v The vector to rotate.
+         * @param [in] yaw The yaw to rotate to.
+         * @return The rotated coordinate in NED frame.
+         */
+        template <typename Vect>
+        Vect RotateBodyToNED(Vect v, double yaw) {
+            double cy = std::cos(DEG2RAD(yaw)), sy = std::sin(DEG2RAD(yaw));
+            double x = v.x * cy - v.y * sy;
+            double y = v.x * sy + v.y * cy;
+            v.x = x;
+            v.y = y;
+            //v.z = -v.z;
+            return v;
         }
         
         const Coord2D PERTH_BL = {-33, 115};

@@ -62,6 +62,8 @@ void EnvironmentalMapping::Run(FlightController *fc, void *opts) {
     GPSData d;
     fc->gps->GetLatest(&d);
     Coord3D centre = {d.fix.lat, d.fix.lon, d.fix.alt - d.fix.groundalt};
+    //Vec3D offset = RotateBodyToNED(Vec3D{-5, 0, 0}, fc->imu->GetLatestYaw()); //5m to left of copter.
+    centre = CoordAddOffset(centre, Vec3D{-5, 0, 0}); //5m To west of copter.
 
     fc->fb->SetRegionOfInterest(centre);
     for (int j=0; j<3; j+=1) {
