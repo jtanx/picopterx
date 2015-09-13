@@ -260,6 +260,10 @@ void CameraStream::ProcessImages() {
     static const std::vector<int> saveparams = {CV_IMWRITE_JPEG_QUALITY, 90};
     int frame_counter = 0, frame_duration = 0;
     auto sampling_start = steady_clock::now();
+    cv::Mat tmp = cv::imread("glyph1.png");
+    cv::resize(tmp, tmp, cv::Size(100,100));
+    //cv::cvtColor(tmp, tmp, CV_BGR2GRAY);
+    cv::GaussianBlur(tmp,tmp, cv::Size(7,7), 0);
 
     while (!m_stop) {
         std::unique_lock<std::mutex> lock(m_worker_mutex, std::defer_lock);
@@ -312,6 +316,12 @@ void CameraStream::ProcessImages() {
                     }
                 }
                 break;
+            case MODE_CANNY_GLYPH:
+                CannyGlyphDetection(image, backend, tmp);
+            break;
+            case MODE_THRESH_GLYPH:
+                ThresholdingGlyphDetection(image, backend, tmp);
+            break;
         }
 
         DrawCrosshair(image, cv::Point(image.cols/2, image.rows/2),
