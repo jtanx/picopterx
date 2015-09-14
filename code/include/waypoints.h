@@ -24,6 +24,7 @@ namespace picopter {
         WAYPOINT_SPIRAL = 2,
         /** Spiral mode, facing outwards **/
         WAYPOINT_SPIRAL_OUT = 3
+        
     } WaypointMethod;
 
     /**
@@ -37,6 +38,8 @@ namespace picopter {
                 bool has_roi;
             } Waypoint;
             
+            Waypoints(std::deque<Waypoint> pts, std::deque<std::deque<navigation::Coord3D>> zones, WaypointMethod method);
+            Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::deque<navigation::Coord3D>> zones, WaypointMethod method);
             Waypoints(std::deque<Waypoint> pts, WaypointMethod method);
             Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method);
             virtual ~Waypoints() override;
@@ -69,6 +72,7 @@ namespace picopter {
             
             std::deque<Waypoint> GenerateLawnmowerPattern(Waypoint start, Waypoint end);
             std::deque<Waypoint> GenerateSpiralPattern(Waypoint centre, Waypoint edge1, Waypoint edge2, bool face_out);
+            
             /** Copy constructor (disabled) **/
             Waypoints(const Waypoints &other);
             /** Assignment operator (disabled) **/

@@ -8,6 +8,7 @@ set (SOURCE
 	 observations.cpp
 	 env_mapping.cpp
 	 utility.cpp
+	 pathplan.cpp
 )
 set (HEADERS
 	 ${PI_INCLUDE}/waypoints.h
@@ -16,6 +17,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/observations.h
 	 ${PI_INCLUDE}/env_mapping.h
 	 ${PI_INCLUDE}/utility.h
+	 ${PI_INCLUDE}/pathplan.h
 )
 
 #Compile as a static library

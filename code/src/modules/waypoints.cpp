@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "waypoints.h"
+#include "pathplan.h"
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -21,7 +22,7 @@ using std::chrono::duration_cast;
  * @param [in] pts The set of waypoints to move to.
  * @param [in] method The method for moving through the specified waypoints.
  */
-Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method)
+Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::deque<Coord3D> > zones, WaypointMethod method)
 : m_pts(pts)
 , m_method(method)
 , m_update_interval(100)
@@ -76,13 +77,26 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod met
             m_waypoint_idle = opts->GetInt("SPIRAL_IDLE_TIME", 0);
         }
     }
+    
+    //Avoid collision zones
+    PathPlan plan;
+    for (std::deque<Coord3D> zone : zones) {
+        plan.addPolygon(zone);
+    }
+    m_pts = std::move(plan.generateFlightPlan(m_pts));
 }
 
 /** 
  * Constructor. Constructs with default settings.
  */
+Waypoints::Waypoints(std::deque<Waypoint> pts, std::deque<std::deque<Coord3D> > zones, WaypointMethod method)
+: Waypoints(NULL, pts, zones, method) {}
+
 Waypoints::Waypoints(std::deque<Waypoint> pts, WaypointMethod method)
-: Waypoints(NULL, pts, method) {}
+: Waypoints(NULL, pts, std::deque<std::deque<Coord3D> >(), method) {}
+
+Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method)
+: Waypoints(NULL, pts, std::deque<std::deque<Coord3D> >(), method) {}
 
 /**
  * Destructor.
@@ -90,6 +104,8 @@ Waypoints::Waypoints(std::deque<Waypoint> pts, WaypointMethod method)
 Waypoints::~Waypoints() {
     
 }
+
+
 
 /**
  * Generates the sweeping lawnmower search pattern.
