@@ -43,7 +43,7 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
 
     TRACK_Kpw = opts->GetReal("TRACK_Kpw", 0.2);
     TRACK_Kpx = opts->GetReal("TRACK_Kpx", 0.2);
-    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 0.2);
+    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 0.5);
     //double TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
     TRACK_TauIw = opts->GetReal("TRACK_TauIw", 1.0);
     TRACK_TauIx = opts->GetReal("TRACK_TauIx", 1.0);
@@ -147,6 +147,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     EulerAngle gimbal;
     GPSData gps_position;
     IMUData imu_data;
+    double lidar_distance = -1;
     auto last_fix = steady_clock::now() - seconds(2);
     bool had_fix = false;
 
@@ -158,6 +159,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         fc->fb->GetGimbalPose(&gimbal);
         fc->gps->GetLatest(&gps_position);
         fc->imu->GetLatest(&imu_data);
+        if (fc->lidar) {
+            lidar_distance = fc->lidar->GetLatest() / 100.0;
+        }
         //Do we have an object?
         if (locations.size() > 0) {                                             
             detected_object = locations.front();
@@ -167,7 +171,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
             
-            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object);
+            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, lidar_distance, &detected_object);
 
             if (!m_observation_mode) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, true);
@@ -236,7 +240,7 @@ bool ObjectTracker::Finished() {
  * @param [in] gimbal The current gimbal angle.
  * @param [in,out] object The detected object.
  */
-void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object) {
+void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, double lidar_distance, ObjectInfo *object) {
     double heightAboveTarget = std::max(pos->fix.alt - pos->fix.groundalt, 0.0);
     
     if (std::isnan(heightAboveTarget)) {
@@ -335,12 +339,12 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
     //double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
     bool useAlt = true;
     bool useLidar = false;
-    double LidarRange = 5.0;    //distance in metres
+    
     if(useAlt){
         double k = heightAboveTarget / RelBody[2];
         RelBody *= k;
-    }else if(useLidar){
-        double k = LidarRange/norm(RelBody, cv::NORM_L2);
+    }else if(useLidar && lidar_distance > 0){
+        double k = lidar_distance/norm(RelBody, cv::NORM_L2);
         RelBody *= k;
     }
 

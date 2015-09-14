@@ -46,7 +46,7 @@ namespace picopter {
             double TRACK_SETPOINT_W, TRACK_SETPOINT_X, TRACK_SETPOINT_Y, TRACK_SETPOINT_Z;
             int TRACK_SPEED_LIMIT_W, TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Z;
             
-            void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
+            void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_distance, ObjectInfo *object);
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
             void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
             /** Copy constructor (disabled) **/
