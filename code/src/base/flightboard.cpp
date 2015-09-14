@@ -40,6 +40,7 @@ FlightBoard::FlightBoard(Options *opts)
 , m_is_armed{false}
 , m_rel_watchdog(0)
 , m_gimbal{}
+, m_hud{}
 , m_handler_table{}
 {
     if (opts) {
@@ -110,6 +111,15 @@ void FlightBoard::GetGimbalPose(EulerAngle *p) {
 }
 
 /**
+ * Retrieve the latest HUD information.
+ * @param [in] i The location to store HUD info.
+ */
+void FlightBoard::GetLatestHUD(HUDInfo *i) {
+    std::lock_guard<std::mutex> lock(m_hud_mutex);
+    *i = m_hud;
+}
+
+/**
  * Input loop to process MAVLink messages received from the copter (Pixhawk).
  */
 void FlightBoard::InputLoop() {
@@ -152,6 +162,12 @@ void FlightBoard::InputLoop() {
                         last_heartbeat = steady_clock::now();
                     }
                 } break;
+                case MAVLINK_MSG_ID_SYSTEM_TIME: {
+                    mavlink_system_time_t tm;
+                    mavlink_msg_system_time_decode(&msg, &tm);
+                    std::lock_guard<std::mutex> lock(m_hud_mutex);
+                    m_hud.unix_time = tm.time_unix_usec;
+                } break;
                 //case MAVLINK_MSG_ID_SYS_STATUS: {
                 //    mavlink_sys_status_t status;
                 //    mavlink_msg_sys_status_decode(&msg, &status);
@@ -174,6 +190,17 @@ void FlightBoard::InputLoop() {
                     m_gimbal.roll = mnt.pointing_b/100.0;
                     m_gimbal.yaw = mnt.pointing_c/100.0;
                     //Log(LOG_DEBUG, "GOT MOUNT! %1f, %.1f, %.1f", m_gimbal.pitch, m_gimbal.roll, m_gimbal.yaw);
+                } break;
+                case MAVLINK_MSG_ID_VFR_HUD: {
+                    mavlink_vfr_hud_t vfr;
+                    mavlink_msg_vfr_hud_decode(&msg, &vfr);
+                    std::lock_guard<std::mutex> lock(m_hud_mutex);
+                    m_hud.air_speed = vfr.airspeed;
+                    m_hud.ground_speed = vfr.groundspeed;
+                    m_hud.heading = vfr.heading;
+                    m_hud.throttle = vfr.throttle;
+                    m_hud.alt_msl = vfr.alt;
+                    m_hud.climb = vfr.climb;
                 } break;
             }
             

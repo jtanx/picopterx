@@ -10,6 +10,7 @@
 #include "opts.h"
 #include "common.h"
 #include "navigation.h"
+#include "flightboard.h" //For HUDInfo
 #include <opencv2/opencv.hpp>
 #ifdef IS_ON_PI
 #  include "omxcv.h"
@@ -96,6 +97,8 @@ namespace picopter {
 
             void GetConfig(Options *config);
             void SetConfig(Options *config);
+            
+            void SetHUDInfo(HUDInfo *hud);
 
             void DoAutoLearning(void);
 
@@ -134,6 +137,8 @@ namespace picopter {
             bool m_save_photo;
             /** The path to store the snapshot to **/
             std::string m_save_filename;
+            /** The current HUD info. **/
+            HUDInfo m_hud;
             /** Arrow indicating movement **/
             navigation::Point3D m_arrow;
             /** Detected objects **/
@@ -154,7 +159,7 @@ namespace picopter {
             void LoadGlyphs(Options *opts);
 
             void ProcessImages(void);
-            void DrawFramerate(cv::Mat& img);
+            void DrawHUD(cv::Mat& img);
             void DrawCrosshair(cv::Mat& img, cv::Point centre, const cv::Scalar& colour, int size);
             void DrawTrackingArrow(cv::Mat& img);
 

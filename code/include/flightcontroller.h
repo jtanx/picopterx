@@ -129,6 +129,8 @@ namespace picopter {
             
             /** Indicates if all operations should be stopped. **/
             std::atomic<bool> m_stop;
+            /** Indicates when the flight controller should shutdown. **/
+            std::atomic<bool> m_quit;
             /** Holds the current state of the flight controller. **/
             std::atomic<ControllerState> m_state;
             /** Holds the current task that is being run. **/
@@ -137,9 +139,15 @@ namespace picopter {
             std::future<void> m_task_thread;
             /** The mutex used to control the currently run task. **/
             std::mutex m_task_mutex;
+            /** Secondary mutex to control flight controller modifications. **/
+            std::mutex m_control_mutex;
+            /** HUD updater thread **/
+            std::thread m_hud_thread;
             /** The current task **/
             std::shared_ptr<FlightTask> m_task;
             
+            /** HUD Loop updater **/
+            void HUDLoop();
             /** Update the current state **/
             ControllerState SetCurrentState(ControllerState state);
             /** Copy constructor (disabled) **/

@@ -18,6 +18,33 @@ namespace picopter {
     class GPS;
     /* Forward declaration of the IMU class */
     class IMU;
+    
+    /**
+     * Struct to hold information that might be displayed on a heads-up display.
+     * This is basically the same as the MAVLink VFR_HUD message, plus a bit
+     * extra.
+     */
+    typedef struct HUDInfo {
+        /** Microseconds since UNIX epoch **/
+        uint64_t unix_time;
+        /** Air speed, in m/s **/
+        float air_speed;
+        /** Ground speed, in m/s **/
+        float ground_speed;
+        /** Heading, in degrees **/
+        int16_t  heading;
+        /** Throttle percentage **/
+        uint16_t throttle;
+        /** Altitude above mean-sea level (m) **/
+        float alt_msl;
+        /** Climb rate; m/s **/
+        float climb;
+        
+        /** Position (altitude is above ground) **/
+        navigation::Coord3D pos;
+        /** Status message **/
+        std::string status1;
+    } HUDInfo;
 
     /**
      * Controls the actuation of the hexacopter.
@@ -33,6 +60,7 @@ namespace picopter {
             GPS* GetGPSInstance();
             IMU* GetIMUInstance();
             void GetGimbalPose(navigation::EulerAngle *p);
+            void GetLatestHUD(HUDInfo *i);
             
             bool IsAutoMode();
             bool IsRTL();
@@ -77,6 +105,8 @@ namespace picopter {
             std::mutex m_output_mutex;
             /** Gimbal mutex **/
             std::mutex m_gimbal_mutex;
+            /** HUD mutex **/
+            std::mutex m_hud_mutex;
             /** Message receiving thread **/
             std::thread m_input_thread;
             /** Message sending thread **/
@@ -101,6 +131,8 @@ namespace picopter {
             int m_rel_watchdog;
             /** The current gimbal position **/
             navigation::EulerAngle m_gimbal;
+            /** The current HUD info **/
+            HUDInfo m_hud;
             /** The event handler table **/
             EventHandler m_handler_table[256];
 

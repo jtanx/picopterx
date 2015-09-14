@@ -66,6 +66,7 @@ FlightController::FlightController(Options *opts)
 , cam(m_camera)
 , lidar(m_lidar)
 , m_stop{false}
+, m_quit{false}
 , m_state{STATE_STOPPED}
 , m_task_id{TASK_NONE}
 {
@@ -83,6 +84,7 @@ FlightController::FlightController(Options *opts)
         m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);
     }
     
+    m_hud_thread = std::thread(&FlightController::HUDLoop, this);
     Log(LOG_INFO, "Initialised components!"); 
     m_buzzer->PlayWait(200, 200, 100);
 }
@@ -96,16 +98,46 @@ FlightController::FlightController() : FlightController(NULL) {}
  * Destructor. Stops/cleans up the base components (depends on RAII)
  */
 FlightController::~FlightController() {
+    m_quit.store(true, std::memory_order_relaxed);
+    
     if (m_task_thread.valid()) {
         Log(LOG_INFO, "Waiting for task to end...");
         Stop();
         m_task_thread.wait();
+    }
+    if (m_hud_thread.joinable()) {
+        m_hud_thread.join();
     }
     delete m_fb;
     //delete m_imu; //Part of the FlightBoard now
     //delete m_gps; //Part of the FlightBoard now
     delete m_buzzer;
     delete m_lidar;
+}
+
+/**
+ * Loop to periodically update the HUD.
+ * @return Return_Description
+ */
+void FlightController::HUDLoop() {
+    while (!m_quit.load(std::memory_order_relaxed)) {
+        std::unique_lock<std::mutex> lock(m_control_mutex);
+        if (m_camera) {
+            HUDInfo hud;
+            GPSData d;
+            std::stringstream ss;
+            ss << (*this);
+            
+            m_fb->GetLatestHUD(&hud);
+            m_gps->GetLatest(&d);
+            
+            hud.pos = Coord3D{d.fix.lat, d.fix.lon, d.fix.alt-d.fix.groundalt};
+            hud.status1 = ss.str();
+            m_camera->SetHUDInfo(&hud);
+        }
+        lock.unlock();
+        sleep_for(milliseconds(500));
+    }
 }
 
 /**
@@ -120,7 +152,8 @@ void FlightController::Stop() {
  * Check whether a stop should occur or not.
  */
 bool FlightController::CheckForStop() {
-    return m_stop.load(std::memory_order_relaxed) || !m_fb->IsAutoMode();
+    return m_quit.load(std::memory_order_relaxed) || 
+        m_stop.load(std::memory_order_relaxed) || !m_fb->IsAutoMode();
 }
 
 /**
@@ -146,6 +179,7 @@ bool FlightController::WaitForAuth() {
  * @return true iff all reloaded components successfully reloaded. 
  */
 bool FlightController::ReloadSettings(Options *opts) {
+    std::lock_guard<std::mutex> lock(m_control_mutex);
     delete m_camera;
     InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
     if (m_camera) {
