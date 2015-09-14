@@ -54,6 +54,20 @@ namespace picopter {
         /** Real-world location (lat/lon/alt) **/
         navigation::Coord3D location;
     } ObjectInfo;
+    
+    /**
+     * Holds information about a glyph.
+     */
+    typedef struct CameraGlyph {
+        /** The glyph ID. Should be unique. **/
+        int id;
+        /** The path to the glyph file, if any. **/
+        std::string path;
+        /** Glyph description. **/
+        std::string description;
+        /** The actual glyph image. **/
+        cv::Mat image;
+    } CameraGlyph;
 
     /**
      * Camera class. Uses OpenCV to interact with the camera.
@@ -124,6 +138,8 @@ namespace picopter {
             navigation::Point3D m_arrow;
             /** Detected objects **/
             std::vector<ObjectInfo> m_detected;
+            /** List of glyphs **/
+            std::vector<CameraGlyph> m_glyphs;
             /** Colour lookup thresholding table **/
             uint8_t m_lookup_threshold[THRESH_SIZE][THRESH_SIZE][THRESH_SIZE];
 
@@ -134,6 +150,8 @@ namespace picopter {
 #ifdef IS_ON_PI
             omxcv::OmxCv *m_enc;
 #endif
+
+            void LoadGlyphs(Options *opts);
 
             void ProcessImages(void);
             void DrawFramerate(cv::Mat& img);
@@ -147,9 +165,9 @@ namespace picopter {
             bool CentreOfMass(cv::Mat& src, cv::Mat& threshold);
             int ConnectedComponents(cv::Mat& src, cv::Mat& threshold);
             bool CamShift(cv::Mat& src, cv::Mat& threshold);
-            bool CannyGlyphDetection(cv::Mat& src, cv::Mat& proc, cv::Mat& templ);
-            bool ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& proc, cv::Mat& templ);
-            bool GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours, cv::Mat &templ) ;
+            bool CannyGlyphDetection(cv::Mat& src, cv::Mat& proc);
+            bool ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& proc);
+            bool GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours) ;
 
             /** Copy constructor (disabled) **/
             CameraStream(const CameraStream &other);

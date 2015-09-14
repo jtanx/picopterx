@@ -268,6 +268,8 @@
                     <option value="1">Centre of mass</option>
                     <option value="2">Camshift</option>
                     <option value="3">Connected components</option>
+                    <option value="4">Canny glyph detection</option>
+                    <option value="5">Thresholding glyph detection</option>
                     <option value="999">Colour training</option>
                   </select>
                 </div>
