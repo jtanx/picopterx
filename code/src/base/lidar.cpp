@@ -12,8 +12,8 @@
 #define    LIDARLITE_ADDRESS 0x62 // Default I2C Address of LIDAR-Lite.
 #define    MEASURE_REGISTER  0x00 // Register to write to initiate ranging.
 #define    MEASURE_VALUE     0x04 // Value to initiate ranging.
-#define    READ_REGISTER     0x8f // Register to get both High and Low bytes in 1 call.
-
+#define    READ_HIGH         0x0f // Register to get the high byte.
+#define    READ_LOW          0x10 // Register to get the low byte.
 using picopter::Lidar;
 using std::this_thread::sleep_for;
 using std::chrono::milliseconds;
@@ -57,18 +57,21 @@ int Lidar::GetLatest() {
 }
 
 void Lidar::Worker() {
-    while (wiringPiI2CWriteReg8(LIDARLITE_ADDRESS, 
-        MEASURE_REGISTER, MEASURE_VALUE) < 0 && !m_stop) {
-        sleep_for(milliseconds(100));
-	//Log(LOG_DEBUG, "WAITING FOR LIDARLITE");
-    }
     
     while (!m_stop) {
-        int distance = wiringPiI2CReadReg16(LIDARLITE_ADDRESS, READ_REGISTER);
-        if (distance < 0) {
+        while (wiringPiI2CWriteReg8(m_fd, 
+            MEASURE_REGISTER, MEASURE_VALUE) < 0 && !m_stop) {
+            sleep_for(milliseconds(100));
+            Log(LOG_DEBUG, "WAITING FOR LIDARLITE");
+        }
+
+        int high = wiringPiI2CReadReg8(m_fd, READ_HIGH);
+        int low = wiringPiI2CReadReg8(m_fd, READ_LOW);
+        if (high < 0 || low < 0) {
             Log(LOG_DEBUG, "Error reading from LIDAR.");
         } else {
-            m_distance = distance; //Need to check endianness
+            m_distance = (high<<8) | (low);
+            Log(LOG_DEBUG, "DIST: %d", m_distance.load());
         }
         
         sleep_for(milliseconds(50)); //20Hz update speed
