@@ -173,7 +173,7 @@ void FlightBoard::InputLoop() {
                     m_gimbal.pitch = mnt.pointing_a/100.0;
                     m_gimbal.roll = mnt.pointing_b/100.0;
                     m_gimbal.yaw = mnt.pointing_c/100.0;
-                    Log(LOG_DEBUG, "GOT MOUNT! %1f, %.1f, %.1f", m_gimbal.pitch, m_gimbal.roll, m_gimbal.yaw);
+                    //Log(LOG_DEBUG, "GOT MOUNT! %1f, %.1f, %.1f", m_gimbal.pitch, m_gimbal.roll, m_gimbal.yaw);
                 } break;
             }
             
