@@ -15,6 +15,11 @@ using picopter::CameraGlyph;
 using picopter::Options;
 using namespace rapidjson;
 
+/**
+ * Unpacks a glyph from the given options entry.
+ * @param [in] val The entry to decode.
+ * @param [in] closure Pointer to the glyph list.
+ */
 static void GlyphUnpickler(const void *val, void *closure) {
     Value *v = const_cast<Value*>(static_cast<const Value*>(val)); //...
     auto *glyphs = static_cast<std::vector<CameraGlyph>*>(closure);
@@ -47,6 +52,10 @@ static void GlyphUnpickler(const void *val, void *closure) {
     }
 }
 
+/**
+ * Load the glyphs from the given options.
+ * @param [in] opts The instance to load glyphs from.
+ */
 void CameraStream::LoadGlyphs(Options *opts) {
     if (opts) {
         opts->SetFamily("CAMERA_GLYPHS");
@@ -101,11 +110,11 @@ static std::vector<cv::Point2f> OrderPoints(std::vector<cv::Point>& pts) {
  * This function will only warp at least somewhat square quads.
  * @param [in] in The input frame.
  * @param [out] out The output frame.
- * @param [in] pts The four points that define the quad.
+ * @param [in] src The four defining points of the quad, ordered by:
+ *                 (tl, tr, bl, br). (Use OrderPoints).
  * @return true iff it was warped.
  */
-static bool WarpPerspective(cv::Mat &in, cv::Mat &out, std::vector<cv::Point> &pts) {
-    std::vector<cv::Point2f> src = std::move(OrderPoints(pts));
+static bool WarpPerspective(cv::Mat &in, cv::Mat &out, std::vector<cv::Point2f> &src) {
     cv::Rect b = std::move(cv::boundingRect(src));
     float ratio = static_cast<float>(b.width)/b.height;
     
@@ -128,6 +137,10 @@ static bool WarpPerspective(cv::Mat &in, cv::Mat &out, std::vector<cv::Point> &p
  * @return true iff detected.
  */
 bool CameraStream::GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours) {
+    ObjectInfo obj{};
+    bool ret = false;
+    m_detected.clear();
+    
     for (size_t i = 0; i < 2 && i < contours.size(); i++) {
         double perimiter = cv::arcLength(contours[i], true);
         std::vector<cv::Point> approx;
@@ -135,16 +148,14 @@ bool CameraStream::GlyphContourDetection(cv::Mat& src, std::vector<std::vector<c
         
         if (approx.size() == 4) { //We probably have a quad.
             cv::Mat quad;
-            if (WarpPerspective(src, quad, approx)) {
+            std::vector<cv::Point2f> pts = std::move(OrderPoints(approx));
+            
+            if (WarpPerspective(src, quad, pts)) {
                 cv::Mat rquad;
                 //Perform initial resize.
                 if (m_glyphs.size() > 0) {
                     cv::resize(quad, rquad, 
                         cv::Size(m_glyphs[0].image.cols, m_glyphs[0].image.rows));
-                }
-                
-                 if (m_demo_mode) {
-                    cv::imshow("Test", quad);
                 }
                 
                 for(size_t i = 0; i < m_glyphs.size(); i++) {
@@ -153,23 +164,41 @@ bool CameraStream::GlyphContourDetection(cv::Mat& src, std::vector<std::vector<c
                         cv::resize(quad, rquad, 
                             cv::Size(m_glyphs[i].image.cols, m_glyphs[i].image.rows));
                     }
-                    //Perform template matching
+                    
+                    //Display the warped and resized image
+                    if (m_demo_mode) {
+                        cv::imshow("Test", rquad);
+                    }
+                    
+                    //Perform template matching. This is the bottleneck if the template image is large.
                     cv::Mat result(1, 1, CV_32FC1);
                     cv::matchTemplate(rquad, m_glyphs[i].image, result, CV_TM_CCORR_NORMED);
 
-                    //Get the correlation value
-                    double minVal; double maxVal;
-                    cv::minMaxLoc(result, &minVal, &maxVal, NULL, NULL, cv::Mat());
+                    //Get the correlation value (no need for minMaxLoc - one result only)
+                    //double minVal; double maxVal;
+                    //cv::minMaxLoc(result, &minVal, &maxVal, NULL, NULL, cv::Mat());
                     
-                    //Log(LOG_DEBUG, "%.4f", maxVal);
-                    //Check goodness of fit.
-                    if (maxVal > 0.8)
-                        Log(LOG_DEBUG, "DETECTED %d<%s>! %.2f, %.2f", m_glyphs[i].id, m_glyphs[i].description.c_str(), maxVal, result.at<float>(0,0));
+                    //Check goodness of fit. If good, add it.
+                    if (result.at<float>(0,0) > 0.8) {
+                        Log(LOG_DEBUG, "DETECTED %d<%s>! %.2f", 
+                            m_glyphs[i].id, m_glyphs[i].description.c_str(),
+                            result.at<float>(0,0));
+                        obj.id = m_glyphs[i].id;
+                        obj.image_width = src.cols;
+                        obj.image_height = src.rows;
+                        obj.bounds = std::move(cv::boundingRect(pts));
+                        obj.position = navigation::Point2D{
+                            obj.bounds.x + obj.bounds.width/2.0,
+                            obj.bounds.y + obj.bounds.height/2.0};
+                        m_detected.push_back(obj);
+                        
+                        ret = true;
+                    }
                 }
             }
         }
     }
-    return false;
+    return ret;
 }
 
 /**
@@ -208,6 +237,7 @@ bool CameraStream::CannyGlyphDetection(cv::Mat& src, cv::Mat& proc) {
         }
     }
     
+    //Get the detected glyphs.
     return GlyphContourDetection(src, contours);
 }
 
@@ -248,5 +278,7 @@ bool CameraStream::ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& threshold) 
             contours[i][j].y *= PIXEL_SKIP;
         }
     }
+    
+    //Get the detected glyphs.
     return GlyphContourDetection(src, contours);
 }

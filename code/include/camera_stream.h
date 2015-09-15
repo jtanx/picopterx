@@ -172,7 +172,7 @@ namespace picopter {
             bool CamShift(cv::Mat& src, cv::Mat& threshold);
             bool CannyGlyphDetection(cv::Mat& src, cv::Mat& proc);
             bool ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& proc);
-            bool GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours) ;
+            bool GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours);
 
             /** Copy constructor (disabled) **/
             CameraStream(const CameraStream &other);

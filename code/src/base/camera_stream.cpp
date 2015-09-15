@@ -97,7 +97,7 @@ CameraStream::CameraStream(Options *opts)
     std::string f = GenerateFilename(
         PICOPTER_HOME_LOCATION "/videos", "save", ".mkv");
     Log(LOG_INFO, "Saving video to %s", f.c_str());
-    m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, 800);
+    m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, (700 * INPUT_WIDTH)/320);
 #endif
 
     //Start the worker thread.
@@ -327,10 +327,20 @@ void CameraStream::ProcessImages() {
                 }
                 break;
             case MODE_CANNY_GLYPH:
-                CannyGlyphDetection(image, backend);
+                if (CannyGlyphDetection(image, backend)) {
+                    for(size_t i=0; i < m_detected.size(); i++) {
+                        cv::rectangle(image, m_detected[i].bounds.tl(),
+                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                    }
+                }
             break;
             case MODE_THRESH_GLYPH:
-                ThresholdingGlyphDetection(image, backend);
+                if (ThresholdingGlyphDetection(image, backend)) {
+                    for(size_t i=0; i < m_detected.size(); i++) {
+                        cv::rectangle(image, m_detected[i].bounds.tl(),
+                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                    }
+                }
             break;
         }
 
