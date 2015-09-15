@@ -5,6 +5,7 @@ BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # The executable
 SERVER=$BASE/../code/bin/picopter
+CONFIG=$BASE/../code/configs/auto.json
 
 # Colourful text
 # Red text
@@ -50,7 +51,8 @@ while [ $fails -lt 1 ]; do
 	log_status "Rotating the system logs..."
 	logrotate -f /etc/logrotate.d/picopter.conf
 	log_status "(Re)starting the server..."
-	$SERVER
+    #$SERVER $CONFIG
+	gdb -ex run --args $SERVER $CONFIG
 	error=$?
 	if [ "$error" == "0" ]; then
 		exit 0
