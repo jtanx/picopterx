@@ -57,7 +57,6 @@ int Lidar::GetLatest() {
 }
 
 void Lidar::Worker() {
-    
     while (!m_stop) {
         while (wiringPiI2CWriteReg8(m_fd, 
             MEASURE_REGISTER, MEASURE_VALUE) < 0 && !m_stop) {
@@ -71,7 +70,7 @@ void Lidar::Worker() {
             Log(LOG_DEBUG, "Error reading from LIDAR.");
         } else {
             m_distance = (high<<8) | (low);
-            Log(LOG_DEBUG, "DIST: %d", m_distance.load());
+            //Log(LOG_DEBUG, "DIST: %d", m_distance.load());
         }
         
         sleep_for(milliseconds(50)); //20Hz update speed

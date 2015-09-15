@@ -15,6 +15,7 @@ using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using steady_clock = std::chrono::steady_clock;
 using std::this_thread::sleep_for;
+using namespace std::placeholders;
 
 const int FlightController::SLEEP_PERIOD;
 
@@ -66,8 +67,10 @@ FlightController::FlightController(Options *opts)
 , cam(m_camera)
 , lidar(m_lidar)
 , m_stop{false}
+, m_quit{false}
 , m_state{STATE_STOPPED}
 , m_task_id{TASK_NONE}
+, m_hud{}
 {
     //GPSGPSD *gps;
     m_buzzer = new Buzzer();
@@ -83,6 +86,12 @@ FlightController::FlightController(Options *opts)
         m_camera->SetMode(CameraStream::MODE_CONNECTED_COMPONENTS);
     }
     
+    //Register the HUD parser.
+    m_fb->RegisterHandler(MAVLINK_MSG_ID_VFR_HUD,
+        std::bind(&FlightController::HUDParser, this, _1));
+    m_fb->RegisterHandler(MAVLINK_MSG_ID_SYSTEM_TIME,
+        std::bind(&FlightController::HUDParser, this, _1));
+
     Log(LOG_INFO, "Initialised components!"); 
     m_buzzer->PlayWait(200, 200, 100);
 }
@@ -96,6 +105,8 @@ FlightController::FlightController() : FlightController(NULL) {}
  * Destructor. Stops/cleans up the base components (depends on RAII)
  */
 FlightController::~FlightController() {
+    m_quit.store(true, std::memory_order_relaxed);
+    
     if (m_task_thread.valid()) {
         Log(LOG_INFO, "Waiting for task to end...");
         Stop();
@@ -106,6 +117,43 @@ FlightController::~FlightController() {
     //delete m_gps; //Part of the FlightBoard now
     delete m_buzzer;
     delete m_lidar;
+}
+
+/**
+ * HUD processing callback.
+ * @return Return_Description
+ */
+void FlightController::HUDParser(const mavlink_message_t *msg) {
+    if (msg->msgid == MAVLINK_MSG_ID_VFR_HUD) {
+        mavlink_vfr_hud_t vfr;
+        mavlink_msg_vfr_hud_decode(msg, &vfr);
+
+        m_hud.air_speed = vfr.airspeed;
+        m_hud.ground_speed = vfr.groundspeed;
+        m_hud.heading = vfr.heading;
+        m_hud.throttle = vfr.throttle;
+        m_hud.alt_msl = vfr.alt;
+        m_hud.climb = vfr.climb;
+        
+        std::lock_guard<std::mutex> lock(m_control_mutex);
+        if (m_camera) {
+            GPSData d;
+            std::stringstream ss;
+            ss << (*this);
+            m_gps->GetLatest(&d);
+            m_hud.pos = Coord3D{d.fix.lat, d.fix.lon, d.fix.alt-d.fix.groundalt};
+            m_hud.status1 = ss.str();
+            m_camera->SetHUDInfo(&m_hud);
+        }
+    } else if (msg->msgid == MAVLINK_MSG_ID_SYSTEM_TIME) {
+        mavlink_system_time_t tm;
+        mavlink_msg_system_time_decode(msg, &tm);
+
+        m_hud.unix_time_offset = (tm.time_unix_usec / 1000000) - time(NULL); 
+        if (m_hud.unix_time_offset < 0) {
+            m_hud.unix_time_offset = 0;
+        }
+    }
 }
 
 /**
@@ -120,7 +168,8 @@ void FlightController::Stop() {
  * Check whether a stop should occur or not.
  */
 bool FlightController::CheckForStop() {
-    return m_stop.load(std::memory_order_relaxed) || !m_fb->IsAutoMode();
+    return m_quit.load(std::memory_order_relaxed) || 
+        m_stop.load(std::memory_order_relaxed) || !m_fb->IsAutoMode();
 }
 
 /**
@@ -146,6 +195,7 @@ bool FlightController::WaitForAuth() {
  * @return true iff all reloaded components successfully reloaded. 
  */
 bool FlightController::ReloadSettings(Options *opts) {
+    std::lock_guard<std::mutex> lock(m_control_mutex);
     delete m_camera;
     InitialiseItem("Camera", m_camera, opts, m_buzzer, false, 1);
     if (m_camera) {

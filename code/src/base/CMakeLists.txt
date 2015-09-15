@@ -16,6 +16,7 @@ set (SOURCE
 	 flightcontroller.cpp
 	 PID.cpp
 	 camera_stream.cpp
+	 camera_glyphs.cpp
 	 mavcommsserial.cpp
 	 mavcommstcp.cpp
 	 lidar.cpp

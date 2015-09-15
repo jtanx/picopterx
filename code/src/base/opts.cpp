@@ -16,17 +16,27 @@ using namespace rapidjson;
 const char* Options::FAMILY_DEFAULT = "picopter";
 
 /**
- * Finds the object based on the given key.
+ * Finds the object based on the given key (internal rep).
  * @param d The rapidjson document to search within.
  * @param key The key of the given entry.
  * @return A pointer to the given value, or nullptr if it doesn't exist.
  */
-static Value* GetValue(Value *d, const char *key) {
+static Value* LGetValue(Value *d, const char *key) {
     auto ret = d->FindMember(key);
     if (ret != d->MemberEnd()) {
         return &ret->value;
     }
     return nullptr;
+}
+
+/**
+ * Finds the object based on the given key.
+ * @param d The rapidjson document to search within.
+ * @param key The key of the given entry.
+ * @return A pointer to the given value, or nullptr if it doesn't exist.
+ */
+void* Options::GetValue(void *d, const char *key) {
+    return static_cast<void*>(LGetValue(static_cast<Value*>(d), key));
 }
 
 /**
@@ -62,7 +72,7 @@ Options::Options(const char *file, const char *json_string) {
         d->SetObject();
         m_family_inst = nullptr;
     } else {
-        Value *fi = GetValue(d, FAMILY_DEFAULT);
+        Value *fi = LGetValue(d, FAMILY_DEFAULT);
         if (fi && !fi->IsObject()) {
             fi->SetObject();
         }
@@ -102,7 +112,7 @@ Options::~Options() {
  */
 void Options::SetFamily(const char *family) {
     m_family = family ? family : FAMILY_DEFAULT;
-    Value *fi = GetValue(static_cast<Document*>(m_doc), family);
+    Value *fi = LGetValue(static_cast<Document*>(m_doc), family);
     if (fi && !fi->IsObject()) {
         fi->SetObject();
     }
@@ -117,7 +127,7 @@ void Options::SetFamily(const char *family) {
 bool Options::Contains(const char *key) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        return GetValue(fi, key) != nullptr;
+        return LGetValue(fi, key) != nullptr;
     }
     return false;
 }
@@ -131,7 +141,7 @@ bool Options::Contains(const char *key) {
 int Options::GetInt(const char *key, int otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        Value *vpt = GetValue(fi, key);
+        Value *vpt = LGetValue(fi, key);
         if (vpt && vpt->IsInt()) {
             int ret = vpt->GetInt();
             LogSimple(LOG_INFO, "%s: %d", key, ret);
@@ -152,7 +162,7 @@ int Options::GetInt(const char *key, int otherwise) {
 bool Options::GetInt(const char *key, int *value) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        Value *vpt = GetValue(fi, key);
+        Value *vpt = LGetValue(fi, key);
         if (vpt && vpt->IsInt()) {
             *value = vpt->GetInt();
             LogSimple(LOG_INFO, "%s: %d", key, *value);
@@ -176,7 +186,7 @@ bool Options::GetInt(const char *key, int *value) {
 bool Options::GetInt(const char *key, int *value, int min, int max) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        Value *vpt = GetValue(fi, key);
+        Value *vpt = LGetValue(fi, key);
         if (vpt && vpt->IsInt()) {
             *value = picopter::clamp(vpt->GetInt(), min, max);
             LogSimple(LOG_INFO, "%s: %d", key, *value);
@@ -196,7 +206,7 @@ bool Options::GetInt(const char *key, int *value, int min, int max) {
 bool Options::GetBool(const char *key, bool otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        Value *vpt = GetValue(fi, key);
+        Value *vpt = LGetValue(fi, key);
         if (vpt && vpt->IsBool()) {
             bool ret = vpt->GetBool();
             LogSimple(LOG_INFO, "%s: %s", key, ret ? "true" : "false");
@@ -217,7 +227,7 @@ bool Options::GetBool(const char *key, bool otherwise) {
 bool Options::GetBool(const char *key, bool *value) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        Value *vpt = GetValue(fi, key);
+        Value *vpt = LGetValue(fi, key);
         if (vpt && vpt->IsBool()) {
             *value = vpt->GetBool();
             LogSimple(LOG_INFO, "%s: %s", key, *value ? "true" : "false");
@@ -240,7 +250,7 @@ bool Options::GetBool(const char *key, bool *value) {
 const char* Options::GetString(const char *key, const char *otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        Value *vpt = GetValue(fi, key);
+        Value *vpt = LGetValue(fi, key);
         if (vpt && vpt->IsString()) {
             const char *ret = vpt->GetString();
             LogSimple(LOG_INFO, "%s: %s", key, ret ? ret : "Null");
@@ -260,7 +270,7 @@ const char* Options::GetString(const char *key, const char *otherwise) {
 double Options::GetReal(const char *key, double otherwise) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        Value *vpt = GetValue(fi, key);
+        Value *vpt = LGetValue(fi, key);
         if (vpt && vpt->IsDouble()) {
             double ret = vpt->GetDouble();
             LogSimple(LOG_INFO, "%s: %f", key, ret);
@@ -288,7 +298,7 @@ double Options::GetReal(const char *key, double otherwise) {
 bool Options::GetReal(const char *key, double *value, double min, double max) {
     Value *fi = static_cast<Value*>(m_family_inst);
     if (fi) {
-        Value *vpt = GetValue(fi, key);
+        Value *vpt = LGetValue(fi, key);
         if (vpt && vpt->IsDouble()) {
             *value = picopter::clamp(vpt->GetDouble(), min, max);
             LogSimple(LOG_INFO, "%s: %f", key, *value);
@@ -301,6 +311,32 @@ bool Options::GetReal(const char *key, double *value, double min, double max) {
     }
     LogSimple(LOG_INFO, "%s [default]: %f", key, *value);
     return false;
+}
+
+/**
+ * Retrieves a list from the options.
+ * @param [in] key The key to the list.
+ * @param [in] closure The user-specified value to pass to the callback.
+ * @param [in] cb The callback to parse each object in the list.
+ */
+void Options::GetList(const char *key, void *closure, ListParser cb) {
+    Value *fi = static_cast<Value*>(m_family_inst);
+    if (fi) {
+        Value *vpt = LGetValue(fi, key);
+        if (vpt && vpt->IsObject()) {
+            for(Value::ConstMemberIterator it=vpt->MemberBegin(); it != vpt->MemberEnd(); ++it) {
+               cb(&it->value, closure);
+            }
+        } else if (vpt && vpt->IsArray()) {
+            for (auto it = vpt->Begin(); it != vpt->End(); ++it) {
+                if (it->IsObject()) {
+                    cb(it, closure);
+                }
+            }
+        }
+        
+    }
+
 }
 
 /**
@@ -325,7 +361,7 @@ void Options::SetImpl(const char *key, const T& val) {
         d->AddMember(family_key, family_val, d->GetAllocator());
         m_family_inst = &(*d)[m_family.c_str()];
     } else { //We have the family
-        Value *existing = GetValue(fi, key);
+        Value *existing = LGetValue(fi, key);
         if (existing) { //The entry was already there, so just update value
             *existing = val;
         } else { //Create the new entry
@@ -358,7 +394,7 @@ void Options::Set(const char *key, const char *val) {
         d->AddMember(family_key, family_val, d->GetAllocator());
         m_family_inst = &(*d)[m_family.c_str()];
     } else { //We have the family
-        Value *existing = GetValue(fi, key);
+        Value *existing = LGetValue(fi, key);
         if (existing) { //The entry was already there, so just update value
             existing->SetString(val, d->GetAllocator());
         } else { //Create the new entry

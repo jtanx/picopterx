@@ -1,10 +1,11 @@
 /**
  * @file camera_stream.cpp
- * @brief Camera interaction functions.
+ * @brief Camera interaction functions. Monster class for camera processing.
  */
 
 #include "common.h"
 #include "camera_stream.h"
+#include "flightboard.h"
 
 #define BLACK 0
 #define WHITE 255
@@ -37,6 +38,7 @@ CameraStream::CameraStream(Options *opts)
 , m_fps(-1)
 , m_show_backend(false)
 , m_save_photo(false)
+, m_hud{}
 , m_arrow{}
 {
     Options clear;
@@ -44,6 +46,9 @@ CameraStream::CameraStream(Options *opts)
         opts = &clear;
     }
 
+    //Load the glyphs, if any.
+    LoadGlyphs(opts);
+    
     //Set the input/processing/streaming width parameters
     opts->SetFamily("CAMERA_STREAM");
     INPUT_WIDTH   = opts->GetInt("INPUT_WIDTH", 320);
@@ -92,7 +97,7 @@ CameraStream::CameraStream(Options *opts)
     std::string f = GenerateFilename(
         PICOPTER_HOME_LOCATION "/videos", "save", ".mkv");
     Log(LOG_INFO, "Saving video to %s", f.c_str());
-    m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, 800);
+    m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, (700 * INPUT_WIDTH)/320);
 #endif
 
     //Start the worker thread.
@@ -213,6 +218,15 @@ void CameraStream::SetConfig(Options *config) {
 }
 
 /**
+ * Sets the heads-up display info.
+ * @param [in] hud The HUD info.
+ */
+void CameraStream::SetHUDInfo(HUDInfo *hud) {
+    std::lock_guard<std::mutex> lock(m_aux_mutex);
+    m_hud = *hud;
+}
+
+/**
  * Perform camera auto learning.
  */
 void CameraStream::DoAutoLearning() {
@@ -312,6 +326,22 @@ void CameraStream::ProcessImages() {
                     }
                 }
                 break;
+            case MODE_CANNY_GLYPH:
+                if (CannyGlyphDetection(image, backend)) {
+                    for(size_t i=0; i < m_detected.size(); i++) {
+                        cv::rectangle(image, m_detected[i].bounds.tl(),
+                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                    }
+                }
+            break;
+            case MODE_THRESH_GLYPH:
+                if (ThresholdingGlyphDetection(image, backend)) {
+                    for(size_t i=0; i < m_detected.size(); i++) {
+                        cv::rectangle(image, m_detected[i].bounds.tl(),
+                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                    }
+                }
+            break;
         }
 
         DrawCrosshair(image, cv::Point(image.cols/2, image.rows/2),
@@ -319,8 +349,8 @@ void CameraStream::ProcessImages() {
         // Draw an arrow on the image (for displaying where it wants to go for object tracking)
         DrawTrackingArrow(image);
 
-        //Display the frame rate
-        DrawFramerate(image);
+        //Overlay the HUD
+        DrawHUD(image);
 
         //Are we in demo mode? If so, display the image on the screen.
         //Trying to do this when no X server is available will crash the program.
@@ -370,15 +400,52 @@ double CameraStream::GetFramerate() {
 }
 
 /**
- * Draws the current frame rate on the image.
- * @param [in] img The image to draw the frame rate onto.
+ * Draws a heads-up display onto the frame.
+ * @param [in] img The image to draw the HUD onto.
  */
-void CameraStream::DrawFramerate(cv::Mat& img) {
+void CameraStream::DrawHUD(cv::Mat& img) {
+    std::unique_lock<std::mutex> lock(m_aux_mutex);
+    HUDInfo hud = m_hud;
+    lock.unlock();
+    
     char string_buf[128];
-
+    time_t ts = time(NULL) + hud.unix_time_offset;
+    struct tm tsp;
+    
+    //Enter the time
+    localtime_r(&ts, &tsp);
+    strftime(string_buf, sizeof(string_buf), "%H:%M:%S", &tsp);
+    cv::putText(img, string_buf, cv::Point(70*img.cols/100, 5*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.34, cv::Scalar(255, 255, 255), 1, 8);
+    strftime(string_buf, sizeof(string_buf), "%d-%m-%Y", &tsp);
+    cv::putText(img, string_buf, cv::Point(70*img.cols/100, 10*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    //Enter the FPS
     sprintf(string_buf, "%3.4f fps", m_fps);
-    cv::putText(img, string_buf, cv::Point(30*img.cols/100, 90*img.rows/100),
-        cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 255, 255), 1, 8);
+    cv::putText(img, string_buf, cv::Point(70*img.cols/100, 15*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    
+    //Enter the position
+    sprintf(string_buf, "%.7f, %.7f", hud.pos.lat, hud.pos.lon);
+    cv::putText(img, string_buf, cv::Point(5*img.cols/100, 5*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    //Enter the altitude and climb rate
+    sprintf(string_buf, "%.1fm, %.1fm/s", hud.pos.alt, hud.climb);
+    cv::putText(img, string_buf, cv::Point(5*img.cols/100, 10*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    //Enter the heading and throttle
+    sprintf(string_buf, "%03d deg, %d%%", hud.heading, hud.throttle);
+    cv::putText(img, string_buf, cv::Point(5*img.cols/100, 15*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    //Enter the ground speed and air speed.
+    sprintf(string_buf, "GS: %.1fm/s AS:%.1f m/s", hud.ground_speed, hud.air_speed);
+    cv::putText(img, string_buf, cv::Point(5*img.cols/100, 20*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+        
+    if (hud.status1.size()) {
+        cv::putText(img, hud.status1, cv::Point(5*img.cols/100, 92*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    }
 }
 
 /**

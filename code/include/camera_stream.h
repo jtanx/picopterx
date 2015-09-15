@@ -10,6 +10,7 @@
 #include "opts.h"
 #include "common.h"
 #include "navigation.h"
+#include "flightboard.h" //For HUDInfo
 #include <opencv2/opencv.hpp>
 #ifdef IS_ON_PI
 #  include "omxcv.h"
@@ -54,6 +55,20 @@ namespace picopter {
         /** Real-world location (lat/lon/alt) **/
         navigation::Coord3D location;
     } ObjectInfo;
+    
+    /**
+     * Holds information about a glyph.
+     */
+    typedef struct CameraGlyph {
+        /** The glyph ID. Should be unique. **/
+        int id;
+        /** The path to the glyph file, if any. **/
+        std::string path;
+        /** Glyph description. **/
+        std::string description;
+        /** The actual glyph image. **/
+        cv::Mat image;
+    } CameraGlyph;
 
     /**
      * Camera class. Uses OpenCV to interact with the camera.
@@ -65,6 +80,8 @@ namespace picopter {
                 MODE_COM = 1,
                 MODE_CAMSHIFT = 2,
                 MODE_CONNECTED_COMPONENTS = 3,
+                MODE_CANNY_GLYPH = 4,
+                MODE_THRESH_GLYPH = 5,
                 MODE_LEARN_COLOUR = 999
             } CameraMode;
 
@@ -80,6 +97,8 @@ namespace picopter {
 
             void GetConfig(Options *config);
             void SetConfig(Options *config);
+            
+            void SetHUDInfo(HUDInfo *hud);
 
             void DoAutoLearning(void);
 
@@ -118,10 +137,14 @@ namespace picopter {
             bool m_save_photo;
             /** The path to store the snapshot to **/
             std::string m_save_filename;
+            /** The current HUD info. **/
+            HUDInfo m_hud;
             /** Arrow indicating movement **/
             navigation::Point3D m_arrow;
             /** Detected objects **/
             std::vector<ObjectInfo> m_detected;
+            /** List of glyphs **/
+            std::vector<CameraGlyph> m_glyphs;
             /** Colour lookup thresholding table **/
             uint8_t m_lookup_threshold[THRESH_SIZE][THRESH_SIZE][THRESH_SIZE];
 
@@ -133,8 +156,10 @@ namespace picopter {
             omxcv::OmxCv *m_enc;
 #endif
 
+            void LoadGlyphs(Options *opts);
+
             void ProcessImages(void);
-            void DrawFramerate(cv::Mat& img);
+            void DrawHUD(cv::Mat& img);
             void DrawCrosshair(cv::Mat& img, cv::Point centre, const cv::Scalar& colour, int size);
             void DrawTrackingArrow(cv::Mat& img);
 
@@ -145,6 +170,9 @@ namespace picopter {
             bool CentreOfMass(cv::Mat& src, cv::Mat& threshold);
             int ConnectedComponents(cv::Mat& src, cv::Mat& threshold);
             bool CamShift(cv::Mat& src, cv::Mat& threshold);
+            bool CannyGlyphDetection(cv::Mat& src, cv::Mat& proc);
+            bool ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& proc);
+            bool GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours);
 
             /** Copy constructor (disabled) **/
             CameraStream(const CameraStream &other);

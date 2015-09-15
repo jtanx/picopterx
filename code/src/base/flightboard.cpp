@@ -130,11 +130,12 @@ void FlightBoard::InputLoop() {
                         m_is_in_air = (heartbeat.system_status == MAV_STATE_ACTIVE);
                         m_is_armed = static_cast<bool>(
                             heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED);
-                        LogSimple(LOG_DEBUG, "Heartbeat! Mode: %d, %d, %d, %d, %d", 
-                        heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, 
-                        heartbeat.system_status, (int)m_is_auto_mode);
+                        //LogSimple(LOG_DEBUG, "Heartbeat! Mode: %d, %d, %d, %d, %d", 
+                        //heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, 
+                        //heartbeat.system_status, (int)m_is_auto_mode);
                         
                         if (m_last_heartbeat >= m_heartbeat_timeout) {
+                            mavlink_request_data_stream_t stream{};
                             mavlink_message_t smsg;
 
                             m_system_id = msg.sysid;
@@ -142,11 +143,32 @@ void FlightBoard::InputLoop() {
                             Log(LOG_INFO, "Initialisation: sysid: %d, compid: %d",
                                 msg.sysid, msg.compid);
                             
-                            //10 Hz update rate
-                            mavlink_msg_request_data_stream_pack(
-                                m_system_id, m_flightboard_id, &smsg,
-                                msg.sysid, msg.compid, MAV_DATA_STREAM_ALL, 10, 1);
-                            //Log(LOG_DEBUG, "Sending data request");
+                            stream.target_system = m_system_id;
+                            stream.target_component = m_component_id;
+                            stream.start_stop = 1;
+                            stream.req_message_rate = 6;
+                            
+                            //GPS data at 6Hz
+                            stream.req_stream_id = MAV_DATA_STREAM_POSITION;
+                            mavlink_msg_request_data_stream_encode(
+                                m_system_id, m_flightboard_id, &smsg, &stream);
+                            m_link->WriteMessage(&smsg);
+                            //IMU data at 6Hz
+                            stream.req_stream_id = MAV_DATA_STREAM_EXTRA1;
+                            mavlink_msg_request_data_stream_encode(
+                                m_system_id, m_flightboard_id, &smsg, &stream);
+                            m_link->WriteMessage(&smsg);
+                            //HUD data at 1Hz
+                            stream.req_stream_id = MAV_DATA_STREAM_EXTRA2;
+                            stream.req_message_rate = 1;
+                            mavlink_msg_request_data_stream_encode(
+                                m_system_id, m_flightboard_id, &smsg, &stream);
+                            m_link->WriteMessage(&smsg);
+                            //Time at 1Hz - only for syncing w/ copter (GPS).
+                            stream.req_stream_id = MAV_DATA_STREAM_EXTRA3;
+                            stream.req_message_rate = 1;
+                            mavlink_msg_request_data_stream_encode(
+                                m_system_id, m_flightboard_id, &smsg, &stream);
                             m_link->WriteMessage(&smsg);
                         }
                         last_heartbeat = steady_clock::now();

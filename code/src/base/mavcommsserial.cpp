@@ -123,7 +123,7 @@ MAVCommsSerial::~MAVCommsSerial() {
  */
 bool MAVCommsSerial::ReadMessage(mavlink_message_t *ret) {
     std::lock_guard<std::mutex> lock(m_io_mutex);
-    struct timeval timeout = {2,0}; //2 second timeout
+    struct timeval timeout = {3,0}; //3 second timeout
     mavlink_status_t status;
     bool received;
     uint8_t cp;
