@@ -8,6 +8,7 @@
 
 /* For the Options class */
 #include "opts.h"
+#include "datalog.h"
 
 namespace picopter {
     class Lidar {
@@ -19,6 +20,7 @@ namespace picopter {
         private:
             int m_fd;
             std::atomic<int> m_distance;
+            DataLog m_log;
             
             std::atomic<bool> m_stop;
             std::thread m_worker;

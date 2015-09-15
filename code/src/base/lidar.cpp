@@ -26,6 +26,7 @@ using std::chrono::milliseconds;
 Lidar::Lidar(Options *opts)
 : m_fd(-1)
 , m_distance(-1)
+, m_log("lidar")
 {
     m_fd = wiringPiI2CSetup(LIDARLITE_ADDRESS);
     if (m_fd == -1) {
@@ -57,6 +58,7 @@ int Lidar::GetLatest() {
 }
 
 void Lidar::Worker() {
+    int counter = 0;
     while (!m_stop) {
         while (wiringPiI2CWriteReg8(m_fd, 
             MEASURE_REGISTER, MEASURE_VALUE) < 0 && !m_stop) {
@@ -69,7 +71,11 @@ void Lidar::Worker() {
         if (high < 0 || low < 0) {
             Log(LOG_DEBUG, "Error reading from LIDAR.");
         } else {
-            m_distance = (high<<8) | (low);
+            low |= (high<<8);
+            m_distance = low;
+            if ((++counter % 20) == 0) { //Restrict log to ~1Hz.
+                m_log.Write(": %d", low);
+            }
             //Log(LOG_DEBUG, "DIST: %d", m_distance.load());
         }
         
