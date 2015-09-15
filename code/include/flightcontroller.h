@@ -141,13 +141,13 @@ namespace picopter {
             std::mutex m_task_mutex;
             /** Secondary mutex to control flight controller modifications. **/
             std::mutex m_control_mutex;
-            /** HUD updater thread **/
-            std::thread m_hud_thread;
             /** The current task **/
             std::shared_ptr<FlightTask> m_task;
+            /** HUD info **/
+            HUDInfo m_hud;
             
             /** HUD Loop updater **/
-            void HUDLoop();
+            void HUDParser(const mavlink_message_t *msg);
             /** Update the current state **/
             ControllerState SetCurrentState(ControllerState state);
             /** Copy constructor (disabled) **/

@@ -25,8 +25,8 @@ namespace picopter {
      * extra.
      */
     typedef struct HUDInfo {
-        /** Microseconds since UNIX epoch **/
-        uint64_t unix_time;
+        /** UNIX epoch offset, in seconds **/
+        int64_t unix_time_offset;
         /** Air speed, in m/s **/
         float air_speed;
         /** Ground speed, in m/s **/
@@ -105,8 +105,6 @@ namespace picopter {
             std::mutex m_output_mutex;
             /** Gimbal mutex **/
             std::mutex m_gimbal_mutex;
-            /** HUD mutex **/
-            std::mutex m_hud_mutex;
             /** Message receiving thread **/
             std::thread m_input_thread;
             /** Message sending thread **/
@@ -131,8 +129,6 @@ namespace picopter {
             int m_rel_watchdog;
             /** The current gimbal position **/
             navigation::EulerAngle m_gimbal;
-            /** The current HUD info **/
-            HUDInfo m_hud;
             /** The event handler table **/
             EventHandler m_handler_table[256];
 

@@ -399,7 +399,7 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     lock.unlock();
     
     char string_buf[128];
-    time_t ts = static_cast<time_t>(hud.unix_time / 1000000); 
+    time_t ts = time(NULL) + hud.unix_time_offset;
     struct tm tsp;
     
     //Enter the time

@@ -56,6 +56,8 @@ void UtilityModule::Run(FlightController *fc, void *opts) {
             while (!fc->fb->IsArmed() && !fc->CheckForStop()) {
                 fc->Sleep(100);
             }
+            //Wait a while for motor spinup
+            fc->Sleep(300);
             
             if (fc->fb->IsArmed() && !fc->CheckForStop()) {
                 Log(LOG_INFO, "Performing take-off!");
