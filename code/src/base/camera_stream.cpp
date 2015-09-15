@@ -300,6 +300,7 @@ void CameraStream::ProcessImages() {
                 int lwidth = (LEARN_SIZE*image.cols)/100, lheight = (LEARN_SIZE*image.rows)/100;
                 cv::Rect roi((image.cols - lwidth)/2, (image.rows - lheight)/2,
                     lwidth, lheight);
+                Threshold(image, backend, PROCESS_WIDTH);
                 LearnThresholds(image, backend, roi);
 
                 cv::rectangle(image,roi.tl(), roi.br(), cv::Scalar(255, 255, 255));
@@ -588,7 +589,10 @@ void CameraStream::LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect ro
     if (m_learning_thresholds.hue_min > m_learning_thresholds.hue_max) {
         m_learning_thresholds.hue_min -= 180;
     }
-    threshold = src;
+    
+    if (m_demo_mode) {
+        cv::imshow("Thresholded image", threshold);
+    }
 }
 
 /**
