@@ -192,8 +192,8 @@ std::deque<int> PathPlan::detour(Coord3D A, Coord3D B ){
 		bool traversableToEnd = true;
 		for(int j =0; j<numNodes; j++){
 		    for(int k = j; k<numNodes; k++){
-			    if( checkIntersection(start, i, j, k) ) traversableFromStart=false;
-			    if( checkIntersection(end, i, j, k) )  traversableToEnd=false;
+			    if( checkIntersection(start, i, j, k) && collisionBoundary[j][k]>0) traversableFromStart=false;
+			    if( checkIntersection(end, i, j, k) && collisionBoundary[j][k]>0)  traversableToEnd=false;
 			    if(!traversableFromStart && !traversableToEnd) break;
 			}
 		}
@@ -217,7 +217,7 @@ std::deque<int> PathPlan::detour(Coord3D A, Coord3D B ){
 	while(OPEN.size() > 0 && !success){
 		int n = 0; //index of OPEN with most-fit node
 		//find most-fit discovered node
-		for(size_t i = 1; i<OPEN.size();i++){
+		for(size_t i = 1; i<OPEN.size(); i++){
 		    if(fitness[OPEN[i]]<fitness[OPEN[n]]) n=i;
 		}
 std::cout << OPEN[n] << ": ";
@@ -238,29 +238,29 @@ std::cout << "success!\n";
 std::cout << i << ", ";
 			    distance[i] = distance[OPEN[n]]+paths[OPEN[n]][i];
 			    fitness[i] =distance[i] + displacement(nodes[OPEN[n]], nodes[i]);
-		         pathtree[i] = OPEN[n];
-		         OPEN.push_front(i);
+		        pathtree[i] = OPEN[n];
+		        OPEN.push_back(i);
 		    }
 		}
-		CLOSED.push_front(OPEN[n]);
+		CLOSED.push_back(OPEN[n]);
 		OPEN.erase (OPEN.begin()+n);
 std::cout << "\n";
 	}
 
-    deleteNode(end);
-    deleteNode(start);	
+    //deleteNode(end);
+    //deleteNode(start);	
     
-for(int i=0; i<numNodes; i++) std::cout << pathtree[i] << ", ";
     
     //create path from pathtree
     std::deque<int> path;
     int backstep = end;
     while(backstep != start){
-std::cout << backstep << "\n";
+std::cout << backstep << ", ";
         path.push_front(backstep);
         backstep = pathtree[backstep];
     }
     path.push_front(start);
+std::cout << start << "\n";
     
     return path;
 }
