@@ -27,6 +27,7 @@ Lidar::Lidar(Options *opts)
 : m_fd(-1)
 , m_distance(-1)
 , m_log("lidar")
+, m_stop{false}
 {
     m_fd = wiringPiI2CSetup(LIDARLITE_ADDRESS);
     if (m_fd == -1) {
@@ -76,7 +77,7 @@ void Lidar::Worker() {
             if ((++counter % 20) == 0) { //Restrict log to ~1Hz.
                 m_log.Write(": %d", low);
             }
-            //Log(LOG_DEBUG, "DIST: %d", m_distance.load());
+            //Log(LOG_DEBUG, "DIST: %d", low));
         }
         
         sleep_for(milliseconds(50)); //20Hz update speed
