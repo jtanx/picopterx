@@ -149,7 +149,7 @@ void FlightController::HUDParser(const mavlink_message_t *msg) {
             }
             m_hud.pos = Coord3D{d.fix.lat, d.fix.lon, d.fix.alt-d.fix.groundalt};
             m_hud.status1 = ss.str();
-            if (m_fb_status_counter < 7 && m_fb_status_text.size() > 0) {
+            if (m_fb_status_counter < 14 && m_fb_status_text.size() > 0) {
                 m_hud.status2 = m_fb_status_text;
             } else {
                 m_hud.status2.clear();
