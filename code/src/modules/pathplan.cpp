@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "pathplan.h"
+#include <fstream>
 
 using namespace picopter;
 using namespace picopter::navigation;
@@ -145,7 +146,6 @@ double PathPlan::crossProduct(double Ax, double Ay, double Bx, double By){
 
 //check if two line-segments cross
 bool PathPlan::checkIntersection(int node1, int node2, int node3, int node4){
-
 	node n1=nodes[node1], n2=nodes[node2], n3=nodes[node3], n4=nodes[node4];
     //if no line exists to intersect, no intersection
     if(collisionBoundary[node3][node4] < 0) return false;
@@ -203,10 +203,9 @@ std::deque<int> PathPlan::detour(Coord3D A, Coord3D B ){
 	
 	//use A* algorithm to find shortest path from start to end
 	
-	double distance[numNodes];
-	double fitness[numNodes];
-	std::vector<int> pathtree;
-	pathtree.resize(numNodes);	
+	std::vector<double> distance(numNodes);
+	std::vector<double>  fitness(numNodes);
+	std::vector<int> pathtree(numNodes);	
 	std::deque<int> OPEN;
 	std::deque<int> CLOSED;
 	
@@ -218,7 +217,7 @@ std::deque<int> PathPlan::detour(Coord3D A, Coord3D B ){
 	while(OPEN.size() > 0 && !success){
 		int n = 0; //index of OPEN with most-fit node
 		//find most-fit discovered node
-		for(int i = 1; i<OPEN.size();i++){
+		for(size_t i = 1; i<OPEN.size();i++){
 		    if(fitness[OPEN[i]]<fitness[OPEN[n]]) n=i;
 		}
 std::cout << OPEN[n] << ": ";
@@ -232,8 +231,8 @@ std::cout << "success!\n";
 		//enqueue all of most-fit node's neighbors
 		for(int i = 0; i< numNodes; i++){
 		    bool explored = false;
-		    for(int j= 0; j<OPEN.size(); j++) if(OPEN[j]==i) explored = true;
-		    for(int j= 0; j<CLOSED.size(); j++) if(CLOSED[j]==i) explored = true;
+		    for(size_t j= 0; j<OPEN.size(); j++) if(OPEN[j]==i) explored = true;
+		    for(size_t j= 0; j<CLOSED.size(); j++) if(CLOSED[j]==i) explored = true;
 		    		    
 		    if(!explored && paths[OPEN[n]][i] > 0){
 std::cout << i << ", ";
@@ -267,8 +266,8 @@ std::cout << backstep << "\n";
 }
 
 //Writes graph to an .svg file
-void PathPlan::writeGraphSVGJamesOval(const char *fileName, std::deque<Coord3D> flightPlan){
-    /*
+void PathPlan::writeGraphSVGJamesOval(const char *fileName, std::deque<Waypoints::Waypoint> flightPlan){
+    
     double originy = -31.979272, originx = 115.817147;
     double terminy = -31.980967, terminx = 115.818789;
     double width = 417, height = 505;
@@ -281,7 +280,7 @@ void PathPlan::writeGraphSVGJamesOval(const char *fileName, std::deque<Coord3D> 
     
     //Draw collision zones
     int index = 0;
-    for(int i = 0; i<polygonSides.size(); i++){
+    for(size_t i = 0; i<polygonSides.size(); i++){
         map << "   <path\n     style=\"fill:#ff0000;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1;opacity:0.5\"\n" << "        d=\"M   ";
  
         for(int j=0; j<polygonSides[i]; j++){
@@ -307,8 +306,8 @@ void PathPlan::writeGraphSVGJamesOval(const char *fileName, std::deque<Coord3D> 
     //Draw flight plan
     if(flightPlan.size() > 1){
         map << "   <path\n     style=\"fill:none;stroke:#ffff00;stroke-width:3px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n     d=\"M ";
-        for(int i = 0; i<flightPlan.size(); i++){
-            map << (flightPlan[i].lon-originx)/(terminx-originx) * width  << ',' << (flightPlan[i].lat-originy)/(terminy-originy) * height;
+        for(size_t i = 0; i<flightPlan.size(); i++){
+            map << (flightPlan[i].pt.lon - originx)/(terminx-originx) * width  << ',' << (flightPlan[i].pt.lat-originy)/(terminy-originy) * height;
             map << ' ';
         }
         map << "\"\n     id=\"path" << " flightplan" << "\"/>\n";
@@ -317,5 +316,5 @@ void PathPlan::writeGraphSVGJamesOval(const char *fileName, std::deque<Coord3D> 
     map << "</svg>\n";
     
     map.close();
-    */
+    
 }

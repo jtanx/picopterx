@@ -22,7 +22,7 @@ namespace picopter {
 	        PathPlan();
 	        void addPolygon(std::deque<navigation::Coord3D> c);
 	        std::deque<Waypoints::Waypoint> generateFlightPlan(std::deque<Waypoints::Waypoint> waypoints);
-	        void writeGraphSVGJamesOval(const char *fileName, std::deque<navigation::Coord3D> flightPlan);
+	        void writeGraphSVGJamesOval(const char *fileName, std::deque<Waypoints::Waypoint> flightPlan);
         private:
             int numNodes;
 	        std::vector<node> nodes;

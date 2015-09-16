@@ -78,12 +78,14 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::de
         }
     }
     
-    //Avoid collision zones
-    PathPlan plan;
-    for (std::deque<Coord3D> zone : zones) {
-        plan.addPolygon(zone);
+    if (zones.size() > 0) {
+        //Avoid collision zones
+        PathPlan plan;
+        for (std::deque<Coord3D> zone : zones) {
+            plan.addPolygon(zone);
+        }
+        m_pts = std::move(plan.generateFlightPlan(m_pts));
     }
-    m_pts = std::move(plan.generateFlightPlan(m_pts));
 }
 
 /** 
