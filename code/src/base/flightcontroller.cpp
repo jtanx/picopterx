@@ -71,6 +71,7 @@ FlightController::FlightController(Options *opts)
 , m_state{STATE_STOPPED}
 , m_task_id{TASK_NONE}
 , m_hud{}
+, m_fb_status_counter(0)
 {
     //GPSGPSD *gps;
     m_buzzer = new Buzzer();
@@ -90,6 +91,8 @@ FlightController::FlightController(Options *opts)
     m_fb->RegisterHandler(MAVLINK_MSG_ID_VFR_HUD,
         std::bind(&FlightController::HUDParser, this, _1));
     m_fb->RegisterHandler(MAVLINK_MSG_ID_SYSTEM_TIME,
+        std::bind(&FlightController::HUDParser, this, _1));
+    m_fb->RegisterHandler(MAVLINK_MSG_ID_STATUSTEXT,
         std::bind(&FlightController::HUDParser, this, _1));
 
     Log(LOG_INFO, "Initialised components!"); 
@@ -141,8 +144,16 @@ void FlightController::HUDParser(const mavlink_message_t *msg) {
             std::stringstream ss;
             ss << (*this);
             m_gps->GetLatest(&d);
+            if (m_lidar) {
+                m_hud.lidar = m_lidar->GetLatest() / 100.0f;
+            }
             m_hud.pos = Coord3D{d.fix.lat, d.fix.lon, d.fix.alt-d.fix.groundalt};
             m_hud.status1 = ss.str();
+            if (m_fb_status_counter < 7 && m_fb_status_text.size() > 0) {
+                m_hud.status2 = m_fb_status_text;
+            } else {
+                m_hud.status2.clear();
+            }
             m_camera->SetHUDInfo(&m_hud);
         }
     } else if (msg->msgid == MAVLINK_MSG_ID_SYSTEM_TIME) {
@@ -153,7 +164,14 @@ void FlightController::HUDParser(const mavlink_message_t *msg) {
         if (m_hud.unix_time_offset < 0) {
             m_hud.unix_time_offset = 0;
         }
+    } else if (msg->msgid == MAVLINK_MSG_ID_STATUSTEXT) {
+        mavlink_statustext_t st;
+        mavlink_msg_statustext_decode(msg, &st);
+        st.text[49] = 0; //Null-terminate string. Truncates to 49 chars long...
+        m_fb_status_text = st.text;
+        m_fb_status_counter = 0;
     }
+    m_fb_status_counter++;
 }
 
 /**

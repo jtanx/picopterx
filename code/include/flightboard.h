@@ -40,10 +40,15 @@ namespace picopter {
         /** Climb rate; m/s **/
         float climb;
         
+        /** LIDAR reading (m) **/
+        float lidar;
+        
         /** Position (altitude is above ground) **/
         navigation::Coord3D pos;
         /** Status message **/
         std::string status1;
+        /** Flightboard status message **/
+        std::string status2;
     } HUDInfo;
 
     /**

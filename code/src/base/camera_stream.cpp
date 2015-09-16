@@ -425,6 +425,10 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     sprintf(string_buf, "%3.4f fps", m_fps);
     cv::putText(img, string_buf, cv::Point(70*img.cols/100, 15*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    //Enter the LIDAR range
+    sprintf(string_buf, "L: %.2fm", hud.lidar);
+    cv::putText(img, string_buf, cv::Point(70*img.cols/100, 20*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
     
     //Enter the position
     sprintf(string_buf, "%.7f, %.7f", hud.pos.lat, hud.pos.lon);
@@ -442,7 +446,11 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     sprintf(string_buf, "GS: %.1fm/s AS:%.1f m/s", hud.ground_speed, hud.air_speed);
     cv::putText(img, string_buf, cv::Point(5*img.cols/100, 20*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
-        
+    
+    if (hud.status2.size()) {
+        cv::putText(img, hud.status2,  cv::Point(5*img.cols/100, 87*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    }
     if (hud.status1.size()) {
         cv::putText(img, hud.status1, cv::Point(5*img.cols/100, 92*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);

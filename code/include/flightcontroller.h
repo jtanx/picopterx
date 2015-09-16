@@ -145,6 +145,10 @@ namespace picopter {
             std::shared_ptr<FlightTask> m_task;
             /** HUD info **/
             HUDInfo m_hud;
+            /** Flightboard status text **/
+            std::string m_fb_status_text;
+            /** Poor man's timeout **/
+            int m_fb_status_counter;
             
             /** HUD Loop updater **/
             void HUDParser(const mavlink_message_t *msg);
