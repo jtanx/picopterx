@@ -467,14 +467,62 @@ L.NumberedDivIconRed = L.Icon.extend({
        */
       this.updateBounds = function() {
         instance.removeMapLayer(data.map, data, 'boundRegion');
+        instance.removeMapLayer(data.map, data.paths, 'lawnmowerOverlay');
         instance.removeMapLayer(data.map, data, 'upperBoundRegion');
 
         if (data.pattern === "lawnmower") {
           if (data.rctMarkers.length == 2) {
+            function calcLawnmower(ll1, ll2) {
+              //Good for small distances only.
+              var SWEEP_SPACING = 3; //3m
+              //Determine which way we are sweeping
+              var d1 = ll1.distanceTo(L.latLng(ll1.lat, ll2.lng));
+              var d2 = L.latLng(ll1.lat, ll2.lng).distanceTo(ll2);
+              var points = Math.floor(Math.min(d1, d2)/SWEEP_SPACING);
+              var pts = [];
+              
+              if (points != 0) {
+                  var modlat = true;
+                  var frac;
+                  
+                  if (d1 > d2) {
+                    frac = (ll2.lat - ll1.lat) / points;
+                  } else {
+                    frac = (ll2.lng - ll1.lng) / points;
+                    modlat = false;
+                  }
+                  for (var i = 0; i < points; i++) {
+                    v1 = modlat ? L.latLng(ll1.lat + frac*i, ll1.lng) :
+                                  L.latLng(ll1.lat, ll1.lng + frac*i);
+                    v2 = modlat ? L.latLng(v1.lat, ll2.lng) : 
+                                  L.latLng(ll2.lat, v1.lng);
+                    if (i%2) {
+                      pts.push(v2);
+                      pts.push(v1);
+                    } else {
+                      pts.push(v1);
+                      pts.push(v2);
+                    }
+                  }
+                  if (!(points%2)) {
+                    pts.push(modlat ? L.latLng(ll2.lat, ll1.lng) :
+                                      L.latLng(ll1.lat, ll2.lng));
+                  }
+              } else {
+                  pts.push(ll1);
+              }
+              pts.push(ll2);
+              
+              return pts;
+            }
+            
             data.boundRegion = L.rectangle(L.latLngBounds(
               data.rctMarkers[0].getLatLng(), data.rctMarkers[1].getLatLng()),
               {color : "#0066FF", weight : 1}
             ).addTo(data.map);
+            instance.addPath('lawnmowerOverlay', 'green',
+              calcLawnmower(data.rctMarkers[0].getLatLng(),
+              data.rctMarkers[1].getLatLng()));
           }
         } else if (data.pattern === "spiral") {
           if (data.splMarkers.length >= 2) {
