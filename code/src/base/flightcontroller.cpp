@@ -348,6 +348,8 @@ namespace picopter {
                 stream << "Awaiting motor arming."; break;
             case STATE_UTILITY_TAKEOFF:
                 stream << "Performing takeoff."; break;
+            case STATE_UTILITY_JOYSTICK:
+                stream << "Under joystick control."; break;
         }
         return stream;
     }

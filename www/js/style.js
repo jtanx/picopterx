@@ -128,22 +128,24 @@ function updateWptInfo(e) {
  * @param [in] ret The JSON object of the CAMERA_STREAM family.
  */
 function updateDisplayedCameraConfig(ret) {
-  switch (ret["THRESH_COLOURSPACE"]) {
-    default: case 0:
-      $("#camera-thresh-colourspace").val("csp-hsv");
-      $("#cal-hue").val([ret["MIN_HUE"], ret["MAX_HUE"]]);
-      $("#cal-sat").val([ret["MIN_SAT"], ret["MAX_SAT"]]);
-      $("#cal-val").val([ret["MIN_VAL"], ret["MAX_VAL"]]);
-      break;
-    case 1:
-      $("#camera-thresh-colourspace").val("csp-ycbcr");
-      $("#cal-y").val([ret["MIN_Y"], ret["MAX_Y"]]);
-      $("#cal-cb").val([ret["MIN_Cb"], ret["MAX_Cb"]]);
-      $("#cal-cr").val([ret["MIN_Cr"], ret["MAX_Cr"]]);
-      break;
+  if (ret) {
+    switch (ret["THRESH_COLOURSPACE"]) {
+      default: case 0:
+        $("#camera-thresh-colourspace").val("csp-hsv");
+        $("#cal-hue").val([ret["MIN_HUE"], ret["MAX_HUE"]]);
+        $("#cal-sat").val([ret["MIN_SAT"], ret["MAX_SAT"]]);
+        $("#cal-val").val([ret["MIN_VAL"], ret["MAX_VAL"]]);
+        break;
+      case 1:
+        $("#camera-thresh-colourspace").val("csp-ycbcr");
+        $("#cal-y").val([ret["MIN_Y"], ret["MAX_Y"]]);
+        $("#cal-cb").val([ret["MIN_Cb"], ret["MAX_Cb"]]);
+        $("#cal-cr").val([ret["MIN_Cr"], ret["MAX_Cr"]]);
+        break;
+    }
+    
+    $("#camera-thresh-colourspace").trigger("change");
   }
-  
-  $("#camera-thresh-colourspace").trigger("change");
 }
 
 

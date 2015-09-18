@@ -7,6 +7,7 @@
 #include "utility.h"
 
 using picopter::UtilityModule;
+using std::chrono::seconds;
 
 /**
  * Constructor.
@@ -16,6 +17,8 @@ using picopter::UtilityModule;
 UtilityModule::UtilityModule(Options *opts, UtilityMethod method)
 : m_finished{false}
 , m_method(method)
+, m_data_available(false)
+, m_joystick_data{}
 {
     
 }
@@ -31,7 +34,7 @@ UtilityModule::UtilityModule(UtilityMethod method)
  * Destructor.
  */
 UtilityModule::~UtilityModule() {
-    
+
 }
 
 /**
@@ -73,9 +76,52 @@ void UtilityModule::Run(FlightController *fc, void *opts) {
                 }
             }
             break;
+        case UTILITY_JOYSTICK: {
+            SetCurrentState(fc, STATE_UTILITY_JOYSTICK);
+            Log(LOG_INFO, "Initiating Joystick control!");
+            
+            std::unique_lock<std::mutex> lock(m_worker_mutex);
+            while (!fc->CheckForStop()) {
+                m_signaller.wait_for(lock, seconds(1),
+                    [this,fc]{return m_data_available || fc->CheckForStop();});
+                if (m_data_available) {
+                    if (m_joystick_data.w != 0) {
+                        fc->fb->SetYaw(m_joystick_data.w, true);
+                    }
+                    
+                    //Don't crash into the ground!!!
+                    if (fc->gps->GetLatestRelAlt() < 3 && m_joystick_data.z < 0) {
+                        m_joystick_data.z = 0;
+                    }
+                    fc->fb->SetBodyVel(m_joystick_data);
+                    m_data_available = false;
+                }
+            }
+        } break;
+            
     }
     
+    fc->fb->Stop();
     m_finished = true;
+}
+
+/**
+ * Update the joystick info and inform the worker.
+ * @param [in] throttle Throttle percentage (-100% to 100%).
+ * @param [in] yaw Yaw percentage (-100% to 100%).
+ * @param [in] x Left/Right percentage (-100% to 100%).
+ * @param [in] y Fowards/Backwards percentage (-100% to 100%).
+ * @return Return_Description
+ */
+void UtilityModule::UpdateJoystick(int throttle, int yaw, int x, int y) {
+    std::unique_lock<std::mutex> lock(m_worker_mutex);
+    m_joystick_data.x = picopter::clamp(3.0*x/100.0, -3.0, 3.0);
+    m_joystick_data.y = picopter::clamp(3.0*y/100.0, -3.0, 3.0);
+    m_joystick_data.z = picopter::clamp(2.0*throttle/100.0, -2.0, 2.0);
+    m_joystick_data.w = picopter::clamp(30*yaw/100.0, -30.0, 30.0);
+    m_data_available = true;
+    lock.unlock();
+    m_signaller.notify_one();
 }
 
 /**

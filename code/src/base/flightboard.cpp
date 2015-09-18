@@ -391,9 +391,9 @@ bool FlightBoard::SetBodyVel(Vec3D v) {
         sp.vz = -picopter::clamp(v.z, -2.0, 2.0); //NED coords; flipped alt.
         
         //Safety: Try not to allow it to drop below 2m altitude above ground.
-        if (m_gps->GetLatestRelAlt() < 2.0) {
+        if (m_gps->GetLatestRelAlt() < 2.0 && sp.vz > 0) {
             Log(LOG_WARNING, "1m safety deadband activated!!!");
-            sp.vz = std::min(sp.vz, 0.0f);
+            sp.vz = 0;
         }
         
         m_disable_local = false; //Enable watchdog

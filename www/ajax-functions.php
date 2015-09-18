@@ -142,6 +142,16 @@
           print "updateExclusions failed.\n";
         }
         break;
+        
+      case "updateJoystick":
+        if (isset($source["data"]) && sizeof($source["data"]) == 4) {
+          $client->updateJoystick($source["data"][0], $source["data"][1],
+            $source["data"][2], $source["data"][3]);
+          print "OK.\n";
+        } else {
+          print "updateJoystick failed.\n";
+        }
+        break;
 
       case "resetWaypoints":
         $ans = $client->resetWaypoints();
@@ -162,12 +172,16 @@
         $ans = $client->beginUserTrackingThread();
         print "beginUserTrackingThread " . $b[$ans] . "\n";
         break;
+        
+      case "beginJoystickControl":
+        $ans = $client->beginJoystickControl();
+        print "beginJoystickControl " . $b[$ans] . "\n";
+        break;
 
-            case "beginUserMapping":
-                $ans = $client->beginUserMappingThread();
-                print "beginUserMappingThread " . $b[$ans] . "\n";
-                break;
-
+      case "beginUserMapping":
+          $ans = $client->beginUserMappingThread();
+          print "beginUserMappingThread " . $b[$ans] . "\n";
+          break;
 
       case "beginObjectTracking":
         if (isset($source["data"])) {

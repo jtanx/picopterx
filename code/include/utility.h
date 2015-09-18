@@ -18,18 +18,31 @@ namespace picopter {
     class UtilityModule : public FlightTask {
         public:
             typedef enum {
-                UTILITY_TAKEOFF
+                UTILITY_TAKEOFF,
+                UTILITY_JOYSTICK
             } UtilityMethod;
             
             UtilityModule(Options *opts, UtilityMethod method);
             UtilityModule(UtilityMethod method);
             virtual ~UtilityModule() override;
             
+            void UpdateJoystick(int throttle, int yaw, int x, int y);
+            
             void Run(FlightController *fc, void *opts) override;
             bool Finished() override;
         private:
+            /** Indicates whether or not we've finished running **/
             std::atomic<bool> m_finished;
+            /** The utility method to perform. **/
             UtilityMethod m_method;
+            /** Worker mutex. **/
+            std::mutex m_worker_mutex;
+            /** Indicates that there is new data for the worker thread **/
+            bool m_data_available;
+            /** Holds joystick information **/
+            navigation::Vec4D m_joystick_data;
+            /** Condition to signal the worker thread to wake up **/
+            std::condition_variable m_signaller;
             
             /** Copy constructor (disabled) **/
             UtilityModule(const UtilityModule &other);

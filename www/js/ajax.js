@@ -56,6 +56,7 @@ function getDetectedObjects() {
  *  Send the all stop command
  */
 function allStop() {
+  $("#allstop").trigger("allstop");
   return ajaxSend('allStop');
 }
 

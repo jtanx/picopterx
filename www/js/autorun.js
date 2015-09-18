@@ -125,4 +125,6 @@ $(document).ready(function () {
   };
 
   statusWorker(hud);
+  initGamepads();
+  gpPoller();
 });

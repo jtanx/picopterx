@@ -70,11 +70,32 @@ namespace picopter {
             double magnitude() { return std::sqrt(x*x + y*y + z*z); };
         } Point3D;
         
+        /**
+         * Holds a 3-dimensional position in Cartesian space.
+         */
+        typedef struct Point4D {
+            /** x-coordinate. **/
+            double x;
+            /** y-coordinate. **/
+            double y;
+            /** z-coordinate. **/
+            double z;
+            /** w-coordinate. **/
+            double w;
+            /** Implicit conversion to 3D coordinate. **/
+            operator Point3D() { return Point3D{x, y, z}; }
+            /** Returns the vector magnitude. **/
+            double magnitude() { return std::sqrt(x*x + y*y + z*z); };
+        } Point4D;
+        
         /** 2D vector (alias) **/
         typedef struct Point2D Vec2D;
         
         /** 3D vector (alias) **/
         typedef struct Point3D Vec3D;
+        
+        /** 4D vector (alias) **/
+        typedef struct Point4D Vec4D;
         
         /**
          * Holds a set of Euler angles.

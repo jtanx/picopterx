@@ -52,6 +52,8 @@ namespace picopter {
         STATE_UTILITY_AWAITING_ARM,
         /** Performing a take-off **/
         STATE_UTILITY_TAKEOFF,
+        /** Joystick control **/
+        STATE_UTILITY_JOYSTICK,
     } ControllerState;
     
     /**

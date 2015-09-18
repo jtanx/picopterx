@@ -9,6 +9,8 @@
     <title>UWA Copter GCS</title>
     <!-- Needed to scale the contents properly on iOS devices... -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Joystick in IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <!-- Not LCARS anymore, but eh... -->
     <link rel="icon" href="css/markers/trek.png">
     <!-- Using the Yeti theme from Bootswatch (http://bootswatch.com/yeti/) -->
@@ -43,9 +45,10 @@
             <!--<li><a aria-expanded="false" href="#sidebar-general" data-toggle="tab">General</a></li>-->
             <li class="dropdown">
             <a aria-expanded="false" class="dropdown-toggle" data-toggle="dropdown" href="#">
-              Options <span class="caret"></span>
+              Other <span class="caret"></span>
             </a>
               <ul class="dropdown-menu">
+                <li><a aria-expanded="false" href="#sidebar-joy" data-toggle="tab">Joystick control</a></li>
                 <li><a aria-expanded="false" href="#sidebar-calibration" data-toggle="tab">Camera calibration</a></li>
                 <li><a aria-expanded="false" href="#sidebar-interface" data-toggle="tab">Interface settings</a></li>
               </ul>
@@ -111,7 +114,7 @@
             <li><a aria-expanded="false" href="#tab-server-config" data-toggle="tab">Server Config</a></li>
           </ul>
         </li>
-        <li class=""><a aria-expanded="false" href="#" class="nav-primary btn-control" onclick="allStop()">All Stop</a></li>
+        <li class=""><a aria-expanded="false" href="#" id="allstop" class="nav-primary btn-control" onclick="allStop()">All Stop</a></li>
         <li class="pull-right visible-xs visible-sm">
           <a aria-expanded="false" href="#right-sidebar-jump">
             <span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>
@@ -255,6 +258,50 @@
                 </div>
               </div>
             </div>
+            <!-- Joystick control sidebar -->
+            <div id="sidebar-joy" class="tab-pane panel panel-primary">
+              <div class="panel-heading">
+                <h3 class="panel-title">Joystick control</h3>
+              </div>
+              <div class="panel-body">
+              <form id="joy-form">
+                <div class="form-group">
+                  <label>Using Joystick:</label>
+                  <input type="text" id="joy-id" class="form-control" readonly>
+                </div>
+                <div class="form-group">
+                  <label>Dead man's switch</label>
+                  <input type="text" id="joy-deadman" class="form-control danger-danger" value="OFF" readonly>
+                </div>
+                <div class="row">
+                  <div class="form-group col-xs-6">
+                    <label>Throttle</label>
+                    <input type="text" id="joy-throttle" class="form-control" readonly>
+                  </div>
+                  <div class="form-group col-xs-6">
+                    <label>Yaw</label>
+                    <input type="text" id="joy-yaw" class="form-control" readonly>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="form-group col-xs-6">
+                    <label>X</label>
+                    <input type="text" id="joy-x" class="form-control" readonly>
+                  </div>
+                  <div class="form-group col-xs-6">
+                    <label>Y</label>
+                    <input type="text" id="joy-y" class="form-control" readonly>
+                  </div>
+                </div>
+                <button type="button" id="joy-begin" class="btn btn-primary btn-block" onclick="gpBegin()">
+                Begin
+                </button>
+                <button type="button" id="joy-end" class="btn btn-warning btn-block hidden" onclick="allStop()">
+                End
+                </button>
+              </form>
+              </div>
+            </div>
             <!-- Camera calibration sidebar -->
             <div id="sidebar-calibration" class="tab-pane panel panel-primary">
               <div class="panel-heading">
@@ -386,6 +433,7 @@
     <script src="js/external/leaflet.js"></script>
     <script src="js/jquery.coptermap.js"></script>
     <script src="js/ajax.js"></script>
+    <script src="js/joystick.js"></script>
     <script src="js/style.js"></script>
     <script src="js/autorun.js"></script>
   </body>
