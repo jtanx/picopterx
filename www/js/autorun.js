@@ -45,6 +45,9 @@ function cameraInit() {
   $("#cal-hue").sliderify(-20, 20, -180, 180);
   $("#cal-sat").sliderify(97, 255, 0, 255);
   $("#cal-val").sliderify(127, 255, 0, 255);
+  $("#cal-y").sliderify(0, 255, 0, 255);
+  $("#cal-cb").sliderify(86, 141, 0, 255);
+  $("#cal-cr").sliderify(167, 255, 0, 255);
 
   ajaxSend('requestCameraMode').success(function (response) {
     var mode = parseInt(response, 10);
@@ -54,6 +57,10 @@ function cameraInit() {
         $("#camera-calibration-inputs").removeClass('hidden');
       }
     }
+  });
+  
+  ajaxSend('requestCameraConfig').success(function(ret) {
+    updateDisplayedCameraConfig($.parseJSON(ret)["CAMERA_STREAM"]);
   });
 }
 

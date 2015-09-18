@@ -278,6 +278,11 @@
                 </div>
                 <div id="camera-calibration-inputs" class="hidden">
                   <div class="form-group">
+                    <label>Colourspace</label>
+                      <select id="camera-thresh-colourspace" class="input-large form-control">
+                      <option value="csp-hsv" selected="selected">HSV</option>
+                      <option value="csp-ycbcr">YCbCr</option>
+                    </select>
                     <label>Presets</label>
                      <select id="camera-colour-presets" class="input-large form-control">
                       <option value="preset-red" selected="selected">Red</option>
@@ -287,13 +292,23 @@
                       <option value="preset-blue">Blue</option>
                       <option value="preset-white">White</option>
                       <option value="preset-black">Black</option>
-                    </select>               
-                    <label>Hue</label>
-                    <div id="cal-hue"></div>
-                    <label>Saturation</label>
-                    <div id="cal-sat"></div>
-                    <label>Value</label>
-                    <div id="cal-val"></div>
+                    </select>
+                    <div id="cal-hsv">
+                      <label>Hue</label>
+                      <div id="cal-hue"></div>
+                      <label>Saturation</label>
+                      <div id="cal-sat"></div>
+                      <label>Value</label>
+                      <div id="cal-val"></div>
+                    </div>
+                    <div id="cal-ycbcr" class="hidden">
+                      <label>Y</label>
+                      <div id="cal-y"></div>
+                      <label>Cb</label>
+                      <div id="cal-cb"></div>
+                      <label>Cr</label>
+                      <div id="cal-cr"></div>
+                    </div>
                   </div>
                   <div class="btn-group btn-group-justified">
                     <div class="btn-group">

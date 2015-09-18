@@ -150,10 +150,7 @@ function setCameraLearningSize(decrease) {
 function doCameraAutoLearning() {
   ajaxSend('doCameraAutoLearning').success(function() {
     ajaxSend('requestCameraConfig').success(function(ret) {
-      ret = $.parseJSON(ret)["CAMERA_STREAM"];
-      $("#cal-hue").val([ret["MIN_HUE"], ret["MAX_HUE"]]);
-      $("#cal-sat").val([ret["MIN_SAT"], ret["MAX_SAT"]]);
-      $("#cal-val").val([ret["MIN_VAL"], ret["MAX_VAL"]]);
+      updateDisplayedCameraConfig($.parseJSON(ret)["CAMERA_STREAM"]);
     });
   });
 }
@@ -165,22 +162,34 @@ function setCameraLearningValues() {
   function toInts(val) {
     return parseInt(val, 10);
   };
-
+  
+  var csp = $("#camera-thresh-colourspace option:selected").val();
   var ret={};
-  var h = $("#cal-hue").val().map(toInts);
-  var s = $("#cal-sat").val().map(toInts);
-  var v = $("#cal-val").val().map(toInts);
+  
+  if (csp === "csp-hsv") {
+    var h = $("#cal-hue").val().map(toInts);
+    var s = $("#cal-sat").val().map(toInts);
+    var v = $("#cal-val").val().map(toInts);
 
-  ret["MIN_HUE"] = h[0]; ret["MAX_HUE"] = h[1];
-  ret["MIN_SAT"] = s[0]; ret["MAX_SAT"] = s[1];
-  ret["MIN_VAL"] = v[0]; ret["MAX_VAL"] = v[1];
+    ret["THRESH_COLOURSPACE"] = 0;
+    ret["MIN_HUE"] = h[0]; ret["MAX_HUE"] = h[1];
+    ret["MIN_SAT"] = s[0]; ret["MAX_SAT"] = s[1];
+    ret["MIN_VAL"] = v[0]; ret["MAX_VAL"] = v[1];
+    
+  } else if (csp === "csp-ycbcr") {
+    var y = $("#cal-y").val().map(toInts);
+    var cb = $("#cal-cb").val().map(toInts);
+    var cr = $("#cal-cr").val().map(toInts);
+
+    ret["THRESH_COLOURSPACE"] = 1;
+    ret["MIN_Y"] = y[0]; ret["MAX_Y"] = y[1];
+    ret["MIN_Cb"] = cb[0]; ret["MAX_Cb"] = cb[1];
+    ret["MIN_Cr"] = cr[0]; ret["MAX_Cr"] = cr[1];   
+  }
 
   ajaxSend('setCameraConfig', JSON.stringify({"CAMERA_STREAM" : ret})).success(function() {
     ajaxSend('requestCameraConfig').success(function(ret) {
-      ret = $.parseJSON(ret)["CAMERA_STREAM"];
-      $("#cal-hue").val([ret["MIN_HUE"], ret["MAX_HUE"]]);
-      $("#cal-sat").val([ret["MIN_SAT"], ret["MAX_SAT"]]);
-      $("#cal-val").val([ret["MIN_VAL"], ret["MAX_VAL"]]);
+      updateDisplayedCameraConfig($.parseJSON(ret)["CAMERA_STREAM"]);
     });
   });
 }

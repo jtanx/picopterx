@@ -58,13 +58,15 @@ CameraStream::CameraStream(Options *opts)
     LEARN_SIZE    = picopter::clamp(opts->GetInt("LEARN_SIZE", 50), 20, 100);
 
     //Set the default hue thresholds
-    m_thresholds.hue_min = opts->GetInt("MIN_HUE", -10);
-    m_thresholds.hue_max = opts->GetInt("MAX_HUE", 10);
-    m_thresholds.sat_min = opts->GetInt("MIN_SAT", 95);
-    m_thresholds.sat_max = opts->GetInt("MAX_SAT", 255);
-    m_thresholds.val_min = opts->GetInt("MIN_VAL", 127);
-    m_thresholds.val_max = opts->GetInt("MAX_VAL", 255);
-
+    m_thresholds.p1_min = opts->GetInt("MIN_HUE", -10);
+    m_thresholds.p1_max = opts->GetInt("MAX_HUE", 10);
+    m_thresholds.p2_min = opts->GetInt("MIN_SAT", 95);
+    m_thresholds.p2_max = opts->GetInt("MAX_SAT", 255);
+    m_thresholds.p3_min = opts->GetInt("MIN_VAL", 127);
+    m_thresholds.p3_max = opts->GetInt("MAX_VAL", 255);
+    m_thresholds.colourspace = THRESH_HSV;
+    m_learning_thresholds.colourspace = THRESH_HSV;
+    
    if (!m_capture.isOpened()) {
         Log(LOG_WARNING, "cv::VideoCapture failed.");
         throw std::invalid_argument("Could not open camera stream.");
@@ -177,12 +179,23 @@ int CameraStream::GetInputHeight() {
 void CameraStream::GetConfig(Options *config) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     config->SetFamily("CAMERA_STREAM");
-    config->Set("MIN_HUE", m_thresholds.hue_min);
-    config->Set("MAX_HUE", m_thresholds.hue_max);
-    config->Set("MIN_SAT", m_thresholds.sat_min);
-    config->Set("MAX_SAT", m_thresholds.sat_max);
-    config->Set("MIN_VAL", m_thresholds.val_min);
-    config->Set("MAX_VAL", m_thresholds.val_max);
+    
+    config->Set("THRESH_COLOURSPACE", m_thresholds.colourspace);
+    if (m_thresholds.colourspace == THRESH_HSV) {
+        config->Set("MIN_HUE", m_thresholds.p1_min);
+        config->Set("MAX_HUE", m_thresholds.p1_max);
+        config->Set("MIN_SAT", m_thresholds.p2_min);
+        config->Set("MAX_SAT", m_thresholds.p2_max);
+        config->Set("MIN_VAL", m_thresholds.p3_min);
+        config->Set("MAX_VAL", m_thresholds.p3_max);
+    } else if (m_thresholds.colourspace == THRESH_YCbCr) {
+        config->Set("MIN_Y", m_thresholds.p1_min);
+        config->Set("MAX_Y", m_thresholds.p1_max);
+        config->Set("MIN_Cb", m_thresholds.p2_min);
+        config->Set("MAX_Cb", m_thresholds.p2_max);
+        config->Set("MIN_Cr", m_thresholds.p3_min);
+        config->Set("MAX_Cr", m_thresholds.p3_max);
+    }
     config->Set("SHOW_BACKEND", m_show_backend);
 }
 
@@ -193,17 +206,37 @@ void CameraStream::GetConfig(Options *config) {
 void CameraStream::SetConfig(Options *config) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     bool refresh = false, decrease = false;
+    int colourspace = THRESH_HSV;
 
     config->SetFamily("CAMERA_STREAM");
     config->GetBool("SHOW_BACKEND", &m_show_backend);
 
-    refresh |= config->GetInt("MIN_HUE", &m_thresholds.hue_min, -180, 180);
-    refresh |= config->GetInt("MAX_HUE", &m_thresholds.hue_max, 0, 180);
-    refresh |= config->GetInt("MIN_SAT", &m_thresholds.sat_min, 0, 255);
-    refresh |= config->GetInt("MAX_SAT", &m_thresholds.sat_max, 0, 255);
-    refresh |= config->GetInt("MIN_VAL", &m_thresholds.val_min, 0, 255);
-    refresh |= config->GetInt("MAX_VAL", &m_thresholds.val_max, 0, 255);
-
+    
+    config->GetInt("THRESH_COLOURSPACE", &colourspace);
+    switch(colourspace) {
+        default: //Deliberate fall-through
+        case THRESH_HSV:
+            m_thresholds.colourspace = THRESH_HSV;
+            refresh |= config->GetInt("MIN_HUE", &m_thresholds.p1_min, -180, 180);
+            refresh |= config->GetInt("MAX_HUE", &m_thresholds.p1_max, 0, 180);
+            refresh |= config->GetInt("MIN_SAT", &m_thresholds.p2_min, 0, 255);
+            refresh |= config->GetInt("MAX_SAT", &m_thresholds.p2_max, 0, 255);
+            refresh |= config->GetInt("MIN_VAL", &m_thresholds.p3_min, 0, 255);
+            refresh |= config->GetInt("MAX_VAL", &m_thresholds.p3_max, 0, 255);
+            break;
+        case THRESH_YCbCr:
+            m_thresholds.colourspace = THRESH_YCbCr;
+            refresh |= config->GetInt("MIN_Y", &m_thresholds.p1_min, 0, 255);
+            refresh |= config->GetInt("MAX_Y", &m_thresholds.p1_max, 0, 255);
+            refresh |= config->GetInt("MIN_Cb", &m_thresholds.p2_min, 0, 255);
+            refresh |= config->GetInt("MAX_Cb", &m_thresholds.p2_max, 0, 255);
+            refresh |= config->GetInt("MIN_Cr", &m_thresholds.p3_min, 0, 255);
+            refresh |= config->GetInt("MAX_Cr", &m_thresholds.p3_max, 0, 255);
+            break;
+    }
+    
+    m_learning_thresholds.colourspace = m_thresholds.colourspace;
+    
     if (refresh) {
         BuildThreshold(m_lookup_threshold, m_thresholds);
     }
@@ -232,8 +265,15 @@ void CameraStream::SetHUDInfo(HUDInfo *hud) {
 void CameraStream::DoAutoLearning() {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     if (m_mode == CameraMode::MODE_LEARN_COLOUR) {
-        m_thresholds.hue_min = m_learning_thresholds.hue_min;
-        m_thresholds.hue_max = m_learning_thresholds.hue_max;
+        if (m_learning_thresholds.colourspace == THRESH_HSV) {
+            m_thresholds.p1_min = m_learning_thresholds.p1_min;
+            m_thresholds.p1_max = m_learning_thresholds.p1_max;
+        } else if (m_learning_thresholds.colourspace == THRESH_YCbCr) {
+            m_thresholds.p2_min = m_learning_thresholds.p2_min;
+            m_thresholds.p2_max = m_learning_thresholds.p2_max;
+            m_thresholds.p3_min = m_learning_thresholds.p3_min;
+            m_thresholds.p3_max = m_learning_thresholds.p3_max;
+        }
         BuildThreshold(m_lookup_threshold, m_thresholds);
     }
 }
@@ -525,26 +565,55 @@ void CameraStream::RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t 
 }
 
 /**
+ * Converts to the Y'CbCr colourspace.
+ * @param [in] r The red value.
+ * @param [in] g The green value.
+ * @param [in] b The blue value.
+ * @param [in] y The luma component (0-255).
+ * @param [in] cb The blue difference component (0-255).
+ * @param [in] cr The red difference component (0-255).
+ * @return Return_Description
+ */
+void CameraStream::RGB2YCbCr(uint8_t r, uint8_t g, uint8_t b, uint8_t *y, uint8_t *cb, uint8_t *cr) {
+    *y = 0.299 * r + 0.587 * g + 0.114 * b;
+    *cb = -0.168736 * r - 0.331264 * g + 0.500 * b + 128;
+    *cr = 0.500 * r - 0.418688 * g - 0.081312 * b + 128;
+}
+
+/**
  * Builds the threshold lookup table from the given thresholding parameters.
  * @param [out] lookup The lookup table.
  * @param [in] thresh The thresholding parameters.
  */
-void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], HueThresholds thresh) {
-    uint8_t r, g, b, h, s, v;
+void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], ThresholdParams thresh) {
+    uint8_t r, g, b;
     for(r = 0; r < THRESH_SIZE; r++) {
         for(g = 0; g < THRESH_SIZE; g++) {
             for(b = 0; b < THRESH_SIZE; b++) {
-                RGB2HSV(UNREDUCE(r), UNREDUCE(g), UNREDUCE(b), &h, &s, &v);
-
                 lookup[r][g][b] = 0;
-                if (v >= thresh.val_min && v <= thresh.val_max &&
-                    s >= thresh.sat_min && s <= thresh.sat_max) {
-                    if (thresh.hue_min < 0) {
-                        if ((h >= thresh.hue_min+180 && h <= 180) ||
-                            (h >= 0 && h <= thresh.hue_max)) {
-                                lookup[r][g][b] = 1;
-                            }
-                    } else if (h >= thresh.hue_min && h <= thresh.hue_max) {
+                
+                if (thresh.colourspace == THRESH_HSV) {
+                    uint8_t h, s, v;
+                    RGB2HSV(UNREDUCE(r), UNREDUCE(g), UNREDUCE(b), &h, &s, &v);
+                    
+                    if (v >= thresh.p3_min && v <= thresh.p3_max &&
+                        s >= thresh.p2_min && s <= thresh.p2_max) {
+                        if (thresh.p1_min < 0) {
+                            if ((h >= thresh.p1_min+180 && h <= 180) ||
+                                (h >= 0 && h <= thresh.p1_max)) {
+                                    lookup[r][g][b] = 1;
+                                }
+                        } else if (h >= thresh.p1_min && h <= thresh.p1_max) {
+                            lookup[r][g][b] = 1;
+                        }
+                    }
+                } else if (thresh.colourspace == THRESH_YCbCr) {
+                    uint8_t y, cb, cr;
+                    RGB2YCbCr(UNREDUCE(r), UNREDUCE(g), UNREDUCE(b), &y, &cb, &cr);
+                    
+                    if (y >= thresh.p1_min && y <= thresh.p1_max &&
+                        cb >= thresh.p2_min && cb <= thresh.p2_max &&
+                        cr >= thresh.p3_min && cr <= thresh.p3_max) {
                         lookup[r][g][b] = 1;
                     }
                 }
@@ -584,20 +653,34 @@ void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
 void CameraStream::LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect roi) {
     cv::Mat sroi(src, roi);
     cv::medianBlur(sroi, sroi, 7);
-    cv::cvtColor(sroi, sroi, CV_BGR2HSV);
-    std::vector<cv::Mat> channels;
-    cv::split(sroi, channels);
+    if (m_learning_thresholds.colourspace == THRESH_HSV) {
+        cv::cvtColor(sroi, sroi, CV_BGR2YCrCb);
+        std::vector<cv::Mat> channels;
+        cv::split(sroi, channels);
 
-    cv::Scalar mean_hue = cv::mean(channels[0]);
-    m_learning_thresholds.hue_min = mean_hue[0]-10;
-    m_learning_thresholds.hue_max = mean_hue[0]+10;
-    if (m_learning_thresholds.hue_max > 180) {
-        m_learning_thresholds.hue_max -= 180;
+        cv::Scalar mean_hue = cv::mean(channels[0]);
+        m_learning_thresholds.p1_min = mean_hue[0]-10;
+        m_learning_thresholds.p1_max = mean_hue[0]+10;
+        if (m_learning_thresholds.p1_max > 180) {
+            m_learning_thresholds.p1_max -= 180;
+        }
+        if (m_learning_thresholds.p1_min > m_learning_thresholds.p1_max) {
+            m_learning_thresholds.p1_min -= 180;
+        }
+    } else if (m_learning_thresholds.colourspace == THRESH_YCbCr) {
+        cv::cvtColor(sroi, sroi, CV_BGR2YCrCb);
+        std::vector<cv::Mat> channels;
+        cv::split(sroi, channels);
+
+        cv::Scalar mean_cr = cv::mean(channels[1]);
+        cv::Scalar mean_cb = cv::mean(channels[2]);
+        
+        m_learning_thresholds.p2_min = std::max((int)mean_cb[0]-15, 0);
+        m_learning_thresholds.p2_max = std::min((int)mean_cb[0]+15, 255);
+        
+        m_learning_thresholds.p3_min = std::max((int)mean_cr[0]-15, 0);
+        m_learning_thresholds.p3_max = std::min((int)mean_cr[0]+15, 255);
     }
-    if (m_learning_thresholds.hue_min > m_learning_thresholds.hue_max) {
-        m_learning_thresholds.hue_min -= 180;
-    }
-    
     if (m_demo_mode) {
         cv::imshow("Thresholded image", threshold);
     }

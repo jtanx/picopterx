@@ -25,18 +25,28 @@
 #define UNREDUCE(x) (((x)*255 + 127) / THRESH_SIZE)
 
 namespace picopter {
+    /**
+     * Enum defining the colourspaces that we threshold.
+     */
+    typedef enum ThresholdColourspaces {
+        /** The HSV colourspace. **/
+        THRESH_HSV = 0,
+        /** The Y'CbCr colourspace. **/
+        THRESH_YCbCr = 1
+    } ThresholdColourspace;
 
     /**
-     * Structure to hold hue thresholding information.
+     * Structure to hold colour thresholding information.
      */
-    typedef struct HueThresholds {
-        int hue_min, hue_max;
-        int sat_min, sat_max;
-        int val_min, val_max;
+    typedef struct ThresholdParams {
+        int p1_min, p1_max;
+        int p2_min, p2_max;
+        int p3_min, p3_max;
+        ThresholdColourspace colourspace;
 
-        cv::Scalar Min() {return cv::Scalar(hue_min, sat_min, val_min);}
-        cv::Scalar Max() {return cv::Scalar(hue_max, sat_max, val_max);}
-    } HueThresholds;
+        cv::Scalar Min() {return cv::Scalar(p1_min, p2_min, p3_min);}
+        cv::Scalar Max() {return cv::Scalar(p1_max, p2_max, p3_max);}
+    } ThresholdParams;
 
     /**
      * Holds information about a detected object.
@@ -124,9 +134,9 @@ namespace picopter {
             std::future<void> m_worker_thread;
 
             /** The colour thresholding parameters **/
-            HueThresholds m_thresholds;
+            ThresholdParams m_thresholds;
             /** The colour auto-learning thresholding parameters **/
-            HueThresholds m_learning_thresholds;
+            ThresholdParams m_learning_thresholds;
             /** The processing rate (FPS) **/
             double m_fps;
             /** Demo mode (displays camera stream in GTK window) **/
@@ -164,7 +174,8 @@ namespace picopter {
             void DrawTrackingArrow(cv::Mat& img);
 
             void RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t *s, uint8_t *v);
-            void BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], HueThresholds thresh);
+            void RGB2YCbCr(uint8_t r, uint8_t g, uint8_t b, uint8_t *y, uint8_t *cb, uint8_t *cr);
+            void BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], ThresholdParams thresh);
             void Threshold(const cv::Mat& src, cv::Mat &out, int width);
             void LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect roi);
             bool CentreOfMass(cv::Mat& src, cv::Mat& threshold);
