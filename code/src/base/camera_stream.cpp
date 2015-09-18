@@ -744,16 +744,17 @@ int CameraStream::ConnectedComponents(cv::Mat& src, cv::Mat& threshold) {
     cv::findContours(threshold, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
     //Calculate the contour moments
-    std::vector<cv::Moments> comps(contours.size());
+    typedef std::pair<std::vector<cv::Point>*, cv::Moments> ctm_t;
+    std::vector<ctm_t> comps(contours.size());
     for(size_t i = 0; i < contours.size(); i++) {
-        comps[i] = cv::moments(contours[i], true);
+        comps[i] = ctm_t(&contours[i], cv::moments(contours[i], true));
     }
     //Sort moments in order of decreasing size (largest first)
     std::sort(comps.begin(), comps.end(),
-    [] (const cv::Moments &a, const cv::Moments &b) {
-        return (int)b.m00 < (int)a.m00;
+    [] (const ctm_t &a, const ctm_t &b) {
+        return (int)b.second.m00 < (int)a.second.m00;
     });
-
+    
     m_detected.clear();
 
     ObjectInfo object = {0};
@@ -765,20 +766,19 @@ int CameraStream::ConnectedComponents(cv::Mat& src, cv::Mat& threshold) {
 
     //Calculate the locations on the original image (first 4 only)
     for(int k=0; k < 4 && k < (int)comps.size(); k++) {
-        if(comps[k].m00 > PIXEL_THRESHOLD) {
-            comps[k].m01 *= PIXEL_SKIP;
-            comps[k].m10 *= PIXEL_SKIP;
+        if(comps[k].second.m00 > PIXEL_THRESHOLD) {
+            comps[k].second.m01 *= PIXEL_SKIP;
+            comps[k].second.m10 *= PIXEL_SKIP;
 
             object.id = k;
-            object.position.x = comps[k].m10/comps[k].m00 - nCols/2;
-            object.position.y = -(comps[k].m01/comps[k].m00 - nRows/2);
+            object.position.x = comps[k].second.m10/comps[k].second.m00 - nCols/2;
+            object.position.y = -(comps[k].second.m01/comps[k].second.m00 - nRows/2);
 
-            //1.5: BOX_SIZE
-            int width = (1.5*PIXEL_SKIP*sqrt(comps[k].m00));
-            object.bounds.x = std::max(comps[k].m10/comps[k].m00 - width/2, 0.0);
-            object.bounds.y = std::max(comps[k].m01/comps[k].m00 - width/2, 0.0);
-            object.bounds.width = std::min(width, nCols - object.bounds.x);
-            object.bounds.height = std::min(width, nRows - object.bounds.y);
+            object.bounds = cv::boundingRect(*(comps[k].first));
+            object.bounds.x *= PIXEL_SKIP;
+            object.bounds.y *= PIXEL_SKIP;
+            object.bounds.width *= PIXEL_SKIP;
+            object.bounds.height *= PIXEL_SKIP;
             m_detected.push_back(object);
         }
     }
