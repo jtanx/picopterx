@@ -243,9 +243,9 @@ void CameraStream::SetConfig(Options *config) {
 
     if (config->GetBool("SET_LEARNING_SIZE", &decrease)) {
         if (decrease) {
-            LEARN_SIZE = picopter::clamp(LEARN_SIZE-10, 20, 100);
+            LEARN_SIZE = picopter::clamp(LEARN_SIZE-10, 10, 100);
         } else {
-            LEARN_SIZE = picopter::clamp(LEARN_SIZE+10, 20, 100);
+            LEARN_SIZE = picopter::clamp(LEARN_SIZE+10, 10, 100);
         }
     }
 }
