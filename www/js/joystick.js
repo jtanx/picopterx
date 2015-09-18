@@ -7,10 +7,6 @@
 var gamepad;
 /** Indicates if we should send joystick data to server. **/
 var sendData = false;
-/** It's experimental! **/
-var getGamepads = (navigator.getGamepads) ? navigator.getGamepads :
-                  (navigator.webkitGetGamepads) ? navigator.webkitGetGamepads : 
-                  undefined;
 
 /** The mapping we use. **/
 var mapping = {
@@ -31,10 +27,18 @@ var mapping = {
 };
 
 /**
+ * Because of JavaScript closures...
+ * @return The current gamepad instance.
+ */
+function getGamepad() {
+  return gamepad;
+}
+
+/**
  * Fallback poller for chrome.
  */
 function gpAvailPoller() {
-  var gp = getGamepads();
+  var gp = navigator.webkitGetGamepads();
   if (gp.length > 0 && typeof gamepad === "undefined") {
     gamepad = gp[0];
     $("#joy-id").val(gamepad.id);
@@ -58,7 +62,7 @@ function initGamepads() {
     $("#joy-begin").removeClass("hidden");
   });
   
-  if (getGamepads) {
+  if (navigator.getGamepads || navigator.webkitGetGamepads) {
     if (navigator.webkitGetGamepads) {
       gpAvailPoller();
     } else {
@@ -69,7 +73,7 @@ function initGamepads() {
           gamepad = gp;
           $("#joy-id").val(gamepad.id);
         } else if (gp.id === gamepad.id) {
-          var gps = getGamepads();
+          var gps = navigator.getGamepads();
           var ng;
           for (var i = 0; i < gps.length; i++) {
             if (gps[i].id !== gamepad.id) {
@@ -119,10 +123,10 @@ function deadzone(val, lims) {
  * Gamepad API requires polling the state for current status.
  */
 function gpPoller() {
-  var gp = gamepad;
+  var gp = getGamepad();
   var gogogo = false;
   
-  if (typeof gp !== "undefined") {
+  if (typeof gamepad !== "undefined") {
     $("#joy-deadman").toggleClass("danger-danger", !gp.buttons[mapping.DEADMAN].pressed);
     $("#joy-deadman").toggleClass("success-success", gp.buttons[mapping.DEADMAN].pressed);
     
@@ -153,6 +157,13 @@ function gpPoller() {
     
     setTimeout(gpPoller, 200);
   } else {
+    $("#joy-throttle").val(0);
+    $("#joy-yaw").val(0);
+    $("#joy-x").val(0);
+    $("#joy-y").val(0);
+    $("#joy-deadman").val("OFF");
+    $("#joy-deadman").addClass("danger-danger");
+    $("#joy-deadman").removeClass("success-success");
     setTimeout(gpPoller, 500);
   }
 }
