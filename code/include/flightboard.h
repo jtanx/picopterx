@@ -90,7 +90,7 @@ namespace picopter {
             void SendMessage(mavlink_message_t *msg);
         private:
             /** The autopilot connection timeout (in s) **/
-            static const int HEARTBEAT_TIMEOUT_DEFAULT = 10;
+            static const int HEARTBEAT_TIMEOUT_DEFAULT = 4;
 
             /** The hearbeat timeout **/
             int m_heartbeat_timeout;

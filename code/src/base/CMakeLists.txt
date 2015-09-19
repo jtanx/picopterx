@@ -6,6 +6,7 @@ set (SOURCE
 	 log.cpp
 	 datalog.cpp
 	 opts.cpp
+	 watchdog.cpp
 	 gpio.cpp
 	 buzzer.cpp
 	 flightboard.cpp
@@ -26,6 +27,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/log.h
 	 ${PI_INCLUDE}/datalog.h
 	 ${PI_INCLUDE}/opts.h
+	 ${PI_INCLUDE}/watchdog.h
 	 ${PI_INCLUDE}/gpio.h
 	 ${PI_INCLUDE}/buzzer.h
 	 ${PI_INCLUDE}/picopter.h

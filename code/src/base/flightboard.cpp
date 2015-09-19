@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+#include "watchdog.h"
 #include "flightboard.h"
 #include "navigation.h"
 #include "gps_mav.h"
@@ -28,7 +29,6 @@ using std::chrono::duration_cast;
  */
 FlightBoard::FlightBoard(Options *opts)
 : m_heartbeat_timeout(HEARTBEAT_TIMEOUT_DEFAULT)
-, m_last_heartbeat(999)
 , m_shutdown{false}
 , m_disable_local{false}
 , m_system_id(0)
@@ -46,13 +46,13 @@ FlightBoard::FlightBoard(Options *opts)
         opts->SetFamily("FLIGHTBOARD");
         m_heartbeat_timeout = opts->GetInt("HEARTBEAT_TIMEOUT", HEARTBEAT_TIMEOUT_DEFAULT);
     }
-    //Some increment past the timeout
-    m_last_heartbeat = m_heartbeat_timeout + 10;
     //m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
     try {
         m_link = new MAVCommsTCP("127.0.0.1", 5760);
+        Log(LOG_NOTICE, "Connected to the simulator on port 5760.");
     } catch (std::invalid_argument e) {
         m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
+        Log(LOG_NOTICE, "Connected to the Pixhawk via /dev/ttyAMA0.");
     }
     
     m_gps = new GPSMAV(this, opts);
@@ -113,10 +113,19 @@ void FlightBoard::GetGimbalPose(EulerAngle *p) {
  * Input loop to process MAVLink messages received from the copter (Pixhawk).
  */
 void FlightBoard::InputLoop() {
-    auto last_heartbeat = steady_clock::now() - seconds(m_heartbeat_timeout);
     mavlink_message_t msg;
     mavlink_heartbeat_t heartbeat;
+    std::atomic<bool> needs_refresh{true};
     
+    Watchdog wdog(m_heartbeat_timeout*1000, [this, &needs_refresh] {
+        m_is_auto_mode = false;
+        if (!needs_refresh) {
+            Log(LOG_WARNING, "Heartbeat timeout, disabling auto mode!");
+            needs_refresh = true;
+        }
+    });
+    
+    wdog.Start();
     while (!m_shutdown) {
         if (m_link->ReadMessage(&msg)) {
             switch (msg.msgid) {
@@ -134,7 +143,7 @@ void FlightBoard::InputLoop() {
                         //heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, 
                         //heartbeat.system_status, (int)m_is_auto_mode);
                         
-                        if (m_last_heartbeat >= m_heartbeat_timeout) {
+                        if (needs_refresh) {
                             mavlink_request_data_stream_t stream{};
                             mavlink_message_t smsg;
 
@@ -170,8 +179,10 @@ void FlightBoard::InputLoop() {
                             mavlink_msg_request_data_stream_encode(
                                 m_system_id, m_flightboard_id, &smsg, &stream);
                             m_link->WriteMessage(&smsg);
+                            
+                            needs_refresh = false;
                         }
-                        last_heartbeat = steady_clock::now();
+                        wdog.Touch();
                     }
                 } break;
                 //case MAVLINK_MSG_ID_SYS_STATUS: {
@@ -207,13 +218,8 @@ void FlightBoard::InputLoop() {
                 }
             }
         }
-        m_last_heartbeat = duration_cast<seconds>(steady_clock::now()-last_heartbeat).count();
-        if (m_is_auto_mode && m_last_heartbeat >= m_heartbeat_timeout) {
-            Log(LOG_WARNING, "Heartbeat timeout (%d s); disabling auto mode!",
-                m_last_heartbeat);
-            m_is_auto_mode = false;
-        }
     }
+    wdog.Stop();
 }
 
 /**

@@ -7,7 +7,8 @@ import time
 import pytz
 
 time_fmt = r"%d/%m/%Y %H:%M:%S"
-gps_fmt = re.compile(r"^([^:]+ \d+:\d+:\d+): \(([-\.\d]+), ([-\.\d]+)\) \[([-\.\d]+) at ([-\.\d]+)\] \(([-\.\d]+) m\)$")
+#gps_fmt = re.compile(r"^([^:]+ \d+:\d+:\d+): \(([-\.\d]+), ([-\.\d]+)\) \[([-\.\d]+) at ([-\.\d]+)\] \(([-\.\d]+) m\)$")
+gps_fmt = re.compile(r"^([^:]+ \d+:\d+:\d+): \(([-\.\d]+)[^,]*, ([-\.\d]+)[^)]*\) \[(.*?) at ([-\.\d]+)[^\]]*\]$");
 
 def parse_time(t):
     ctime = datetime(*(time.strptime(t, time_fmt)[0:6]),
@@ -38,9 +39,11 @@ def main(gps_log):
                 ctime = parse_time(m.group(1))
                 lat = float(m.group(2))
                 lon = float(m.group(3))
-                speed = float(m.group(4))
+                #speed = float(m.group(4))
                 bearing = m.group(5)
-                alt = float(m.group(6))
+                #alt = float(m.group(6))
+                speed = 0
+                alt = 0
                 
                 gpx_segment.points.append(GPXTrackPoint(lat,lon,time=ctime, speed=speed, elevation=alt, name=bearing))
         
