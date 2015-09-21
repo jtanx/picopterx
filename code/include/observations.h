@@ -94,7 +94,8 @@ namespace picopter {
         //acceleration information if it is available
         Distrib acceleration;
         //information from camera detection defined in camera_stream
-        ObjectInfo* camDetection;
+        ObjectInfo camDetection;
+
         //something for lidar data
         //something for
 

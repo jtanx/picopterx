@@ -142,6 +142,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     //Point2D input_limits = {m_camwidth/2.0, m_camheight/2.0};
 
     std::vector<ObjectInfo> locations;
+
+    std::vector<Observation> visibles; //things we can currently see
+    std::vector<Observations> knownThings; //things we know of
+
+
     Vec3D course{};
     EulerAngle gimbal;
     GPSData gps_position;
@@ -158,11 +163,31 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         fc->gps->GetLatest(&gps_position);
         fc->imu->GetLatest(&imu_data);
         double lidar_range = (double)fc->lidar->GetLatest() / (100.0); //convert lidar range to metres
-        //Do we have an object?
-        if (locations.size() > 0) {                                             
+
+        //start making observation structures
+        Observation lidarObservation = ObservationFromLidar(&gps_position, &gimbal, &imu_data, lidar_range);
+        
+
+        //Do we have any objects?
+        if (locations.size() > 0) {
             detected_object = locations.front();
-            SetCurrentState(fc, STATE_TRACKING_LOCKED);
             
+            //build observations for each
+            std::vector<Observation> visibles; //things we can currently see
+            visibles.reserve(locations.size()); //save multiple reallocations
+            for(uint i=0; i<locations.size(); i++){
+                visibles.push_back(ObservationFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object));
+            }
+
+            //disambiguate between many objects
+
+
+            //generate new knownThings for observations that didn't fit.
+            
+
+            SetCurrentState(fc, STATE_TRACKING_LOCKED);
+
+
             //Set PID update intervals
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
@@ -344,7 +369,6 @@ Observation ObjectTracker::ObservationFromImageCoords(GPSData *pos, EulerAngle *
     cv::Matx31d vect (0,0,0);
     Distrib occular_ray = {axes,vect};
 
-
     occular_ray = stretchDistrib(occular_ray, 3);   //how big? we can't have conical distributions yet.
 
     occular_ray = rotateDistrib(occular_ray, Mblob);
@@ -362,7 +386,7 @@ Observation ObjectTracker::ObservationFromImageCoords(GPSData *pos, EulerAngle *
     imageObservation.velocity = zeroDistrib;
     imageObservation.acceleration = zeroDistrib;
     imageObservation.source = CAMERA_BLOB;
-    imageObservation.camDetection = object;
+    imageObservation.camDetection = *object;
 
     return imageObservation;
 
@@ -405,7 +429,7 @@ Observation ObjectTracker::ObservationFromLidar(GPSData *pos, EulerAngle *gimbal
     lidarObservation.velocity = zeroDistrib;
     lidarObservation.acceleration = zeroDistrib;
     lidarObservation.source = LIDAR;
-    lidarObservation.camDetection = NULL;
+    //lidarObservation.camDetection = NULL;
 
     return lidarObservation;
 }

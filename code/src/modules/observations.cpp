@@ -25,7 +25,7 @@ double Observations::getSameProbability(Observation* observation){
     Distrib C;
     C.axes = (location.axes.inv() + observation->location.axes.inv()).inv();
     C.vect = location.vect - observation->location.vect;
-    double retval = ((C.vect).t() * (C.axes * C.vect))(0,0);
+    double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0,0)));
 
 
 return retval;
