@@ -11,6 +11,7 @@
 #include "flightcontroller.h"
 #include "navigation.h"
 #include "PID.h"
+#include "observations.h"
 #include <opencv2/opencv.hpp>
  
 namespace picopter {
@@ -46,9 +47,18 @@ namespace picopter {
             double TRACK_SETPOINT_W, TRACK_SETPOINT_X, TRACK_SETPOINT_Y, TRACK_SETPOINT_Z;
             int TRACK_SPEED_LIMIT_W, TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Z;
             
-            void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
+            void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range);
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
             void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
+
+            //transformation matrices for gimbal and body
+            cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
+            cv::Matx33d BodyToGround(IMUData *imu_data);
+            cv::Matx33d BodyToLevel(IMUData *imu_data);
+            cv::Matx33d LevelToGround(IMUData *imu_data);
+
+            bool UseLidar(ObjectInfo *object, double lidar_range);
+
             /** Copy constructor (disabled) **/
             ObjectTracker(const ObjectTracker &other);
             /** Assignment operator (disabled) **/

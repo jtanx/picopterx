@@ -6,7 +6,6 @@
 #include "common.h"
 #include "object_tracker.h"
 
-
 using namespace picopter;
 using namespace picopter::navigation;
 using std::chrono::steady_clock;
@@ -158,6 +157,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         fc->fb->GetGimbalPose(&gimbal);
         fc->gps->GetLatest(&gps_position);
         fc->imu->GetLatest(&imu_data);
+        double lidar_range = (double)fc->lidar->GetLatest() / (100.0); //convert lidar range to metres
         //Do we have an object?
         if (locations.size() > 0) {                                             
             detected_object = locations.front();
@@ -167,7 +167,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
             
-            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object);
+            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object, lidar_range);
 
             if (!m_observation_mode) {
                 CalculateTrackingTrajectory(fc, &course, &detected_object, true);
@@ -236,7 +236,7 @@ bool ObjectTracker::Finished() {
  * @param [in] gimbal The current gimbal angle.
  * @param [in,out] object The detected object.
  */
-void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object) {
+void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range) {
     double heightAboveTarget = std::max(pos->fix.alt - pos->fix.groundalt, 0.0);
     
     if (std::isnan(heightAboveTarget)) {
@@ -248,63 +248,10 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
         }
         heightAboveTarget = 4;
     }
-
-
-    //taking Euler chained rotations:
-    double a;
-    /*
-    a = DEG2RAD(imu_data->roll);
-    cv::Matx33d Rbx(1,      0,       0,
-                   0, cos(a), -sin(a),
-                   0, sin(a),  cos(a));
-
-    a = DEG2RAD(imu_data->pitch);
-    cv::Matx33d Rby(cos(a), 0, -sin(a),
-                        0, 1,       0,
-                   sin(a), 0,  cos(a));
-    a = DEG2RAD(imu_data->yaw);
-    cv::Matx33d Rbz(cos(a), -sin(a), 0,
-                   sin(a),  cos(a), 0,
-                        0,       0, 1);
-    cv::Matx33d Rbody = Rbx*Rby*Rbz;    
-    */
-
-    
-    //The camera defaults to down position.
-    a = DEG2RAD(gimbal->pitch);     //this might be reversed sign
-    cv::Matx33d Rgx(1,      0,       0,     //lateral not affected
-                    0, cos(a),  sin(a),     //positive depth into image plane is +forward at +pitch
-                    0, sin(a), -cos(a));    //positive depth into image plane is -alt at gimal zero, +imageY is +alt at +pitch
-
-    /*
-    //a = DEG2RAD(gimbal->yaw);     //facing down, yaw operates between X and Z
-    a=0;
-    cv::Matx33d Rgy(cos(a), 0, -sin(a),
-                         0, 1,       0,
-                    sin(a), 0,  cos(a));
-
-    //a = DEG2RAD(gimbal->roll);    //facing down, roll operates between X and Y
-    a=0;
-    cv::Matx33d Rgz(cos(a), -sin(a), 0,
-                    sin(a),  cos(a), 0,
-                         0,       0, 1);
-    */
-    //cv::Matx33d Rgimbal = Rgx*Rgy*Rgz;    
-    cv::Matx33d Rgimbal = Rgx;    //cut this back to the complexity we had before
-
-    /*
-    lidar dist;
-    imu_data->roll;
-    imu_data->pitch;
-    imu_data->yaw;
-    object->location.lat;
-    object->location.lon;
-    object->location.alt;
-    object->offset.x;
-    object->offset.y;
-    object->offset.z;
-    */
-
+    //find the transformation matrix from camera frame to ground.
+    cv::Matx33d Mbody = GimbalToBody(gimbal);
+    cv::Matx33d Mstable = BodyToLevel(imu_data);
+    cv::Matx33d MYaw = LevelToGround(imu_data);
 
     //Comment this out to use dynamic altitude.
     //#warning "using 4m as height above target"
@@ -313,52 +260,64 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
     //Calibration factor Original: 2587.5 seemed too low from experimental testing
     //0.9m high 
     double L = 3687.5 * object->image_width/2592.0;
-    //double gimbalVertical = 50; //gimbal angle that sets the camera to point straight down
 
-
-    //3D vector of the target on the image plane
-    cv::Vec3d RelCam(object->position.x, object->position.y, L);
-    //3D vector of the target in global rotations, relative to the copter
-    cv::Vec3d RelBody = Rgimbal * RelCam;
-    //cv::Vec3d RelBody = Rbody * Rgimbal * RelCam;
+    //3D vector of the target on the image plane, zero pose is straight down
+    cv::Vec3d RelCam(object->position.y, object->position.x, L);
+    //3D vector of the target, relative to the copter's stabilised frame
+    cv::Vec3d RelBody = Mstable * Mbody * RelCam;
 
     //Angles from image normal
-    double theta = atan(RelCam[1]/RelCam[2]); //y angle
-    double phi   = atan(RelCam[0]/RelCam[2]); //x angle
+    double theta = atan2(RelCam[0],RelCam[2]); //Pitch angle of target in camera frame from vertical
+    double phi   = atan2(RelCam[1],RelCam[2]); //Roll angle of target in camera frame from vertical
     
-    //Tilt - in radians from vertical
-    //double gimbalTilt = DEG2RAD(gimbalVertical - current->gimbal);
-    //double gimbalTilt = gimbal->pitch;
-    double objectAngleY = DEG2RAD(gimbal->pitch) + theta;
-    //double forwardPosition = tan(objectAngleY) * heightAboveTarget;
-
-    //double lateralPosition = ((object->position.x / L) / cos(objectAngleY)) * heightAboveTarget;
     bool useAlt = true;
-    bool useLidar = false;
+    bool useLidar = UseLidar(object, lidar_range);
+
     double LidarRange = 5.0;    //distance in metres
-    if(useAlt){
-        double k = heightAboveTarget / RelBody[2];
-        RelBody *= k;
-    }else if(useLidar){
+
+    if(useLidar){
         double k = LidarRange/norm(RelBody, cv::NORM_L2);
         RelBody *= k;
+    }else if(useAlt){
+        double k = heightAboveTarget / RelBody[2];
+        RelBody *= k;
     }
-
-    //These coorinates are a bit crazy.
-    //object->offset.y = forwardPosition;
-    //object->offset.x = lateralPosition;
-    //object->offset.z = heightAboveTarget;
 
     object->offset.x = RelBody[0];
     object->offset.y = RelBody[1];
     object->offset.z = RelBody[2];
-
-
     Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
-//        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), forwardPosition, lateralPosition);
-        heightAboveTarget, RAD2DEG(phi), RAD2DEG(objectAngleY), object->offset.y, object->offset.x);
+        heightAboveTarget, RAD2DEG(phi), RAD2DEG(theta), object->offset.y, object->offset.x);
 }
 
+cv::Matx33d ObjectTracker::GimbalToBody(EulerAngle *gimbal){
+    return RotationMatrix(gimbal->roll,gimbal->pitch,gimbal->yaw);
+}
+cv::Matx33d ObjectTracker::BodyToGround(IMUData *imu_data){
+    return RotationMatrix(imu_data->roll, imu_data->pitch, imu_data->yaw);
+}
+cv::Matx33d ObjectTracker::BodyToLevel(IMUData *imu_data){
+    return RotationMatrix(imu_data->roll, imu_data->pitch, 0);
+}
+cv::Matx33d ObjectTracker::LevelToGround(IMUData *imu_data){
+    return RotationMatrix(0,0,imu_data->yaw);
+}
+//
+
+/**
+ * determines whether or not the object in frame overlaps the lidar
+ * @param [in] object The detected object.
+ */
+bool ObjectTracker::UseLidar(ObjectInfo *object, double lidar_range){
+    //the centre of the lidar spot in the image frame
+    double lidarCentreX = 0.1;
+    double lidarCentreY = -0.2;
+    double lidarRadius = 0.01;
+    
+    double x = (object->position.x / object->image_width) - lidarCentreX;
+    double y = (object->position.y / object->image_height) - lidarCentreY;
+    return (sqrt((x*x)+(y*y))<lidarRadius);
+}
 
 /**
  * Calculates the trajectory (flight output) needed to track the object.

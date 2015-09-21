@@ -106,7 +106,11 @@ namespace picopter {
 
     Distrib combineDistribs(Distrib A, Distrib B);                              //combine two distrib distributions (as though statistically independent)
     Distrib translateDistrib(Distrib A, double x, double y, double z);          //translate a distrib struct from the origin
-    Distrib rotateDistrib(Distrib A, double yaw, double pitch, double roll);    //rotate a distrib struct about the origin
+    Distrib rotateDistrib(Distrib A, cv::Matx33d Mrot);                         //rotate a distrib struct about the origin
+    Distrib rotateDistribEuler(Distrib A, double roll, double pitch, double yaw);    //rotate a distrib struct about the origin
+    
+    cv::Matx33d RotationMatrix(double roll, double pitch, double yaw);
+
     Distrib stretchDistrib(Distrib A, double sx, double sy, double sz);         //stretch a distrib struct about the origin
     inline Distrib stretchDistrib(Distrib A, double s){                         //overload
         return stretchDistrib(A,s,s,s);}                                              

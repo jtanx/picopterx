@@ -12,6 +12,7 @@
 using namespace picopter;
 using namespace cv;
 
+namespace picopter{
 
 Observations::Observations() {
 
@@ -73,7 +74,7 @@ Distrib generateDistrib(DistribParams params){
 //        primitive.coeffs[i] = 0;
 //    }
     Distrib dS = stretchDistrib(primitive, params.sigma_x, params.sigma_y, params.sigma_z);
-    Distrib dR = rotateDistrib(dS, params.yaw, params.pitch, params.roll);
+    Distrib dR = rotateDistribEuler(dS, params.yaw, params.pitch, params.roll);
     Distrib dT = translateDistrib(dR, params.x, params.y, params.z);
 
     return dT;
@@ -113,29 +114,36 @@ Distrib translateDistrib(Distrib A, double x, double y, double z){
     return D;
 }
 
-//translate a distrib struct about the origin
-Distrib rotateDistrib(Distrib A, double yaw, double pitch, double roll){
-    Distrib D;
-    double a;
-    a = pitch;
-    Matx33d Rx(
-        1,      0,       0,
-        0, cos(a), -sin(a),
-        0, sin(a),  cos(a));
-    a = roll;
-    Matx33d Ry(
-         cos(a), 0, sin(a),
-              0, 1,      0,
-        -sin(a), 0, cos(a));
-    a = yaw;
-    Matx33d Rz(
-        cos(a), -sin(a), 0 , 
-        sin(a),  cos(a), 0 , 
-             0,       0, 1 ); 
 
-//    D.axes = Rx.inv() * Ry.inv() * Rz.inv() * A.axes * Rz * Ry * Rx;
-    D.axes = Rx.t() * Ry.t() * Rz.t() * A.axes * Rz * Ry * Rx;    //makes more sense as transposes
-    D.vect = Rz * Ry * Rx * A.vect;
+//rotate a distrib struct about the origin
+
+Distrib rotateDistribEuler(Distrib A, double roll, double pitch, double yaw){
+    Distrib D;
+    cv::Matx33d R_total = RotationMatrix(roll, pitch, yaw);
+    return rotateDistrib(A, R_total);
+}
+
+cv::Matx33d RotationMatrix(double roll, double pitch, double yaw){
+    double a;
+    a = DEG2RAD(roll);
+    cv::Matx33d Rx(1,      0,       0,
+                    0, cos(a), -sin(a),
+                    0, sin(a),  cos(a));
+    a = DEG2RAD(pitch);
+    cv::Matx33d Ry( cos(a), 0,  sin(a),
+                          0, 1,       0,
+                    -sin(a), 0,  cos(a));
+    a = DEG2RAD(yaw);
+    cv::Matx33d Rz(cos(a), -sin(a), 0,
+                    sin(a),  cos(a), 0,
+                        0,        0, 1);
+    return Rz*Ry*Rx;
+}
+
+Distrib rotateDistrib(Distrib A, cv::Matx33d Mrot){
+    Distrib D;
+    D.axes = Mrot.inv() * A.axes * Mrot;
+    D.vect = Mrot * A.vect;
     return D;
 }
 
@@ -173,4 +181,5 @@ Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep){
 
     estVel = stretchDistrib(estVel, 1/timestep);
     return estVel;
+}
 }
