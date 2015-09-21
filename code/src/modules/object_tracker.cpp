@@ -233,6 +233,7 @@ bool ObjectTracker::Finished() {
  * 
  * @todo Review the use of the LIDAR-Lite for distance sensing.
  * @param [in] pos The current position of the copter.
+ * @param [in] imu_data The pitch and roll of the copter
  * @param [in] gimbal The current gimbal angle.
  * @param [in,out] object The detected object.
  */
@@ -251,15 +252,13 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
     //find the transformation matrix from camera frame to ground.
     cv::Matx33d Mbody = GimbalToBody(gimbal);
     cv::Matx33d Mstable = BodyToLevel(imu_data);
-    cv::Matx33d MYaw = LevelToGround(imu_data);
+    //cv::Matx33d MYaw = LevelToGround(imu_data);
 
     //Comment this out to use dynamic altitude.
     //#warning "using 4m as height above target"
     //heightAboveTarget = 4;    //hard-coded for lab test
     
-    //Calibration factor Original: 2587.5 seemed too low from experimental testing
-    //0.9m high 
-    double L = 3687.5 * object->image_width/2592.0;
+    double L = FOCAL_LENGTH * object->image_width;
 
     //3D vector of the target on the image plane, zero pose is straight down
     cv::Vec3d RelCam(object->position.y, object->position.x, L);
@@ -273,10 +272,8 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
     bool useAlt = true;
     bool useLidar = UseLidar(object, lidar_range);
 
-    double LidarRange = 5.0;    //distance in metres
-
     if(useLidar){
-        double k = LidarRange/norm(RelBody, cv::NORM_L2);
+        double k = lidar_range/norm(RelBody, cv::NORM_L2);
         RelBody *= k;
     }else if(useAlt){
         double k = heightAboveTarget / RelBody[2];
@@ -317,6 +314,100 @@ bool ObjectTracker::UseLidar(ObjectInfo *object, double lidar_range){
     double x = (object->position.x / object->image_width) - lidarCentreX;
     double y = (object->position.y / object->image_height) - lidarCentreY;
     return (sqrt((x*x)+(y*y))<lidarRadius);
+}
+
+/**
+ * Create an observation structure from the blob of colour
+ * 
+ * @param [in] pos The current position of the copter.
+ * @param [in] gimbal The current gimbal angle.
+ * @param [in] imu_data The pitch and roll of the copter
+ * @param [in] object The detected object.
+ */
+Observation ObjectTracker::ObservationFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object){
+    
+    double L = FOCAL_LENGTH * object->image_width;     
+    cv::Vec3d RelCam(object->position.y, object->position.x, L);    
+    double theta = atan2(RelCam[0],RelCam[2]); //Pitch angle of target in camera frame from vertical    
+    double phi   = atan2(RelCam[1],RelCam[2]); //Roll angle of target in camera frame from vertical     
+    
+    cv::Matx33d Mblob = RotationMatrix(phi,theta,0);   //the angle between the camera normal and the blob (deg)
+    //find the transformation matrix from camera frame to ground.
+    cv::Matx33d Mbody = GimbalToBody(gimbal);
+    cv::Matx33d Mstable = BodyToLevel(imu_data);
+    //cv::Matx33d MYaw = LevelToGround(imu_data);
+
+    cv::Matx33d axes ( 
+        0.5, 0, 0,
+        0, 0.5, 0,
+        0, 0, 0.0); //totally unknown depth
+    cv::Matx31d vect (0,0,0);
+    Distrib occular_ray = {axes,vect};
+
+
+    occular_ray = stretchDistrib(occular_ray, 3);   //how big? we can't have conical distributions yet.
+
+    occular_ray = rotateDistrib(occular_ray, Mblob);
+    occular_ray = rotateDistrib(occular_ray, Mbody);
+    occular_ray = rotateDistrib(occular_ray, Mstable);
+
+    cv::Matx33d zeroAxes ( 
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0); //totally unknown
+    Distrib zeroDistrib = {zeroAxes,vect};
+
+    Observation imageObservation;
+    imageObservation.location = occular_ray;
+    imageObservation.velocity = zeroDistrib;
+    imageObservation.acceleration = zeroDistrib;
+    imageObservation.source = CAMERA_BLOB;
+    imageObservation.camDetection = object;
+
+    return imageObservation;
+
+}
+
+/**
+ * Create an observation structure from the lidar data
+ * 
+ * @param [in] pos The current position of the copter.
+ * @param [in] gimbal The current gimbal angle.
+ * @param [in] imu_data The pitch and roll of the copter
+ * @param [in] lidar_range The length of the lidar beam.
+ */
+Observation ObjectTracker::ObservationFromLidar(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, double lidar_range){
+    cv::Matx33d MLidar = RotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
+    //find the transformation matrix from camera frame to ground.
+    cv::Matx33d Mbody = GimbalToBody(gimbal);
+    cv::Matx33d Mstable = BodyToLevel(imu_data);
+    //cv::Matx33d MYaw = LevelToGround(imu_data);
+
+    Distrib lidarspot = generatedistrib();
+    
+    double spotWidth = lidar_range*sin(DEG2RAD(3));
+    lidarspot = stretchDistrib(lidarspot, spotWidth, spotWidth, 0.02);
+    lidarspot = translateDistrib(lidarspot, 0,0,lidar_range);
+    lidarspot = rotateDistrib(lidarspot, MLidar);
+    lidarspot = rotateDistrib(lidarspot, Mbody);
+    lidarspot = rotateDistrib(lidarspot, Mstable);
+
+    cv::Matx33d zeroAxes ( 
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0); //totally unknown
+    cv::Matx31d vect (0,0,0);
+    Distrib zeroDistrib = {zeroAxes,vect};
+
+    Observation lidarObservation;
+    
+    lidarObservation.location = lidarspot;
+    lidarObservation.velocity = zeroDistrib;
+    lidarObservation.acceleration = zeroDistrib;
+    lidarObservation.source = LIDAR;
+    lidarObservation.camDetection = NULL;
+
+    return lidarObservation;
 }
 
 /**

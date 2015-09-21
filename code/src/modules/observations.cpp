@@ -58,15 +58,21 @@ void Observations::removeObservation(Observation* observation){
 }
 
 //generate an distrib struct from a primitive and operators
-Distrib generateDistrib(DistribParams params){
-    //primitive is a, spherical distribution sigma=1
-    // = e^-(0.5x^2 + 0.5y^2 + 0.5 z^2 + 0yz + 0xz + 0yx + 0x + 0y + 0z + 0);
+
+Distrib generatedistrib(){
     Matx33d axes ( 
         0.5, 0, 0,
         0, 0.5, 0,
         0, 0, 0.5);
     Matx31d vect (0,0,0);
     Distrib primitive = {axes,vect};
+    return primitive;
+}
+Distrib generateDistrib(DistribParams params){
+    //primitive is a, spherical distribution sigma=1
+    // = e^-(0.5x^2 + 0.5y^2 + 0.5 z^2 + 0yz + 0xz + 0yx + 0x + 0y + 0z + 0);
+
+    Distrib primitive = generatedistrib();
 //    for (int i = 0; i < 3; i++) {
 //        primitive.coeffs[i] = 0.5;
 //    }

@@ -6,6 +6,8 @@
 #ifndef _PICOPTERX_OBJECT_TRACKER_H
 #define _PICOPTERX_OBJECT_TRACKER_H
 
+#define FOCAL_LENGTH (3687.5/2592.0)
+
 /* For the Options class */
 #include "opts.h"
 #include "flightcontroller.h"
@@ -50,7 +52,6 @@ namespace picopter {
             void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range);
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
             void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
-
             //transformation matrices for gimbal and body
             cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
             cv::Matx33d BodyToGround(IMUData *imu_data);
@@ -58,6 +59,10 @@ namespace picopter {
             cv::Matx33d LevelToGround(IMUData *imu_data);
 
             bool UseLidar(ObjectInfo *object, double lidar_range);
+
+            Observation ObservationFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
+            Observation ObservationFromLidar(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_range);
+
 
             /** Copy constructor (disabled) **/
             ObjectTracker(const ObjectTracker &other);

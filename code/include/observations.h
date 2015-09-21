@@ -53,7 +53,6 @@ namespace picopter {
 
     //a 3d gaussian elliptical structure
 
-    const int _distrib_coeffs = 10;
     typedef struct Distrib {
         cv::Matx33d axes;   //eigenvectors are the semi-major axes, eigenvalues are the sigma=1 widths
         cv::Matx31d vect;   //offset from origin column vector
@@ -101,6 +100,7 @@ namespace picopter {
 
     } Observation;
 
+    Distrib generatedistrib();                                                  //Generate an empty (sigma 1) distribution
     Distrib generatedistrib(DistribParams params);                              //generate an distrib struct from a primitive and operators
     DistribParams getdistribParams(Distrib A);                                  //calculate the centre and covariance widths of this object
 
