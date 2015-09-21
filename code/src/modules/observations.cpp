@@ -14,42 +14,47 @@ using namespace cv;
 
 namespace picopter{
 
-Observations::Observations() {
+Observations::Observations(Observation firstSighting) {
 
+    
+    location = {cv::Matx33d( 
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0),
+        cv::Matx31d(0,0,0)};
+    velocity = stretchDistrib(generatedistrib(),0.1);   //0.1m/s uncertainty
+    acceleration = stretchDistrib(generatedistrib(),0.1);   //0.1m/s/s uncertainty
+
+    appendObservation(firstSighting);
 }
 
 
 //estimate the probability the given observation is of the same object
 //return the integral of  e^((x-l1).t()*A*(x-l1)) * e^((x-l2).t()*B*(x-l2))
-double Observations::getSameProbability(Observation* observation){ 
+double Observations::getSameProbability(Observation observation){ 
     Distrib C;
-    C.axes = (location.axes.inv() + observation->location.axes.inv()).inv();
-    C.vect = location.vect - observation->location.vect;
+    C.axes = (location.axes.inv() + observation.location.axes.inv()).inv();
+    C.vect = location.vect - observation.location.vect;
     double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0,0)));
-
-
 return retval;
 }
 
 
 //add another sighting to this object
-void Observations::appendObservation(Observation* observation){     
+void Observations::appendObservation(Observation observation){     
     sightings.push_back(observation);
-    //for(int i=0; i<_distrib_coeffs; i++){
-    //    distrib.coeffs[i] += observation->distrib.coeffs[i];
-    //}
-    location = combineDistribs(location, observation->location);
-    velocity = combineDistribs(velocity, observation->velocity);
+    location = combineDistribs(location, observation.location);
+    velocity = combineDistribs(velocity, observation.velocity);
 }
 void Observations::updateObject(TIME_TYPE timestep){
     location = vectorSum(location, stretchDistrib(velocity, timestep));
-    velocity = vectorSum(velocity, stretchDistrib(acceleration, timestep));
+    //velocity = vectorSum(velocity, stretchDistrib(acceleration, timestep));
     //acceleration = vectorSum(acceleration, something);
 }
 
 
 //remove an observation from this object
-void Observations::removeObservation(Observation* observation){     
+void Observations::removeObservation(Observation observation){     
     //riffle through the sightings until we find an identical pointer to this observation?
         //remove it, replace with the tail?
         //sightings.at(n) = pop_back(); //fast, breaks order
@@ -188,4 +193,5 @@ Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep){
     estVel = stretchDistrib(estVel, 1/timestep);
     return estVel;
 }
+
 }

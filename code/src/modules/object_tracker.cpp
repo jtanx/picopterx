@@ -164,14 +164,20 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         fc->imu->GetLatest(&imu_data);
         double lidar_range = (double)fc->lidar->GetLatest() / (100.0); //convert lidar range to metres
 
-        //start making observation structures
-        Observation lidarObservation = ObservationFromLidar(&gps_position, &gimbal, &imu_data, lidar_range);
+        
+        //Now would be a good time to use the velocity and acceleration handler
+        for(uint i=0; i<knownThings.size(); i++){
+            knownThings.at(i).updateObject(update_rate);
+        }//blur the location.
         
 
-        //Do we have any objects?
+        //start making observation structures
+        Observation lidarObservation = ObservationFromLidar(&gps_position, &gimbal, &imu_data, lidar_range);
+
+        //Did the camera see anything?
         if (locations.size() > 0) {
             detected_object = locations.front();
-            
+
             //build observations for each
             std::vector<Observation> visibles; //things we can currently see
             visibles.reserve(locations.size()); //save multiple reallocations
@@ -179,11 +185,32 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 visibles.push_back(ObservationFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object));
             }
 
-            //disambiguate between many objects
+            //distinguish between many objects
+            for(uint j=0; j<visibles.size(); j++){
+                uint bestFit = 0;
+                double fit=0;
+                for(uint i=0; i<knownThings.size(); i++){
+                    //Find the best fit
+                    double thisFit = knownThings.at(i).getSameProbability(visibles.at(j));
+                    if(thisFit>fit){
+                        bestFit = i;
+                        fit=thisFit;
+                    }
+                }
+                //How well does it fit?
+                if(fit>OVERLAP_CONFIDENCE){
+                    knownThings.at(bestFit).appendObservation(visibles.at(j));
+                }else{
+                    //doesn't fit anything well. Track it for later.
+                    Observations newThing(visibles.at(j));
+                    knownThings.push_back(newThing);
+                }
+            }
 
-
-            //generate new knownThings for observations that didn't fit.
+            //Now we have some things to track with known locations, without needing to see them.
+            //Which one do we track?  The first thing it saw sounds right.
             
+            //CalculateTrackingTrajectory(knownThings.front());
 
             SetCurrentState(fc, STATE_TRACKING_LOCKED);
 
@@ -202,6 +229,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
             last_fix = steady_clock::now();
             had_fix = true;
+
+
         } else if (had_fix && steady_clock::now() - last_fix < seconds(2)) {
             //We had an object, attempt to follow according to last known position, but slower
             //Set PID update intervals
@@ -433,6 +462,9 @@ Observation ObjectTracker::ObservationFromLidar(GPSData *pos, EulerAngle *gimbal
 
     return lidarObservation;
 }
+
+
+
 
 /**
  * Calculates the trajectory (flight output) needed to track the object.

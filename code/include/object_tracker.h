@@ -7,6 +7,7 @@
 #define _PICOPTERX_OBJECT_TRACKER_H
 
 #define FOCAL_LENGTH (3687.5/2592.0)
+#define OVERLAP_CONFIDENCE 0.9
 
 /* For the Options class */
 #include "opts.h"

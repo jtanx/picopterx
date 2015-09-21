@@ -47,7 +47,7 @@ Motivated by investigation into the monocular case of:
 #include "camera_stream.h"
 #include <opencv2/opencv.hpp>
 
-#define TIME_TYPE uint32_t
+#define TIME_TYPE double
 
 namespace picopter {
 
@@ -122,14 +122,15 @@ namespace picopter {
     //one per distinct object.
     class Observations {
         public:
-            Observations();
-            double getSameProbability(Observation* observation);    //estimate the probability the given observation is of the same object
-            void appendObservation(Observation* observation);       //add another sighting to this object
-            void removeObservation(Observation* observation);       //remove an observation from this object
+            Observations(Observation firstSighting);
+            double getSameProbability(Observation observation);    //estimate the probability the given observation is of the same object
+            void appendObservation(Observation observation);       //add another sighting to this object
+            void removeObservation(Observation observation);       //remove an observation from this object
             void updateObject(TIME_TYPE timestep);                  //update the location and velocity with the time.
 
         private:
-            std::vector<Observation*> sightings;                    //the collection of sightings associated with this object
+            //A timestamp for the last observation
+            std::vector<Observation> sightings;                    //the collection of sightings associated with this object
             Distrib location;                                       //cumulative uncertainty distribution
             Distrib velocity;                                       //the current distribution for velocity. distrib will be translated and inflated by this much per unit of time.
             Distrib acceleration;                                   //the current distribution for acceleration. velocity will be translated and inflated by this much per unit of time.
