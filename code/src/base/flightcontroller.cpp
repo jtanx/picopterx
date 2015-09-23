@@ -115,6 +115,7 @@ FlightController::~FlightController() {
         Stop();
         m_task_thread.wait();
     }
+    delete m_camera;
     delete m_fb;
     //delete m_imu; //Part of the FlightBoard now
     //delete m_gps; //Part of the FlightBoard now
