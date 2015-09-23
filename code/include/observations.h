@@ -47,8 +47,9 @@ Motivated by investigation into the monocular case of:
 #include "camera_stream.h"
 #include <opencv2/opencv.hpp>
 
-#define TIME_TYPE double
-
+#define TICKS_PER_SEC 1000000000l
+#define TIME_TYPE std::chrono::duration<long int, std::ratio<1l, TICKS_PER_SEC> >
+#define CLOCK_TYPE std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1l, TICKS_PER_SEC> > >
 namespace picopter {
 
     //a 3d gaussian elliptical structure
@@ -83,7 +84,10 @@ namespace picopter {
     //The specific measurement of the object.  These might get flushed to disk if we ever get that far.
     typedef struct Observation {
         //location of copter +uncertainty
+        
         //time
+        TIME_TYPE sample_time;
+
         //IMU data (including velocity)
         //3D probability density function (ellipsoidal normal )
         Distrib location;
@@ -127,15 +131,17 @@ namespace picopter {
             void appendObservation(Observation observation);       //add another sighting to this object
             void removeObservation(Observation observation);       //remove an observation from this object
             void updateObject(TIME_TYPE timestep);                  //update the location and velocity with the time.
-
+            TIME_TYPE lastObservation();
         private:
-            //A timestamp for the last observation
-            std::vector<Observation> sightings;                    //the collection of sightings associated with this object
+            TIME_TYPE last_sample;                                          //A timestamp for the last observation
+            //characteristic data (colour, speckle histogram, glyph ID etc)
+            std::vector<Observation> sightings;                     //the collection of sightings associated with this object
             Distrib location;                                       //cumulative uncertainty distribution
             Distrib velocity;                                       //the current distribution for velocity. distrib will be translated and inflated by this much per unit of time.
             Distrib acceleration;                                   //the current distribution for acceleration. velocity will be translated and inflated by this much per unit of time.
             //acceleration won't be measured by most sensors, so we'll just leave this at some reasonable value
             //for chasing the buggy, we'll set this as a flat-ish circle on the origin
+
     };
 }
 

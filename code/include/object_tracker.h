@@ -21,6 +21,7 @@ namespace picopter {
     /**
      * Class for moving the hexacopter through waypoints.
      */
+
     class ObjectTracker : public FlightTask {
         public:
             typedef enum {
@@ -36,7 +37,9 @@ namespace picopter {
             void SetTrackMethod(TrackMethod method);
             void Run(FlightController *fc, void *opts) override;
             bool Finished() override;
+
         private:
+            CLOCK_TYPE m_task_start;
             bool m_observation_mode;
             PID m_pidw, m_pidx, m_pidy;//, m_pidz;
             std::atomic<TrackMethod> m_track_method;
@@ -53,6 +56,9 @@ namespace picopter {
             void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range);
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
             void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
+
+            void CalculateVantagePoint(FlightController *fc, Observations object, bool has_fix);
+
             //transformation matrices for gimbal and body
             cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
             cv::Matx33d BodyToGround(IMUData *imu_data);
@@ -61,14 +67,15 @@ namespace picopter {
 
             bool UseLidar(ObjectInfo *object, double lidar_range);
 
-            Observation ObservationFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
-            Observation ObservationFromLidar(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_range);
+            Observation ObservationFromImageCoords(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
+            Observation ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_range);
 
 
             /** Copy constructor (disabled) **/
             ObjectTracker(const ObjectTracker &other);
             /** Assignment operator (disabled) **/
             ObjectTracker& operator= (const ObjectTracker &other);
+
     };
 }
 

@@ -47,7 +47,8 @@ void Observations::appendObservation(Observation observation){
     velocity = combineDistribs(velocity, observation.velocity);
 }
 void Observations::updateObject(TIME_TYPE timestep){
-    location = vectorSum(location, stretchDistrib(velocity, timestep));
+
+    location = vectorSum(location, stretchDistrib(velocity, ((double)(timestep.count()))/TICKS_PER_SEC ));
     //velocity = vectorSum(velocity, stretchDistrib(acceleration, timestep));
     //acceleration = vectorSum(acceleration, something);
 }
@@ -60,6 +61,10 @@ void Observations::removeObservation(Observation observation){
         //sightings.at(n) = pop_back(); //fast, breaks order
         //sightings.erase(n);   //slow, preserves order
 
+}
+
+TIME_TYPE Observations::lastObservation(){
+    return last_sample;
 }
 
 //generate an distrib struct from a primitive and operators
@@ -190,7 +195,7 @@ Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep){
     estVel.vect = newLoc.vect - oldLoc.vect;    //difference in position
     estVel.axes = (newLoc.axes.inv() + oldLoc.axes.inv()).inv();    //change in variance is same as vectorSum
 
-    estVel = stretchDistrib(estVel, 1/timestep);
+    estVel = stretchDistrib(estVel, TICKS_PER_SEC/(double)(timestep.count()));
     return estVel;
 }
 

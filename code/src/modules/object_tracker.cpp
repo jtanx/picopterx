@@ -96,6 +96,13 @@ ObjectTracker::~ObjectTracker() {
     
 }
 
+//TIME_TYPE ObjectTracker::timeSinceStart(){
+//    return microseconds(steady_clock::now() - m_task_start);
+//}
+//TIME_TYPE ObjectTracker::timeSince(std::chrono::time_point<std::chrono::steady_clock> new_time){
+//    return microseconds(new_time - m_task_start);
+//}
+
 /**
  * Returns the current tracking method.
  * @return The current tracking method.
@@ -151,12 +158,22 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     EulerAngle gimbal;
     GPSData gps_position;
     IMUData imu_data;
-    auto last_fix = steady_clock::now() - seconds(2);
+    m_task_start = steady_clock::now();
+    TIME_TYPE last_loop = steady_clock::now() - m_task_start;     //the current time for the samples being collected below
+    TIME_TYPE loop_start = last_loop;
+    //TIME_TYPE last_fix = sample_time - seconds(2);   //no fix (deprecate)
+
     bool had_fix = false;
 
     while (!fc->CheckForStop()) {
+        last_loop = loop_start;
+        loop_start = steady_clock::now() - m_task_start;
+        TIME_TYPE loop_period = (loop_start - last_loop);
+
+
         double update_rate = 1.0 / fc->cam->GetFramerate();
-        auto sleep_time = microseconds((int)(1000000*update_rate));
+        TIME_TYPE sleep_time = microseconds((int)(1000000*update_rate));    //how long to wait for the next frame (FIXME)
+        
 
         fc->cam->GetDetectedObjects(&locations);
         fc->fb->GetGimbalPose(&gimbal);
@@ -167,12 +184,12 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         
         //Now would be a good time to use the velocity and acceleration handler
         for(uint i=0; i<knownThings.size(); i++){
-            knownThings.at(i).updateObject(update_rate);
+            knownThings.at(i).updateObject(loop_period);
         }//blur the location.
         
 
         //start making observation structures
-        Observation lidarObservation = ObservationFromLidar(&gps_position, &gimbal, &imu_data, lidar_range);
+        Observation lidarObservation = ObservationFromLidar(loop_start, &gps_position, &gimbal, &imu_data, lidar_range);
 
         //Did the camera see anything?
         if (locations.size() > 0) {
@@ -182,7 +199,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             std::vector<Observation> visibles; //things we can currently see
             visibles.reserve(locations.size()); //save multiple reallocations
             for(uint i=0; i<locations.size(); i++){
-                visibles.push_back(ObservationFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object));
+                visibles.push_back(ObservationFromImageCoords(loop_start, &gps_position, &gimbal, &imu_data, &detected_object));
             }
 
             //distinguish between many objects
@@ -191,6 +208,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 double fit=0;
                 for(uint i=0; i<knownThings.size(); i++){
                     //Find the best fit
+                    //compare characteristic data here.
                     double thisFit = knownThings.at(i).getSameProbability(visibles.at(j));
                     if(thisFit>fit){
                         bestFit = i;
@@ -227,11 +245,12 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             }
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
-            last_fix = steady_clock::now();
             had_fix = true;
 
 
-        } else if (had_fix && steady_clock::now() - last_fix < seconds(2)) {
+        //} else if (had_fix && steady_clock::now() - last_fix < seconds(2)) {
+        } else if (had_fix && knownThings.front().lastObservation() < seconds(2)) {
+            
             //We had an object, attempt to follow according to last known position, but slower
             //Set PID update intervals
             m_pidx.SetInterval(update_rate);
@@ -367,7 +386,7 @@ bool ObjectTracker::UseLidar(ObjectInfo *object, double lidar_range){
     
     double x = (object->position.x / object->image_width) - lidarCentreX;
     double y = (object->position.y / object->image_height) - lidarCentreY;
-    return (sqrt((x*x)+(y*y))<lidarRadius);
+    return (sqrt((x*x)+(y*y)) < lidarRadius);
 }
 
 /**
@@ -378,7 +397,7 @@ bool ObjectTracker::UseLidar(ObjectInfo *object, double lidar_range){
  * @param [in] imu_data The pitch and roll of the copter
  * @param [in] object The detected object.
  */
-Observation ObjectTracker::ObservationFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object){
+Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object){
     
     double L = FOCAL_LENGTH * object->image_width;     
     cv::Vec3d RelCam(object->position.y, object->position.x, L);    
@@ -429,7 +448,7 @@ Observation ObjectTracker::ObservationFromImageCoords(GPSData *pos, EulerAngle *
  * @param [in] imu_data The pitch and roll of the copter
  * @param [in] lidar_range The length of the lidar beam.
  */
-Observation ObjectTracker::ObservationFromLidar(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, double lidar_range){
+Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, double lidar_range){
     cv::Matx33d MLidar = RotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
     //find the transformation matrix from camera frame to ground.
     cv::Matx33d Mbody = GimbalToBody(gimbal);
@@ -526,3 +545,33 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *cou
         -tracky/TRACK_SPEED_LIMIT_Y, trackw/TRACK_SPEED_LIMIT_W});
 
 }
+
+
+
+/**
+ * Calculates the desired location of the copter based on the estimated location of the object.
+ * @param [in] fc The flight controller.
+ * @param [in] object The detected object.
+ * @param [in] has_fix Indicates if we have a fix on the object or not. (deprecate?)
+ */
+void CalculateVantagePoint(FlightController *fc, Observations object, bool has_fix){
+
+    if (has_fix) {
+        
+        //go to a fixed radius from the object (or fly to the north, into the sun etc)
+        //calculate a position to make a better observation from?
+
+    }else{
+        //go to a fixed radius from where we think the object is (or fly to the north, into the sun etc)
+        //the aim here could be to see the object at all
+
+    }
+
+}
+void CalculatePath(){
+
+
+}
+
+
+
