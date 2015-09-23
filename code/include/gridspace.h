@@ -7,13 +7,14 @@
 #define _PICOPTERX_GRID_SPACE_H
 
 #include "waypoints.h"
+#include <iostream>
 
 namespace picopter {
     class GridSpace{
 
         public:
             typedef struct voxel {
-                std:: vector<bool> observations;
+                int observations;
                 bool isFull;
             } Voxel;
             
@@ -23,15 +24,20 @@ namespace picopter {
                 double z;
             } index3D;
             
-            GridSpace();
+            GridSpace(/*FLightController *fc*/);
+            void raycast(/*FLightController *fc*/);
+            void printToConsole(int rangeMin, int rangeMax, int zDepth);
+            
+
             
         private:
             std::vector< std::vector< std::vector<voxel> > > grid;
-            double copterRadius;
-            double copterHeight;
+            double voxelLength;
+            double voxelWidth;
+            double voxelHeight;
             navigation::Coord3D launchPoint;
             navigation::Coord3D getGPS();
-            index3D findCopter();
+            index3D worldToGrid(navigation::Coord3D GPSloc);
             double degToRad(double deg);    
     };
 }
