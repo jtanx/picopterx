@@ -126,7 +126,7 @@ Distrib translateDistrib(Distrib A, double x, double y, double z){
     cv::Matx31d offset(x,y,z);
     Distrib D;
     D.axes = A.axes;
-    D.vect = A.vect - offset;
+    D.vect = A.vect + offset;
     return D;
 }
 
@@ -135,11 +135,11 @@ Distrib translateDistrib(Distrib A, double x, double y, double z){
 
 Distrib rotateDistribEuler(Distrib A, double roll, double pitch, double yaw){
     Distrib D;
-    cv::Matx33d R_total = RotationMatrix(roll, pitch, yaw);
+    cv::Matx33d R_total = rotationMatrix(roll, pitch, yaw);
     return rotateDistrib(A, R_total);
 }
 
-cv::Matx33d RotationMatrix(double roll, double pitch, double yaw){
+cv::Matx33d rotationMatrix(double roll, double pitch, double yaw){
     double a;
     a = DEG2RAD(roll);
     cv::Matx33d Rx(1,      0,       0,

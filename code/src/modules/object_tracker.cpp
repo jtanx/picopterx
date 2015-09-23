@@ -173,7 +173,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
         double update_rate = 1.0 / fc->cam->GetFramerate();
         TIME_TYPE sleep_time = microseconds((int)(1000000*update_rate));    //how long to wait for the next frame (FIXME)
-        
+
 
         fc->cam->GetDetectedObjects(&locations);
         fc->fb->GetGimbalPose(&gimbal);
@@ -361,16 +361,16 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
 }
 
 cv::Matx33d ObjectTracker::GimbalToBody(EulerAngle *gimbal){
-    return RotationMatrix(gimbal->roll,gimbal->pitch,gimbal->yaw);
+    return rotationMatrix(gimbal->roll,gimbal->pitch,gimbal->yaw);
 }
 cv::Matx33d ObjectTracker::BodyToGround(IMUData *imu_data){
-    return RotationMatrix(imu_data->roll, imu_data->pitch, imu_data->yaw);
+    return rotationMatrix(imu_data->roll, imu_data->pitch, imu_data->yaw);
 }
 cv::Matx33d ObjectTracker::BodyToLevel(IMUData *imu_data){
-    return RotationMatrix(imu_data->roll, imu_data->pitch, 0);
+    return rotationMatrix(imu_data->roll, imu_data->pitch, 0);
 }
 cv::Matx33d ObjectTracker::LevelToGround(IMUData *imu_data){
-    return RotationMatrix(0,0,imu_data->yaw);
+    return rotationMatrix(0,0,imu_data->yaw);
 }
 //
 
@@ -404,7 +404,7 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     double theta = atan2(RelCam[0],RelCam[2]); //Pitch angle of target in camera frame from vertical    
     double phi   = atan2(RelCam[1],RelCam[2]); //Roll angle of target in camera frame from vertical     
     
-    cv::Matx33d Mblob = RotationMatrix(phi,theta,0);   //the angle between the camera normal and the blob (deg)
+    cv::Matx33d Mblob = rotationMatrix(phi,theta,0);   //the angle between the camera normal and the blob (deg)
     //find the transformation matrix from camera frame to ground.
     cv::Matx33d Mbody = GimbalToBody(gimbal);
     cv::Matx33d Mstable = BodyToLevel(imu_data);
@@ -449,7 +449,7 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
  * @param [in] lidar_range The length of the lidar beam.
  */
 Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, double lidar_range){
-    cv::Matx33d MLidar = RotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
+    cv::Matx33d MLidar = rotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
     //find the transformation matrix from camera frame to ground.
     cv::Matx33d Mbody = GimbalToBody(gimbal);
     cv::Matx33d Mstable = BodyToLevel(imu_data);
