@@ -110,7 +110,11 @@ namespace picopter {
     DistribParams getdistribParams(Distrib A);                                  //calculate the centre and covariance widths of this object
 
     Distrib combineDistribs(Distrib A, Distrib B);                              //combine two distrib distributions (as though statistically independent)
-    Distrib translateDistrib(Distrib A, double x, double y, double z);          //translate a distrib struct from the origin
+
+    Distrib translateDistrib(Distrib A, cv::Matx31d offset);
+    inline Distrib translateDistrib(Distrib A, double x, double y, double z){   //translate a distrib struct from the origin
+        return translateDistrib(A, cv::Matx31d(x,y,z));
+    }
     Distrib rotateDistrib(Distrib A, cv::Matx33d Mrot);                         //rotate a distrib struct about the origin
     Distrib rotateDistribEuler(Distrib A, double roll, double pitch, double yaw);    //rotate a distrib struct about the origin
     

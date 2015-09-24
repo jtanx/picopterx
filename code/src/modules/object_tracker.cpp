@@ -189,7 +189,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         
 
         //start making observation structures
-        Observation lidarObservation = ObservationFromLidar(loop_start, &gps_position, &gimbal, &imu_data, lidar_range);
+        //Observation lidarObservation = ObservationFromLidar(loop_start, &gps_position, &gimbal, &imu_data, lidar_range);
 
         //Did the camera see anything?
         if (locations.size() > 0) {
@@ -422,6 +422,9 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     occular_ray = rotateDistrib(occular_ray, Mblob);
     occular_ray = rotateDistrib(occular_ray, Mbody);
     occular_ray = rotateDistrib(occular_ray, Mstable);
+    
+    Coord3D copterloc = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
+    occular_ray = translateDistrib(occular_ray, GroundFromGPS( copterloc ));
 
     cv::Matx33d zeroAxes ( 
         0, 0, 0,
@@ -463,8 +466,10 @@ Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *
     lidarspot = rotateDistrib(lidarspot, MLidar);
     lidarspot = rotateDistrib(lidarspot, Mbody);
     lidarspot = rotateDistrib(lidarspot, Mstable);
+    Coord3D copterloc = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
+    lidarspot = translateDistrib(lidarspot, GroundFromGPS( copterloc ));
 
-    cv::Matx33d zeroAxes ( 
+    cv::Matx33d zeroAxes (
         0, 0, 0,
         0, 0, 0,
         0, 0, 0); //totally unknown
@@ -572,6 +577,20 @@ void CalculatePath(){
 
 
 }
-
-
+//using North, East, Down coordinates
+cv::Matx31d ObjectTracker::GroundFromGPS(Coord3D coord){
+    cv::Matx31d retval(
+        (launch_point.lat - coord.lat) * (1000*RADIUS_OF_EARTH),
+        (launch_point.lon - coord.lon) * (1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))),
+        (launch_point.alt - coord.alt)
+        );
+    return retval;
+}
+Coord3D ObjectTracker::GPSFromGround(cv::Matx31d coord){
+    Coord3D retval;
+    retval.lat = launch_point.lat + RAD2DEG(coord(0,0)/(1000*RADIUS_OF_EARTH));
+    retval.lon = launch_point.lon + RAD2DEG(coord(1,0)/(1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))));
+    retval.alt = launch_point.alt - coord(2,0);
+    return retval;
+}
 

@@ -110,20 +110,16 @@ DistribParams getDistribParams(Distrib A){
 //combine two distributions (as though statistically independent, so beware of biases)
 Distrib combineDistribs(Distrib A, Distrib B){
     Distrib C;
-    //so easy in polynomial form.
-    //for(int i=0; i<_distrib_coeffs; i++){
-    //    C.coeffs[i] = A.coeffs[i] + B.coeffs[i];
-    //}
     C.axes = A.axes + B.axes;
     C.vect = C.axes.inv() * (A.axes * A.vect + B.axes * B.vect);    //takes two lines to prove
     //you can see here how if B is a zero matrix, it fully cancels out of this equation.
     //If no velocity or acceleration data is returned by a given sensor, the variance matrix is set to zeroes
-    return A;
+    return C;
 }
 
 //translate a distrib struct from the origin
-Distrib translateDistrib(Distrib A, double x, double y, double z){
-    cv::Matx31d offset(x,y,z);
+
+Distrib translateDistrib(Distrib A, cv::Matx31d offset){
     Distrib D;
     D.axes = A.axes;
     D.vect = A.vect + offset;
@@ -158,8 +154,9 @@ cv::Matx33d rotationMatrix(double roll, double pitch, double yaw){
 
 Distrib rotateDistrib(Distrib A, cv::Matx33d Mrot){
     Distrib D;
-    D.axes = Mrot.inv() * A.axes * Mrot;
+    D.axes = Mrot * A.axes * Mrot.inv();
     D.vect = Mrot * A.vect;
+
     return D;
 }
 
@@ -198,5 +195,7 @@ Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep){
     estVel = stretchDistrib(estVel, TICKS_PER_SEC/(double)(timestep.count()));
     return estVel;
 }
+
+
 
 }

@@ -38,9 +38,15 @@ namespace picopter {
             void Run(FlightController *fc, void *opts) override;
             bool Finished() override;
 
+            cv::Matx31d GroundFromGPS(navigation::Coord3D coord);
+            navigation::Coord3D GPSFromGround(cv::Matx31d coord);
+
+            navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
         private:
+
             CLOCK_TYPE m_task_start;
             bool m_observation_mode;
+
             PID m_pidw, m_pidx, m_pidy;//, m_pidz;
             std::atomic<TrackMethod> m_track_method;
             std::atomic<bool> m_finished;
