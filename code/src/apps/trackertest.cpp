@@ -21,9 +21,9 @@ void printMatrix(cv::Matx33d mat){
     }
 }
 
-void printVector(cv::Matx31d mat){
+void printVector(cv::Vec3d mat){
     for(int i=0;i<3;i++){
-        std::cout << "[" << mat(i,0) << "]" << std::endl;
+        std::cout << "[" << mat(i) << "]" << std::endl;
     }
 }
 void printCoord3d(Coord3D coord){
@@ -78,18 +78,16 @@ int main(int argc, char *argv[]) {
     printCoord3d(testTracker.launch_point);
     
     std::cout << "Convert to ground coords" << std::endl;
-    cv::Matx31d gndlaunch = testTracker.GroundFromGPS(testTracker.launch_point);
+    cv::Vec3d gndlaunch = testTracker.GroundFromGPS(testTracker.launch_point);
     printVector(gndlaunch);
 
     std::cout << "Move in ground coords" << std::endl;
-    gndlaunch += cv::Matx31d(10,5,-2);
+    gndlaunch += cv::Vec3d(10,5,-2);
     printVector(gndlaunch);
 
     std::cout << "Convert back to GPS" << std::endl;
     Coord3D testLoc = testTracker.GPSFromGround(gndlaunch);
     printCoord3d(testLoc);
-
-
 
     return 0;
 }

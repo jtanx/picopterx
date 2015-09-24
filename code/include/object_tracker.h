@@ -38,8 +38,8 @@ namespace picopter {
             void Run(FlightController *fc, void *opts) override;
             bool Finished() override;
 
-            cv::Matx31d GroundFromGPS(navigation::Coord3D coord);
-            navigation::Coord3D GPSFromGround(cv::Matx31d coord);
+            cv::Vec3d GroundFromGPS(navigation::Coord3D coord);
+            navigation::Coord3D GPSFromGround(cv::Vec3d coord);
 
             navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
         private:
@@ -63,8 +63,9 @@ namespace picopter {
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
             void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
 
-            void CalculateVantagePoint(FlightController *fc, Observations object, bool has_fix);
-
+            navigation::Coord3D CalculateVantagePoint(FlightController *fc, GPSData *pos, Observations *object, bool has_fix);
+            
+            void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Vec3D *course);
             //transformation matrices for gimbal and body
             cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
             cv::Matx33d BodyToGround(IMUData *imu_data);

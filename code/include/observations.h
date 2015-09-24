@@ -56,7 +56,7 @@ namespace picopter {
 
     typedef struct Distrib {
         cv::Matx33d axes;   //eigenvectors are the semi-major axes, eigenvalues are the sigma=1 widths
-        cv::Matx31d vect;   //offset from origin column vector
+        cv::Vec3d vect;   //offset from origin column vector
         //double coeffs[10];
     } Distrib;
     //empty measurements will just be zeroed out. A zero matrix represents infinite variance and covariance
@@ -111,9 +111,9 @@ namespace picopter {
 
     Distrib combineDistribs(Distrib A, Distrib B);                              //combine two distrib distributions (as though statistically independent)
 
-    Distrib translateDistrib(Distrib A, cv::Matx31d offset);
+    Distrib translateDistrib(Distrib A, cv::Vec3d offset);
     inline Distrib translateDistrib(Distrib A, double x, double y, double z){   //translate a distrib struct from the origin
-        return translateDistrib(A, cv::Matx31d(x,y,z));
+        return translateDistrib(A, cv::Vec3d(x,y,z));
     }
     Distrib rotateDistrib(Distrib A, cv::Matx33d Mrot);                         //rotate a distrib struct about the origin
     Distrib rotateDistribEuler(Distrib A, double roll, double pitch, double yaw);    //rotate a distrib struct about the origin
@@ -136,6 +136,7 @@ namespace picopter {
             void removeObservation(Observation observation);       //remove an observation from this object
             void updateObject(TIME_TYPE timestep);                  //update the location and velocity with the time.
             TIME_TYPE lastObservation();
+            Distrib getLocation();
         private:
             TIME_TYPE last_sample;                                          //A timestamp for the last observation
             //characteristic data (colour, speckle histogram, glyph ID etc)

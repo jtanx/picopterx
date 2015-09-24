@@ -21,7 +21,7 @@ Observations::Observations(Observation firstSighting) {
         0, 0, 0,
         0, 0, 0,
         0, 0, 0),
-        cv::Matx31d(0,0,0)};
+        cv::Vec3d(0,0,0)};
     velocity = stretchDistrib(generatedistrib(),0.1);   //0.1m/s uncertainty
     acceleration = stretchDistrib(generatedistrib(),0.1);   //0.1m/s/s uncertainty
 
@@ -35,7 +35,7 @@ double Observations::getSameProbability(Observation observation){
     Distrib C;
     C.axes = (location.axes.inv() + observation.location.axes.inv()).inv();
     C.vect = location.vect - observation.location.vect;
-    double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0,0)));
+    double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0)));
 return retval;
 }
 
@@ -67,6 +67,11 @@ TIME_TYPE Observations::lastObservation(){
     return last_sample;
 }
 
+Distrib Observations::getLocation(){
+    return location;
+}
+
+
 //generate an distrib struct from a primitive and operators
 
 Distrib generatedistrib(){
@@ -74,7 +79,7 @@ Distrib generatedistrib(){
         0.5, 0, 0,
         0, 0.5, 0,
         0, 0, 0.5);
-    Matx31d vect (0,0,0);
+    Vec3d vect (0,0,0);
     Distrib primitive = {axes,vect};
     return primitive;
 }
@@ -101,9 +106,9 @@ Distrib generateDistrib(DistribParams params){
 DistribParams getDistribParams(Distrib A){
     DistribParams D;
     //sigma values are the eigenvalues
-    D.x = -A.vect(0,0);
-    D.y = -A.vect(1,0);
-    D.y = -A.vect(2,0);
+    D.x = -A.vect(0);
+    D.y = -A.vect(1);
+    D.y = -A.vect(2);
     return D;
 }
 
@@ -119,7 +124,7 @@ Distrib combineDistribs(Distrib A, Distrib B){
 
 //translate a distrib struct from the origin
 
-Distrib translateDistrib(Distrib A, cv::Matx31d offset){
+Distrib translateDistrib(Distrib A, cv::Vec3d offset){
     Distrib D;
     D.axes = A.axes;
     D.vect = A.vect + offset;

@@ -189,7 +189,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         
 
         //start making observation structures
-        //Observation lidarObservation = ObservationFromLidar(loop_start, &gps_position, &gimbal, &imu_data, lidar_range);
+        Observation lidarObservation = ObservationFromLidar(loop_start, &gps_position, &gimbal, &imu_data, lidar_range);
 
         //Did the camera see anything?
         if (locations.size() > 0) {
@@ -225,24 +225,30 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 }
             }
 
-            //Now we have some things to track with known locations, without needing to see them.
-            //Which one do we track?  The first thing it saw sounds right.
-            
+        }
+        //Now we have some things to track with known locations, without needing to see them.
+
+
+        //Which one do we track?  The first thing it saw sounds right.
+        if(knownThings.front().lastObservation() == loop_start){    //Did we see the thing this loop?
             //CalculateTrackingTrajectory(knownThings.front());
 
             SetCurrentState(fc, STATE_TRACKING_LOCKED);
 
-
             //Set PID update intervals
-            m_pidx.SetInterval(update_rate);
+            m_pidx.SetInterval(update_rate);    //FIXME!
             m_pidy.SetInterval(update_rate);
             
-            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object, lidar_range);
+//            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object, lidar_range);
+//
+//            if (!m_observation_mode) {
+//                CalculateTrackingTrajectory(fc, &course, &detected_object, true);
+//                fc->fb->SetBodyVel(course);
+//            }
+            Coord3D vantage = CalculateVantagePoint(fc, &gps_position, &knownThings.front(), true);
 
-            if (!m_observation_mode) {
-                CalculateTrackingTrajectory(fc, &course, &detected_object, true);
-                fc->fb->SetBodyVel(course);
-            }
+            CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
+
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
             had_fix = true;
@@ -414,7 +420,7 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
         0.5, 0, 0,
         0, 0.5, 0,
         0, 0, 0.0); //totally unknown depth
-    cv::Matx31d vect (0,0,0);
+    cv::Vec3d vect (0,0,0);
     Distrib occular_ray = {axes,vect};
 
     occular_ray = stretchDistrib(occular_ray, 3);   //how big? we can't have conical distributions yet.
@@ -422,7 +428,7 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     occular_ray = rotateDistrib(occular_ray, Mblob);
     occular_ray = rotateDistrib(occular_ray, Mbody);
     occular_ray = rotateDistrib(occular_ray, Mstable);
-    
+
     Coord3D copterloc = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
     occular_ray = translateDistrib(occular_ray, GroundFromGPS( copterloc ));
 
@@ -473,7 +479,7 @@ Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *
         0, 0, 0,
         0, 0, 0,
         0, 0, 0); //totally unknown
-    cv::Matx31d vect (0,0,0);
+    cv::Vec3d vect (0,0,0);
     Distrib zeroDistrib = {zeroAxes,vect};
 
     Observation lidarObservation;
@@ -559,38 +565,105 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *cou
  * @param [in] object The detected object.
  * @param [in] has_fix Indicates if we have a fix on the object or not. (deprecate?)
  */
-void CalculateVantagePoint(FlightController *fc, Observations object, bool has_fix){
+Coord3D ObjectTracker::CalculateVantagePoint(FlightController *fc, GPSData *pos, Observations *object, bool has_fix){
+    //spit out a Coord3D indicating the optimal location to see the object
 
-    if (has_fix) {
+//    if (has_fix) {
         
         //go to a fixed radius from the object (or fly to the north, into the sun etc)
         //calculate a position to make a better observation from?
 
-    }else{
+        Coord3D copter_coord = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
+        cv::Vec3d copterloc = GroundFromGPS(copter_coord);
+        cv::Vec3d rel_loc =  object->getLocation().vect - copterloc;
+        if(rel_loc(2)<0){
+            //copter is below the target, don't move.
+            return copter_coord;
+        }
+        double height_above_target = rel_loc(2);
+        double level_radius = sqrt((rel_loc(0) * rel_loc(0))+(rel_loc(1) * rel_loc(1)));
+
+        double desiredSlope = 0.8;    //Maintain about the same camera angle 
+        double des_level_radius = rel_loc(2)/desiredSlope;  //what radius is comfortable for this height?
+        rel_loc *= des_level_radius/level_radius;   //
+        rel_loc(2) = height_above_target;
+        cv::Vec3d des_copter_loc = object->getLocation().vect - rel_loc;
+        return GPSFromGround(des_copter_loc);
+
+//    }else{
         //go to a fixed radius from where we think the object is (or fly to the north, into the sun etc)
         //the aim here could be to see the object at all
 
-    }
+//    }
+    return GPSFromGround(object->getLocation().vect);    //obviously not here.
 
 }
-void CalculatePath(){
+void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *imu_data, Coord3D dest, Vec3D *course){
+    //Observe Exclusion Zones?
+    //really feel like I shouldn't be handling this on the Pi. I can just spool the above waypoint to the pixhawk.
+
+    double trackx, tracky, trackw;
+    //Zero the course commands
+    memset(course, 0, sizeof(Vec3D));
+
+    Coord3D copter_coord = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
+    cv::Vec3d copter_loc = GroundFromGPS(copter_coord);    
+    cv::Vec3d dest_loc = GroundFromGPS(dest);
+    cv::Vec3d offset = dest_loc - copter_loc;
+
+    double phi = RAD2DEG( M_PI/2 - atan2(offset(0),offset(1)));   //yaw Angle to object (what is our current yaw?)
+    phi -= imu_data->yaw;
+    cv::Matx33d phi_mat = rotationMatrix(0,0,phi);
+
+    m_pidw.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
+    m_pidx.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
+    m_pidy.SetSetPoint(0);  //maybe swap x,y out for PID on distance and object bearing?
+
+    //Now we can take full advantage of this omnidirectional platform.
+    m_pidw.SetProcessValue(-phi);
+    m_pidx.SetProcessValue((phi_mat * offset)(0));
+    m_pidy.SetProcessValue((phi_mat * offset)(1));
+    //m_pidz.SetProcessValue(  //throttle controller not used
+
+
+    Log(LOG_DEBUG, "PIDW: %.2f, PIDY: %.2f", -phi, -offset(1));
+    trackw = m_pidw.Compute();
+    trackx = m_pidx.Compute();
+    tracky = m_pidy.Compute();
+    //trackz = m_pidz.Compute();
+
+    //TODO: course->z? This controls altitude.
+    //To change yaw, use fb->SetYaw(bearing_or_offset, is_relative)
+    course->x = trackx;
+    course->y = tracky;
+    //Fix the angle for now...
+    //course->gimbal = 50;
+    fc->cam->SetTrackingArrow({trackx/TRACK_SPEED_LIMIT_X,
+        -tracky/TRACK_SPEED_LIMIT_Y, trackw/TRACK_SPEED_LIMIT_W});
+
+
+
+
+
+
+
 
 
 }
 //using North, East, Down coordinates
-cv::Matx31d ObjectTracker::GroundFromGPS(Coord3D coord){
-    cv::Matx31d retval(
+cv::Vec3d ObjectTracker::GroundFromGPS(Coord3D coord){
+    cv::Vec3d retval(
         (launch_point.lat - coord.lat) * (1000*RADIUS_OF_EARTH),
         (launch_point.lon - coord.lon) * (1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))),
         (launch_point.alt - coord.alt)
         );
     return retval;
 }
-Coord3D ObjectTracker::GPSFromGround(cv::Matx31d coord){
+Coord3D ObjectTracker::GPSFromGround(cv::Vec3d coord){
     Coord3D retval;
-    retval.lat = launch_point.lat + RAD2DEG(coord(0,0)/(1000*RADIUS_OF_EARTH));
-    retval.lon = launch_point.lon + RAD2DEG(coord(1,0)/(1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))));
-    retval.alt = launch_point.alt - coord(2,0);
+    retval.lat = launch_point.lat + RAD2DEG(coord(0)/(1000*RADIUS_OF_EARTH));
+    retval.lon = launch_point.lon + RAD2DEG(coord(1)/(1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))));
+    retval.alt = launch_point.alt - coord(2);
     return retval;
 }
 
