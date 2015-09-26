@@ -17,11 +17,11 @@ namespace picopter{
 Observations::Observations(Observation firstSighting) {
 
     
-    location = {cv::Matx33d( 
+    location = {Matx33d( 
         0, 0, 0,
         0, 0, 0,
         0, 0, 0),
-        cv::Vec3d(0,0,0)};
+        Vec3d(0,0,0)};
     velocity = stretchDistrib(generatedistrib(),0.1);   //0.1m/s uncertainty
     acceleration = stretchDistrib(generatedistrib(),0.1);   //0.1m/s/s uncertainty
 
@@ -39,12 +39,12 @@ double Observations::getSameProbability(Observation observation){
 return retval;
 }
 
-
 //add another sighting to this object
-void Observations::appendObservation(Observation observation){     
+void Observations::appendObservation(Observation observation){
     sightings.push_back(observation);
     location = combineDistribs(location, observation.location);
     velocity = combineDistribs(velocity, observation.velocity);
+    //update the time stamp
 }
 void Observations::updateObject(TIME_TYPE timestep){
 
@@ -111,6 +111,9 @@ DistribParams getDistribParams(Distrib A){
     D.y = -A.vect(2);
     return D;
 }
+double sampleDistrib(Distrib *A, Vec3d *B){
+    return exp(-(((A->vect-*B).t() * (A->axes * (A->vect-*B)))(0)));
+}
 
 //combine two distributions (as though statistically independent, so beware of biases)
 Distrib combineDistribs(Distrib A, Distrib B){
@@ -124,7 +127,7 @@ Distrib combineDistribs(Distrib A, Distrib B){
 
 //translate a distrib struct from the origin
 
-Distrib translateDistrib(Distrib A, cv::Vec3d offset){
+Distrib translateDistrib(Distrib A, Vec3d offset){
     Distrib D;
     D.axes = A.axes;
     D.vect = A.vect + offset;
@@ -136,28 +139,28 @@ Distrib translateDistrib(Distrib A, cv::Vec3d offset){
 
 Distrib rotateDistribEuler(Distrib A, double roll, double pitch, double yaw){
     Distrib D;
-    cv::Matx33d R_total = rotationMatrix(roll, pitch, yaw);
+    Matx33d R_total = rotationMatrix(roll, pitch, yaw);
     return rotateDistrib(A, R_total);
 }
 
-cv::Matx33d rotationMatrix(double roll, double pitch, double yaw){
+Matx33d rotationMatrix(double roll, double pitch, double yaw){
     double a;
     a = DEG2RAD(roll);
-    cv::Matx33d Rx(1,      0,       0,
+    Matx33d Rx(1,      0,       0,
                     0, cos(a), -sin(a),
                     0, sin(a),  cos(a));
     a = DEG2RAD(pitch);
-    cv::Matx33d Ry( cos(a), 0,  sin(a),
+    Matx33d Ry( cos(a), 0,  sin(a),
                           0, 1,       0,
                     -sin(a), 0,  cos(a));
     a = DEG2RAD(yaw);
-    cv::Matx33d Rz(cos(a), -sin(a), 0,
+    Matx33d Rz(cos(a), -sin(a), 0,
                     sin(a),  cos(a), 0,
                         0,        0, 1);
     return Rz*Ry*Rx;
 }
 
-Distrib rotateDistrib(Distrib A, cv::Matx33d Mrot){
+Distrib rotateDistrib(Distrib A, Matx33d Mrot){
     Distrib D;
     D.axes = Mrot * A.axes * Mrot.inv();
     D.vect = Mrot * A.vect;

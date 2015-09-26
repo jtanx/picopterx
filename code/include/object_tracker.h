@@ -42,9 +42,22 @@ namespace picopter {
             navigation::Coord3D GPSFromGround(cv::Vec3d coord);
 
             navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
-        private:
+
+
+            Observation ObservationFromImageCoords(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
+            Observation ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_range);
+            Observation AssumptionGroundLevel();
+
+            //transformation matrices for gimbal and body
+            cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
+            cv::Matx33d BodyToGround(IMUData *imu_data);
+            cv::Matx33d BodyToLevel(IMUData *imu_data);
+            cv::Matx33d LevelToGround(IMUData *imu_data);
 
             CLOCK_TYPE m_task_start;
+            
+        private:
+
             bool m_observation_mode;
 
             PID m_pidw, m_pidx, m_pidy;//, m_pidz;
@@ -59,24 +72,15 @@ namespace picopter {
             double TRACK_SETPOINT_W, TRACK_SETPOINT_X, TRACK_SETPOINT_Y, TRACK_SETPOINT_Z;
             int TRACK_SPEED_LIMIT_W, TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Z;
             
-            void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range);
+            //void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range);
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
-            void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
+            //void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
 
             navigation::Coord3D CalculateVantagePoint(FlightController *fc, GPSData *pos, Observations *object, bool has_fix);
             
             void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Vec3D *course);
-            //transformation matrices for gimbal and body
-            cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
-            cv::Matx33d BodyToGround(IMUData *imu_data);
-            cv::Matx33d BodyToLevel(IMUData *imu_data);
-            cv::Matx33d LevelToGround(IMUData *imu_data);
 
             bool UseLidar(ObjectInfo *object, double lidar_range);
-
-            Observation ObservationFromImageCoords(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
-            Observation ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_range);
-
 
             /** Copy constructor (disabled) **/
             ObjectTracker(const ObjectTracker &other);

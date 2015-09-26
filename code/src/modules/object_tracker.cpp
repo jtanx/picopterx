@@ -163,6 +163,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     TIME_TYPE loop_start = last_loop;
     //TIME_TYPE last_fix = sample_time - seconds(2);   //no fix (deprecate)
 
+
     bool had_fix = false;
 
     while (!fc->CheckForStop()) {
@@ -190,6 +191,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
         //start making observation structures
         Observation lidarObservation = ObservationFromLidar(loop_start, &gps_position, &gimbal, &imu_data, lidar_range);
+        Observation theGround = AssumptionGroundLevel();
 
         //Did the camera see anything?
         if (locations.size() > 0) {
@@ -218,6 +220,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 //How well does it fit?
                 if(fit>OVERLAP_CONFIDENCE){
                     knownThings.at(bestFit).appendObservation(visibles.at(j));
+                    knownThings.at(bestFit).appendObservation(theGround);
                 }else{
                     //doesn't fit anything well. Track it for later.
                     Observations newThing(visibles.at(j));
@@ -239,16 +242,17 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidx.SetInterval(update_rate);    //FIXME!
             m_pidy.SetInterval(update_rate);
             
+            Coord3D vantage = CalculateVantagePoint(fc, &gps_position, &knownThings.front(), true);
 //            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object, lidar_range);
 //
 //            if (!m_observation_mode) {
 //                CalculateTrackingTrajectory(fc, &course, &detected_object, true);
 //                fc->fb->SetBodyVel(course);
 //            }
-            Coord3D vantage = CalculateVantagePoint(fc, &gps_position, &knownThings.front(), true);
-
-            CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
-
+            if (!m_observation_mode) {
+                CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
+                fc->fb->SetBodyVel(course);
+            }
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
             had_fix = true;
@@ -266,8 +270,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidy.Reset();
             
             //Determine trajectory to track the object (PID control)
+            Coord3D vantage = CalculateVantagePoint(fc, &gps_position, &knownThings.front(), true);
+
             if (!m_observation_mode) {
-                CalculateTrackingTrajectory(fc, &course, &detected_object, false);
+                CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
+                //CalculateTrackingTrajectory(fc, &course, &detected_object, false);
                 fc->fb->SetBodyVel(course);
             }
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
@@ -275,6 +282,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         } else {
             //Object lost; we should do a search pattern (TBA)
             SetCurrentState(fc, STATE_TRACKING_SEARCHING);
+            knownThings.clear();
             
             //Reset the accumulated error in the PIDs
             m_pidx.Reset();
@@ -316,6 +324,7 @@ bool ObjectTracker::Finished() {
  * @param [in] gimbal The current gimbal angle.
  * @param [in,out] object The detected object.
  */
+ /*
 void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range) {
     double heightAboveTarget = std::max(pos->fix.alt - pos->fix.groundalt, 0.0);
     
@@ -365,6 +374,7 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
     Log(LOG_DEBUG, "HAT: %.1f m, X: %.2fdeg, Y: %.2fdeg, FP: %.2fm, LP: %.2fm",
         heightAboveTarget, RAD2DEG(phi), RAD2DEG(theta), object->offset.y, object->offset.x);
 }
+*/
 
 cv::Matx33d ObjectTracker::GimbalToBody(EulerAngle *gimbal){
     return rotationMatrix(gimbal->roll,gimbal->pitch,gimbal->yaw);
@@ -378,7 +388,6 @@ cv::Matx33d ObjectTracker::BodyToLevel(IMUData *imu_data){
 cv::Matx33d ObjectTracker::LevelToGround(IMUData *imu_data){
     return rotationMatrix(0,0,imu_data->yaw);
 }
-//
 
 /**
  * determines whether or not the object in frame overlaps the lidar
@@ -494,6 +503,34 @@ Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *
 }
 
 
+Observation ObjectTracker::AssumptionGroundLevel(){
+    cv::Matx33d zeroAxes (
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0); //totally unknown
+    cv::Vec3d vect (0,0,0);
+    Distrib zeroDistrib = {zeroAxes,vect};
+
+    cv::Matx33d flatAxes (
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0.5);   //1m variance on ground level
+
+    Coord3D launch_ground = launch_point;
+    launch_ground.alt = 0;    //is this sea level?
+    cv::Vec3d groundLevel = GroundFromGPS(launch_ground);
+    Distrib flatDistrib = {flatAxes,groundLevel};
+
+    Observation Assumption;
+
+    Assumption.location = flatDistrib;
+    Assumption.velocity = zeroDistrib;
+    Assumption.acceleration = zeroDistrib;
+    Assumption.source = ASSUMPTION;
+    Assumption.sample_time = m_task_start - m_task_start;
+    return Assumption;
+
+}
 
 
 /**
@@ -503,6 +540,7 @@ Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *
  * @param [in] object The detected object.
  * @param [in] has_fix Indicates if we have a fix on the object or not.
  */
+ /*
 void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *course, ObjectInfo *object, bool has_fix) {
     double trackx, tracky, trackw;
     
@@ -526,10 +564,10 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *cou
         //This needs to be angle from the center, hence 90deg - angle
         double phi = M_PI/2 - atan2(object->offset.y,object->offset.x);
 
-        /*
-        m_pidx.SetProcessValue(-phi);   //rename this to m_pid_yaw or something, we can seriously use an X controller in chase now.
-        m_pidy.SetProcessValue(object->offset.y);
-        */
+        
+        //m_pidx.SetProcessValue(-phi);   //rename this to m_pid_yaw or something, we can seriously use an X controller in chase now.
+        //m_pidy.SetProcessValue(object->offset.y);
+        
             //Now we can take full advantage of this omnidirectional platform.
         double objectDistance = std::sqrt(object->offset.x*object->offset.x + object->offset.y*object->offset.y);
         double distanceError = desiredForwardPosition-objectDistance;
@@ -556,7 +594,7 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *cou
         -tracky/TRACK_SPEED_LIMIT_Y, trackw/TRACK_SPEED_LIMIT_W});
 
 }
-
+*/
 
 
 /**

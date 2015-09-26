@@ -77,7 +77,8 @@ namespace picopter {
         CAMERA_FLOW,    //optical flow will resolve a range and blob (probably include two images and IMU velocity)
         LIDAR,          //lidar sensor has a small dot, but can't identify objects
         FLOW,           //flow sensor has a large width uncertainty
-        TELEM           //objects transmitted from external sources
+        TELEM,           //objects transmitted from external sources
+        ASSUMPTION      //Fairy stories we tell our robots.
     } Source;
     //ObjectInfo    //detections from the camera stream (grouped into single objects)
 
@@ -88,11 +89,12 @@ namespace picopter {
         //time
         TIME_TYPE sample_time;
 
+        //sensor pack the detection came from
+        Source source;
+
         //IMU data (including velocity)
         //3D probability density function (ellipsoidal normal )
         Distrib location;
-        //sensor pack the detection came from
-        Source source;
         //velocity information if it is available
         Distrib velocity;   
         //acceleration information if it is available
@@ -108,6 +110,8 @@ namespace picopter {
     Distrib generatedistrib();                                                  //Generate an empty (sigma 1) distribution
     Distrib generatedistrib(DistribParams params);                              //generate an distrib struct from a primitive and operators
     DistribParams getdistribParams(Distrib A);                                  //calculate the centre and covariance widths of this object
+    
+    double sampleDistrib(Distrib *A, cv::Vec3d *B);
 
     Distrib combineDistribs(Distrib A, Distrib B);                              //combine two distrib distributions (as though statistically independent)
 
