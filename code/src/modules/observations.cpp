@@ -16,16 +16,17 @@ namespace picopter{
 
 Observations::Observations(Observation firstSighting) {
 
-    
-    location = {Matx33d( 
-        0, 0, 0,
-        0, 0, 0,
-        0, 0, 0),
-        Vec3d(0,0,0)};
-    velocity = stretchDistrib(generatedistrib(),0.1);   //0.1m/s uncertainty
-    acceleration = stretchDistrib(generatedistrib(),0.1);   //0.1m/s/s uncertainty
+    accumulator = firstSighting;
+    sightings.push_back(firstSighting);
+//    location = {Matx33d( 
+//        0, 0, 0,
+//        0, 0, 0,
+//        0, 0, 0),
+//        Vec3d(0,0,0)};
+//    velocity = stretchDistrib(generatedistrib(),0.1);   //0.1m/s uncertainty
+//    acceleration = stretchDistrib(generatedistrib(),0.1);   //0.1m/s/s uncertainty
 
-    appendObservation(firstSighting);
+//    appendObservation(firstSighting);
 }
 
 
@@ -33,8 +34,8 @@ Observations::Observations(Observation firstSighting) {
 //return the integral of  e^((x-l1).t()*A*(x-l1)) * e^((x-l2).t()*B*(x-l2))
 double Observations::getSameProbability(Observation observation){ 
     Distrib C;
-    C.axes = (location.axes.inv() + observation.location.axes.inv()).inv();
-    C.vect = location.vect - observation.location.vect;
+    C.axes = (accumulator.location.axes.inv() + observation.location.axes.inv()).inv();
+    C.vect = accumulator.location.vect - observation.location.vect;
     double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0)));
 return retval;
 }
@@ -42,15 +43,22 @@ return retval;
 //add another sighting to this object
 void Observations::appendObservation(Observation observation){
     sightings.push_back(observation);
-    location = combineDistribs(location, observation.location);
-    velocity = combineDistribs(velocity, observation.velocity);
+
+    accumulator.location = combineDistribs(accumulator.location, observation.location);
+    accumulator.velocity = combineDistribs(accumulator.velocity, observation.velocity);
     //update the time stamp
+    if(accumulator.sample_time < observation.sample_time) accumulator.sample_time=observation.sample_time;
+    accumulator.source = observation.source;
 }
 void Observations::updateObject(TIME_TYPE timestep){
 
-    location = vectorSum(location, stretchDistrib(velocity, ((double)(timestep.count()))/TICKS_PER_SEC ));
+    accumulator.location = vectorSum(accumulator.location, stretchDistrib(accumulator.velocity, ((double)(timestep.count()))/TICKS_PER_SEC ));
     //velocity = vectorSum(velocity, stretchDistrib(acceleration, timestep));
     //acceleration = vectorSum(acceleration, something);
+
+    
+    accumulator.sample_time += timestep;
+    accumulator.source = INTERPOLATION;
 }
 
 
@@ -64,11 +72,11 @@ void Observations::removeObservation(Observation observation){
 }
 
 TIME_TYPE Observations::lastObservation(){
-    return last_sample;
+    return accumulator.sample_time;
 }
 
 Distrib Observations::getLocation(){
-    return location;
+    return accumulator.location;
 }
 
 

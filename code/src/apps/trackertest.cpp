@@ -45,6 +45,7 @@ void rasterDistrib(Mat &mat, Distrib *dist)
         for (int j = 0; j < mat.cols; ++j) {
             Vec4b& rgba = mat.at<Vec4b>(i, j);
             Vec3d B(j-(mat.cols/2.0), i-(mat.rows/2.0),0);
+            
             rgba[0] = saturate_cast<uchar>(sampleDistrib(dist, &B) * UCHAR_MAX);
             rgba[1] = 0;//rgba[0];
             rgba[2] = 0;//rgba[0];
@@ -108,6 +109,7 @@ int main(int argc, char *argv[]) {
     //B = rotateDistrib(stretchDistrib(A, 1, 2, 1), rotationMatrix(0,0,30));
     //C = stretchDistrib(A, 2, 1, 1);
 
+    storeDistrib(&F, 480, 640);
 
 
 
@@ -127,28 +129,48 @@ int main(int argc, char *argv[]) {
     printVector(gndlaunch);
 
     std::cout << "Move in ground coords" << std::endl;
-    gndlaunch += Vec3d(10,5,-2);
+    gndlaunch += Vec3d(10,5,-10);
     printVector(gndlaunch);
 
     std::cout << "Convert back to GPS" << std::endl;
     Coord3D testLoc = testTracker.GPSFromGround(gndlaunch);
     printCoord3d(testLoc);
 
+    std::cout << "And back to ground coords" << std::endl;
+    Vec3d testCoord = testTracker.GroundFromGPS(testLoc);
+    printVector(testCoord);
+
+
     std::cout << "Test Observations" << std::endl;
 
     GPSData gps_pos;
+    gps_pos.fix.lat = testLoc.lat;
+    gps_pos.fix.lon = testLoc.lon;
+    gps_pos.fix.alt = testLoc.alt;
+
     EulerAngle gimbal;
+    gimbal.roll = 0;
+    gimbal.pitch = 20;
+    gimbal.yaw = 0;
+
     IMUData imu_data;
+    imu_data.roll = 60;
+    imu_data.pitch = 0;
+    imu_data.yaw = 0;
+
     ObjectInfo object;
+    object.image_width = 320;
+    object.position.y = 100;
+    object.position.x = 0;
 
     Observation firstSighting = testTracker.ObservationFromImageCoords(testTracker.m_task_start-steady_clock::now(), &gps_pos, &gimbal, &imu_data, &object);
     Observations new_thing(firstSighting);
-    
+    new_thing.appendObservation(testTracker.AssumptionGroundLevel());
+
     printVector(new_thing.getLocation().vect);
 
 
-    Distrib ntloc = new_thing.getLocation();
-    storeDistrib(&F, 480, 640);
+    //Distrib ntloc = new_thing.getLocation();
 
 
     return 0;

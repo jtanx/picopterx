@@ -425,7 +425,7 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     cv::Matx33d Mstable = BodyToLevel(imu_data);
     //cv::Matx33d MYaw = LevelToGround(imu_data);
 
-    cv::Matx33d axes ( 
+    cv::Matx33d axes (
         0.5, 0, 0,
         0, 0.5, 0,
         0, 0, 0.0); //totally unknown depth
@@ -691,8 +691,8 @@ void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *i
 //using North, East, Down coordinates
 cv::Vec3d ObjectTracker::GroundFromGPS(Coord3D coord){
     cv::Vec3d retval(
-        (launch_point.lat - coord.lat) * (1000*RADIUS_OF_EARTH),
-        (launch_point.lon - coord.lon) * (1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))),
+        DEG2RAD(coord.lat - launch_point.lat) * (1000*RADIUS_OF_EARTH),
+        DEG2RAD(coord.lon - launch_point.lon) * (1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))),
         (launch_point.alt - coord.alt)
         );
     return retval;

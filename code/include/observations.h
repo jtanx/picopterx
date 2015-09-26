@@ -78,7 +78,8 @@ namespace picopter {
         LIDAR,          //lidar sensor has a small dot, but can't identify objects
         FLOW,           //flow sensor has a large width uncertainty
         TELEM,           //objects transmitted from external sources
-        ASSUMPTION      //Fairy stories we tell our robots.
+        ASSUMPTION,      //Fairy stories we tell our robots.
+        INTERPOLATION
     } Source;
     //ObjectInfo    //detections from the camera stream (grouped into single objects)
 
@@ -142,12 +143,14 @@ namespace picopter {
             TIME_TYPE lastObservation();
             Distrib getLocation();
         private:
-            TIME_TYPE last_sample;                                          //A timestamp for the last observation
+            Observation accumulator;
+
+            //TIME_TYPE last_sample;                                          //A timestamp for the last observation
             //characteristic data (colour, speckle histogram, glyph ID etc)
             std::vector<Observation> sightings;                     //the collection of sightings associated with this object
-            Distrib location;                                       //cumulative uncertainty distribution
-            Distrib velocity;                                       //the current distribution for velocity. distrib will be translated and inflated by this much per unit of time.
-            Distrib acceleration;                                   //the current distribution for acceleration. velocity will be translated and inflated by this much per unit of time.
+            //Distrib location;                                       //cumulative uncertainty distribution
+            //Distrib velocity;                                       //the current distribution for velocity. distrib will be translated and inflated by this much per unit of time.
+            //Distrib acceleration;                                   //the current distribution for acceleration. velocity will be translated and inflated by this much per unit of time.
             //acceleration won't be measured by most sensors, so we'll just leave this at some reasonable value
             //for chasing the buggy, we'll set this as a flat-ish circle on the origin
 
