@@ -213,5 +213,58 @@ Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep){
 }
 
 
+void rasterDistrib(Mat *mat, Distrib *dist, Vec4b colour, double scale)
+{
+    for (int i = 0; i < mat->rows; ++i) {
+        for (int j = 0; j < mat->cols; ++j) {
+            Vec4b& rgba = mat->at<Vec4b>(i, j);
+            Vec4b C = colour;
+            
+            Vec3d B((j-(mat->cols/2.0))*scale, (i-(mat->rows/2.0))*scale,dist->vect[2]);    //always sample in the plane of the measurement
+
+            C(0) = colour(0) * sampleDistrib(dist, &B);
+            C(1) = colour(1) * sampleDistrib(dist, &B);
+            C(2) = colour(2) * sampleDistrib(dist, &B);
+
+            ////screen layering
+            rgba[0] = saturate_cast<uchar>(
+                (1.0 -(
+                    (1.0-((double)C[0]/(double)UCHAR_MAX))*
+                    (1.0-((double)rgba[0]/(double)UCHAR_MAX))
+                 ))* UCHAR_MAX);
+            rgba[1] = saturate_cast<uchar>(
+                (1.0 -(
+                    (1.0-((double)C[1]/(double)UCHAR_MAX))*
+                    (1.0-((double)rgba[1]/(double)UCHAR_MAX))
+                 ))* UCHAR_MAX);
+            rgba[2] = saturate_cast<uchar>(
+                (1.0 -(
+                    (1.0-((double)C[2]/(double)UCHAR_MAX))*
+                    (1.0-((double)rgba[2]/(double)UCHAR_MAX))
+                 ))* UCHAR_MAX);
+            rgba[3] = UCHAR_MAX;
+
+            //rgba[0] = UCHAR_MAX;
+            //rgba[1] = saturate_cast<uchar>((float (mat.cols - j)) / ((float)mat.cols) * UCHAR_MAX);
+            //rgba[2] = saturate_cast<uchar>((float (mat.rows - i)) / ((float)mat.rows) * UCHAR_MAX);
+            //rgba[3] = saturate_cast<uchar>(0.5 * (rgba[1] + rgba[2]));
+        }
+    }
+}
+
+void storeDistrib(Mat* mat, std::string filename){
+    //Mat mat(rows, cols, CV_8UC4);
+    //rasterDistrib(mat,dist);
+
+    vector<int> compression_params;
+    compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    compression_params.push_back(9);
+
+    imwrite(filename, *mat, compression_params);
+
+    //std::cout <<  "Saved PNG file with alpha data." << std::endl;
+}
+
+
 
 }

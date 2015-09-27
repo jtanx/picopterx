@@ -71,7 +71,9 @@ namespace picopter {
             double TRACK_TauDw, TRACK_TauDx, TRACK_TauDy, TRACK_TauDz; 
             double TRACK_SETPOINT_W, TRACK_SETPOINT_X, TRACK_SETPOINT_Y, TRACK_SETPOINT_Z;
             int TRACK_SPEED_LIMIT_W, TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Z;
-            
+            int observation_image_rows, observation_image_cols;
+            bool print_observation_map;
+            int observation_map_count = 0;
 
             //void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range);
 

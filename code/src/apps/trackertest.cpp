@@ -39,42 +39,6 @@ void printCoord3d(Coord3D coord){
 
 
 
-void rasterDistrib(Mat &mat, Distrib *dist)
-{
-    for (int i = 0; i < mat.rows; ++i) {
-        for (int j = 0; j < mat.cols; ++j) {
-            Vec4b& rgba = mat.at<Vec4b>(i, j);
-            Vec3d B(j-(mat.cols/2.0), i-(mat.rows/2.0),0);
-            
-            rgba[0] = saturate_cast<uchar>(sampleDistrib(dist, &B) * UCHAR_MAX);
-            rgba[1] = 0;//rgba[0];
-            rgba[2] = 0;//rgba[0];
-            rgba[3] = UCHAR_MAX;
-
-            
-            //rgba[0] = UCHAR_MAX;
-            //rgba[1] = saturate_cast<uchar>((float (mat.cols - j)) / ((float)mat.cols) * UCHAR_MAX);
-            //rgba[2] = saturate_cast<uchar>((float (mat.rows - i)) / ((float)mat.rows) * UCHAR_MAX);
-            //rgba[3] = saturate_cast<uchar>(0.5 * (rgba[1] + rgba[2]));
-
-        }
-    }
-}
-
-void storeDistrib(Distrib* dist, int rows, int cols){
-    Mat mat(rows, cols, CV_8UC4);
-    rasterDistrib(mat,dist);
-
-    vector<int> compression_params;
-    compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-    compression_params.push_back(9);
-
-    imwrite("alpha.png", mat, compression_params);
-
-    std::cout <<  "Saved PNG file with alpha data." << std::endl;
-}
-
-
 int main(int argc, char *argv[]) {
 
     std::cout << "Test Rotation Matrix: 30 deg roll" << std::endl;
@@ -87,7 +51,7 @@ int main(int argc, char *argv[]) {
     printMatrix(A.axes);
     printVector(A.vect);
     std::cout << "Translate Distrib by x=10" << std::endl;
-    Distrib B = translateDistrib(A, 10, 0, 0);
+    Distrib B = translateDistrib(A, 10, 0, 30);
     printMatrix(B.axes);
     printVector(B.vect);
     std::cout << "Stretch Distrib by y=5" << std::endl;
@@ -108,9 +72,21 @@ int main(int argc, char *argv[]) {
     printVector(F.vect);
     //B = rotateDistrib(stretchDistrib(A, 1, 2, 1), rotationMatrix(0,0,30));
     //C = stretchDistrib(A, 2, 1, 1);
+//    Mat mat(rows, cols, CV_8UC4);
+//    storeDistrib(&mat, &F, "alpha.png");
 
-    storeDistrib(&F, 480, 640);
+    Mat mat(240, 320, CV_8UC4);
 
+    std::string filename = "alpha.png";
+    Vec4b colour(UCHAR_MAX,0,0,UCHAR_MAX);
+    //colour[0] = UCHAR_MAX;
+    //colour[1] = UCHAR_MAX;
+    //colour[2] = UCHAR_MAX;
+    rasterDistrib(&mat, &F, colour, 1.0);
+    //mat = Mat::zeros(mat.rows, mat.cols, CV_8UC4);
+    colour = Vec4b(0,UCHAR_MAX,0,UCHAR_MAX);
+    rasterDistrib(&mat, &A, colour, 1.0);
+    storeDistrib(&mat, filename);
 
 
     std::cout << "Test NED ground coords" << std::endl;

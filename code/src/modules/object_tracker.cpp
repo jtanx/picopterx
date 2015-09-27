@@ -8,6 +8,8 @@
 
 using namespace picopter;
 using namespace picopter::navigation;
+using namespace cv;
+
 using std::chrono::steady_clock;
 using std::chrono::milliseconds;
 using std::chrono::microseconds;
@@ -60,6 +62,13 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
     TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", 0);
     //double TRACK_SETPOINT_Z = opts->GetReal("TRACK_SETPOINT_Z", 0);
+    
+    TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
+    TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", 0);
+    observation_image_rows = opts->GetReal("OBS_IMAGE_ROWS",240);
+    observation_image_cols = opts->GetReal("OBS_IMAGE_COLS",320);
+    print_observation_map = opts->GetBool("PRINT_OBS_MAP",false);
+    
 
     m_pidw.SetTunings(TRACK_Kpw, TRACK_TauIw, TRACK_TauDw);
     m_pidw.SetInputLimits(-M_PI/2, M_PI/2);
@@ -164,11 +173,17 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     //TIME_TYPE last_fix = sample_time - seconds(2);   //no fix (deprecate)
     bool had_fix = false;
 
+    Observation theGround = AssumptionGroundLevel();
+
+    Mat observation_map(observation_image_rows, observation_image_cols, CV_8UC4);
+
     while (!fc->CheckForStop()) {
         last_loop = loop_start;
         loop_start = steady_clock::now() - m_task_start;
         TIME_TYPE loop_period = (loop_start - last_loop);
 
+        //clear the printable map
+        observation_map = Mat::zeros(observation_map.rows, observation_map.cols, CV_8UC4);
 
         double update_rate = 1.0 / fc->cam->GetFramerate();
         TIME_TYPE sleep_time = microseconds((int)(1000000*update_rate));    //how long to wait for the next frame (FIXME)
@@ -185,12 +200,18 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         //Now would be a good time to use the velocity and acceleration handler
         for(uint i=0; i<knownThings.size(); i++){
             knownThings.at(i).updateObject(loop_period);
+
+            if(print_observation_map){  //plot the objects on the map
+                Distrib tmp = knownThings[i].getLocation();
+                rasterDistrib(&observation_map, &tmp, Vec4b(0,0,UCHAR_MAX,UCHAR_MAX), 1.0);  //red
+            }
         }//blur the location.
-        
+
 
         //start making observation structures
         Observation lidarObservation = ObservationFromLidar(loop_start, &gps_position, &gimbal, &imu_data, lidar_range);
-        Observation theGround = AssumptionGroundLevel();
+        rasterDistrib(&observation_map, &lidarObservation.location, Vec4b(UCHAR_MAX,0,0,UCHAR_MAX), 1.0);  //blue
+
 
         //Did the camera see anything?
         if (locations.size() > 0) {
@@ -201,6 +222,12 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             visibles.reserve(locations.size()); //save multiple reallocations
             for(uint i=0; i<locations.size(); i++){
                 visibles.push_back(ObservationFromImageCoords(loop_start, &gps_position, &gimbal, &imu_data, &detected_object));
+            }
+
+            if(print_observation_map){
+                //print the observations and objects
+                std::string filename = "tracker"+(static_cast<std::ostringstream*>( &(std::ostringstream() << observation_map_count++) )->str())+".png";
+                storeDistrib(&observation_map, filename);
             }
 
             //distinguish between many objects
@@ -219,16 +246,24 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 //How well does it fit?
                 if(fit>OVERLAP_CONFIDENCE){
                     knownThings.at(bestFit).appendObservation(visibles.at(j));
-                    knownThings.at(bestFit).appendObservation(theGround);
+                    //knownThings.at(bestFit).appendObservation(theGround);
                 }else{
                     //doesn't fit anything well. Track it for later.
-                    Observations newThing(visibles.at(j));
+                    Observations newThing(theGround);   //starting assumption
+                    newThing.appendObservation(visibles.at(j));
                     knownThings.push_back(newThing);
                 }
             }
-
         }
+
         //Now we have some things to track with known locations, without needing to see them.
+
+        if(print_observation_map){
+            for(uint j=0; j<visibles.size(); j++){
+                rasterDistrib(&observation_map, &(visibles[j].location), Vec4b(0,UCHAR_MAX,0,UCHAR_MAX), 1.0);
+            }
+        }
+            
 
 
         //Which one do we track?  The first thing it saw sounds right.
@@ -339,9 +374,9 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
         heightAboveTarget = 4;
     }
     //find the transformation matrix from camera frame to ground.
-    cv::Matx33d Mbody = GimbalToBody(gimbal);
-    cv::Matx33d Mstable = BodyToLevel(imu_data);
-    //cv::Matx33d MYaw = LevelToGround(imu_data);
+    Matx33d Mbody = GimbalToBody(gimbal);
+    Matx33d Mstable = BodyToLevel(imu_data);
+    //Matx33d MYaw = LevelToGround(imu_data);
 
     //Comment this out to use dynamic altitude.
     //#warning "using 4m as height above target"
@@ -350,9 +385,9 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
     double L = FOCAL_LENGTH * object->image_width;
 
     //3D vector of the target on the image plane, zero pose is straight down
-    cv::Vec3d RelCam(object->position.y, object->position.x, L);
+    Vec3d RelCam(object->position.y, object->position.x, L);
     //3D vector of the target, relative to the copter's stabilised frame
-    cv::Vec3d RelBody = Mstable * Mbody * RelCam;
+    Vec3d RelBody = Mstable * Mbody * RelCam;
 
     //Angles from image normal
     double theta = atan2(RelCam[0],RelCam[2]); //Pitch angle of target in camera frame from vertical
@@ -362,7 +397,7 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
     bool useLidar = UseLidar(object, lidar_range);
 
     if(useLidar){
-        double k = lidar_range/norm(RelBody, cv::NORM_L2);
+        double k = lidar_range/norm(RelBody, NORM_L2);
         RelBody *= k;
     }else if(useAlt){
         double k = heightAboveTarget / RelBody[2];
@@ -378,16 +413,16 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
 }
 */
 
-cv::Matx33d ObjectTracker::GimbalToBody(EulerAngle *gimbal){
+Matx33d ObjectTracker::GimbalToBody(EulerAngle *gimbal){
     return rotationMatrix(gimbal->roll,gimbal->pitch,gimbal->yaw);
 }
-cv::Matx33d ObjectTracker::BodyToGround(IMUData *imu_data){
+Matx33d ObjectTracker::BodyToGround(IMUData *imu_data){
     return rotationMatrix(imu_data->roll, imu_data->pitch, imu_data->yaw);
 }
-cv::Matx33d ObjectTracker::BodyToLevel(IMUData *imu_data){
+Matx33d ObjectTracker::BodyToLevel(IMUData *imu_data){
     return rotationMatrix(imu_data->roll, imu_data->pitch, 0);
 }
-cv::Matx33d ObjectTracker::LevelToGround(IMUData *imu_data){
+Matx33d ObjectTracker::LevelToGround(IMUData *imu_data){
     return rotationMatrix(0,0,imu_data->yaw);
 }
 
@@ -417,21 +452,21 @@ bool ObjectTracker::UseLidar(ObjectInfo *object, double lidar_range){
 Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object){
     
     double L = FOCAL_LENGTH * object->image_width;     
-    cv::Vec3d RelCam(object->position.y, object->position.x, L);    
+    Vec3d RelCam(object->position.y, object->position.x, L);    
     double theta = atan2(RelCam[0],RelCam[2]); //Pitch angle of target in camera frame from vertical    
     double phi   = atan2(RelCam[1],RelCam[2]); //Roll angle of target in camera frame from vertical     
     
-    cv::Matx33d Mblob = rotationMatrix(phi,theta,0);   //the angle between the camera normal and the blob (deg)
+    Matx33d Mblob = rotationMatrix(phi,theta,0);   //the angle between the camera normal and the blob (deg)
     //find the transformation matrix from camera frame to ground.
-    cv::Matx33d Mbody = GimbalToBody(gimbal);
-    cv::Matx33d Mstable = BodyToLevel(imu_data);
-    //cv::Matx33d MYaw = LevelToGround(imu_data);
+    Matx33d Mbody = GimbalToBody(gimbal);
+    Matx33d Mstable = BodyToLevel(imu_data);
+    //Matx33d MYaw = LevelToGround(imu_data);
 
-    cv::Matx33d axes (
+    Matx33d axes (
         0.5, 0, 0,
         0, 0.5, 0,
         0, 0, 0.0); //totally unknown depth
-    cv::Vec3d vect (0,0,0);
+    Vec3d vect (0,0,0);
     Distrib occular_ray = {axes,vect};
 
     occular_ray = stretchDistrib(occular_ray, 3);   //how big? we can't have conical distributions yet.
@@ -443,7 +478,7 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     Coord3D copterloc = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
     occular_ray = translateDistrib(occular_ray, GroundFromGPS( copterloc ));
 
-    cv::Matx33d zeroAxes ( 
+    Matx33d zeroAxes ( 
         0, 0, 0,
         0, 0, 0,
         0, 0, 0); //totally unknown
@@ -469,11 +504,11 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
  * @param [in] lidar_range The length of the lidar beam.
  */
 Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, double lidar_range){
-    cv::Matx33d MLidar = rotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
+    Matx33d MLidar = rotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
     //find the transformation matrix from camera frame to ground.
-    cv::Matx33d Mbody = GimbalToBody(gimbal);
-    cv::Matx33d Mstable = BodyToLevel(imu_data);
-    //cv::Matx33d MYaw = LevelToGround(imu_data);
+    Matx33d Mbody = GimbalToBody(gimbal);
+    Matx33d Mstable = BodyToLevel(imu_data);
+    //Matx33d MYaw = LevelToGround(imu_data);
 
     Distrib lidarspot = generatedistrib();
     
@@ -486,11 +521,11 @@ Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *
     Coord3D copterloc = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
     lidarspot = translateDistrib(lidarspot, GroundFromGPS( copterloc ));
 
-    cv::Matx33d zeroAxes (
+    Matx33d zeroAxes (
         0, 0, 0,
         0, 0, 0,
         0, 0, 0); //totally unknown
-    cv::Vec3d vect (0,0,0);
+    Vec3d vect (0,0,0);
     Distrib zeroDistrib = {zeroAxes,vect};
 
     Observation lidarObservation;
@@ -506,21 +541,21 @@ Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *
 
 
 Observation ObjectTracker::AssumptionGroundLevel(){
-    cv::Matx33d zeroAxes (
+    Matx33d zeroAxes (
         0, 0, 0,
         0, 0, 0,
         0, 0, 0); //totally unknown
-    cv::Vec3d vect (0,0,0);
+    Vec3d vect (0,0,0);
     Distrib zeroDistrib = {zeroAxes,vect};
 
-    cv::Matx33d flatAxes (
+    Matx33d flatAxes (
         0, 0, 0,
         0, 0, 0,
         0, 0, 0.5);   //1m variance on ground level
 
     Coord3D launch_ground = launch_point;
     launch_ground.alt = 0;    //is this sea level?
-    cv::Vec3d groundLevel = GroundFromGPS(launch_ground);
+    Vec3d groundLevel = GroundFromGPS(launch_ground);
     Distrib flatDistrib = {flatAxes,groundLevel};
 
     Observation Assumption;
@@ -614,8 +649,8 @@ Coord3D ObjectTracker::CalculateVantagePoint(FlightController *fc, GPSData *pos,
         //calculate a position to make a better observation from?
 
         Coord3D copter_coord = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
-        cv::Vec3d copterloc = GroundFromGPS(copter_coord);
-        cv::Vec3d rel_loc =  object->getLocation().vect - copterloc;
+        Vec3d copterloc = GroundFromGPS(copter_coord);
+        Vec3d rel_loc =  object->getLocation().vect - copterloc;
         if(rel_loc(2)<0){
             //copter is below the target, don't move.
             return copter_coord;
@@ -627,7 +662,7 @@ Coord3D ObjectTracker::CalculateVantagePoint(FlightController *fc, GPSData *pos,
         double des_level_radius = rel_loc(2)/desiredSlope;  //what radius is comfortable for this height?
         rel_loc *= des_level_radius/level_radius;   //
         rel_loc(2) = height_above_target;
-        cv::Vec3d des_copter_loc = object->getLocation().vect - rel_loc;
+        Vec3d des_copter_loc = object->getLocation().vect - rel_loc;
         return GPSFromGround(des_copter_loc);
 
 //    }else{
@@ -647,13 +682,13 @@ void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *i
     memset(course, 0, sizeof(Vec3D));
 
     Coord3D copter_coord = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
-    cv::Vec3d copter_loc = GroundFromGPS(copter_coord);    
-    cv::Vec3d dest_loc = GroundFromGPS(dest);
-    cv::Vec3d offset = dest_loc - copter_loc;
+    Vec3d copter_loc = GroundFromGPS(copter_coord);    
+    Vec3d dest_loc = GroundFromGPS(dest);
+    Vec3d offset = dest_loc - copter_loc;
 
     double phi = RAD2DEG( M_PI/2 - atan2(offset(0),offset(1)));   //yaw Angle to object (what is our current yaw?)
     phi -= imu_data->yaw;
-    cv::Matx33d phi_mat = rotationMatrix(0,0,phi);
+    Matx33d phi_mat = rotationMatrix(0,0,phi);
 
     m_pidw.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
     m_pidx.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
@@ -691,15 +726,15 @@ void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *i
 
 }
 //using North, East, Down coordinates
-cv::Vec3d ObjectTracker::GroundFromGPS(Coord3D coord){
-    cv::Vec3d retval(
+Vec3d ObjectTracker::GroundFromGPS(Coord3D coord){
+    Vec3d retval(
         DEG2RAD(coord.lat - launch_point.lat) * (1000*RADIUS_OF_EARTH),
         DEG2RAD(coord.lon - launch_point.lon) * (1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))),
         (launch_point.alt - coord.alt)
         );
     return retval;
 }
-Coord3D ObjectTracker::GPSFromGround(cv::Vec3d coord){
+Coord3D ObjectTracker::GPSFromGround(Vec3d coord){
     Coord3D retval;
     retval.lat = launch_point.lat + RAD2DEG(coord(0)/(1000*RADIUS_OF_EARTH));
     retval.lon = launch_point.lon + RAD2DEG(coord(1)/(1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))));

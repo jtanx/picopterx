@@ -131,6 +131,8 @@ namespace picopter {
     Distrib vectorSum(Distrib A, Distrib B);                                    //move the centre of A by a distance described by B.
     Distrib changeStep(Distrib newLoc, Distrib oldLoc, TIME_TYPE timestep);     //find the step from one distrib to another.
 
+    void rasterDistrib(cv::Mat *mat, Distrib *dist, cv::Vec4b colour, double scale);
+    void storeDistrib(cv::Mat* mat, std::string filename);
 
     //one per distinct object.
     class Observations {
