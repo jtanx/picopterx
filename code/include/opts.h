@@ -7,12 +7,17 @@
 #define _PICOPTERX_OPT_H
 
 namespace picopter {
+    /** List parsing callback function **/
+    typedef void (*ListParser)(const void *val, void *closure);
+    
     /**
      * Provides methods to persistently store and retrieve options.
      * This class is not thread safe.
      */
     class Options {
         public:
+            static void* GetValue(void *d, const char *key);
+            
             Options();
             Options(const char *data, bool is_serialised=false);
             Options(const char *file, const char *json_string);
@@ -25,6 +30,8 @@ namespace picopter {
             bool GetBool(const char *key, bool otherwise = false);
             const char* GetString(const char *key, const char *otherwise = "");
             double GetReal(const char *key, double otherwise = 0.0f);
+            
+            void GetList(const char *key, void *closure, ListParser callback);
 
             bool GetInt(const char *key, int *value);
             bool GetInt(const char *key, int *value, int min, int max);

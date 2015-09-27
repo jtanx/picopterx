@@ -44,6 +44,8 @@ private:
     std::deque<std::deque<Waypoints::Waypoint>> m_zones;
     /** A handle to our user tracker (if any) to update the user position. **/
     std::shared_ptr<FlightTask> m_user_tracker;
+    /** A handle to our joystick control (if any) to update joystick inputs. **/
+    std::shared_ptr<FlightTask> m_joystick_control;
     /** Thread to take pictures (may be unused now) **/
     std::thread m_camera_thread;
     /** Flag to stop camera picture thread (may be unused now) **/
@@ -139,9 +141,22 @@ public:
                 return false;
             }
         }
-        // Your implementation goes here
-        //printf("beginUserTrackingThread\n");
         return false;
+    }
+    
+    bool beginJoystickControl()
+    {
+        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
+            //ALREADY RUNNING
+            return false;
+        } else {
+            m_joystick_control = std::make_shared<UtilityModule>(
+                m_opts, UtilityModule::UTILITY_JOYSTICK);
+            if (!m_fc->RunTask(TASK_UTILITY, m_joystick_control, NULL)) {
+                return false;
+            }
+            return true;
+        }
     }
 
     bool beginUserMappingThread()
@@ -347,6 +362,22 @@ public:
                 uwpt.lon = wpt.lon;
 
                 static_cast<UserTracker*>(trk.get())->UpdateUserPosition(uwpt);
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    bool updateJoystick(int throttle, int yaw, int x, int y)
+    {
+        std::shared_ptr<FlightTask> joy(m_joystick_control);
+        if (joy) {
+            if (joy->Finished()) {
+                //Task is finished, remove our reference to it
+                m_joystick_control.reset();
+            } else {
+                static_cast<UtilityModule*>(joy.get())->UpdateJoystick(
+                    throttle, yaw, x, y);
                 return true;
             }
         }

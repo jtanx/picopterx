@@ -57,7 +57,7 @@ MAVCommsTCP::~MAVCommsTCP() {
  * @return true iff a message was read.
  */
 bool MAVCommsTCP::ReadMessage(mavlink_message_t *ret) {
-    struct timeval timeout = {2,0}; //2 second timeout
+    struct timeval timeout = {5,0}; //5 second timeout
     mavlink_status_t status;
     bool received;
     uint8_t cp;

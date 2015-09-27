@@ -36,7 +36,8 @@ service webInterface {
 	bool		beginWaypointsThread(1: i32 mode);
 	bool		beginUserTrackingThread();
 	bool		beginObjectTrackingThread(1: i32 method);
-    bool		beginUserMappingThread();
+	bool		beginUserMappingThread();
+	bool		beginJoystickControl();
 
 
 	i32			setCameraMode(1: i32 mode);
@@ -54,6 +55,7 @@ service webInterface {
 	string		requestSettings();
 	bool		updateSettings(1: string settings);
 	
+	bool		updateJoystick(1: i32 throttle, 2: i32 yaw, 3: i32 x, 4: i32 y);
 	bool		updateUserPosition(1: coordDeg wpt);
 	bool		updateWaypoints(1: list<coordDeg> wpts);
 	bool		updateExclusions(1: list<list<coordDeg>> zones);

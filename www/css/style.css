@@ -10,6 +10,18 @@ body {
   padding-bottom: 70px;
 }
 
+/* Danger style - override anything else. */
+.danger-danger {
+  background-color: #F04124 !important;
+  color: #FFF !important;
+}
+
+/** Success style - override anything else. */
+.success-success {
+  background-color: #43AC6A !important;
+  color: #FFF !important;  
+}
+
 /* For block-style dropdowns */
 .btn-block-dropdown {
   width: calc(100% - 42px);

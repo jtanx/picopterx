@@ -9,6 +9,8 @@
     <title>UWA Copter GCS</title>
     <!-- Needed to scale the contents properly on iOS devices... -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Joystick in IE -->
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <!-- Not LCARS anymore, but eh... -->
     <link rel="icon" href="css/markers/trek.png">
     <!-- Using the Yeti theme from Bootswatch (http://bootswatch.com/yeti/) -->
@@ -43,9 +45,10 @@
             <!--<li><a aria-expanded="false" href="#sidebar-general" data-toggle="tab">General</a></li>-->
             <li class="dropdown">
             <a aria-expanded="false" class="dropdown-toggle" data-toggle="dropdown" href="#">
-              Options <span class="caret"></span>
+              Other <span class="caret"></span>
             </a>
               <ul class="dropdown-menu">
+                <li><a aria-expanded="false" href="#sidebar-joy" data-toggle="tab">Joystick control</a></li>
                 <li><a aria-expanded="false" href="#sidebar-calibration" data-toggle="tab">Camera calibration</a></li>
                 <li><a aria-expanded="false" href="#sidebar-interface" data-toggle="tab">Interface settings</a></li>
               </ul>
@@ -111,7 +114,7 @@
             <li><a aria-expanded="false" href="#tab-server-config" data-toggle="tab">Server Config</a></li>
           </ul>
         </li>
-        <li class=""><a aria-expanded="false" href="#" class="nav-primary btn-control" onclick="allStop()">All Stop</a></li>
+        <li class=""><a aria-expanded="false" href="#" id="allstop" class="nav-primary btn-control" onclick="allStop()">All Stop</a></li>
         <li class="pull-right visible-xs visible-sm">
           <a aria-expanded="false" href="#right-sidebar-jump">
             <span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span>
@@ -255,6 +258,50 @@
                 </div>
               </div>
             </div>
+            <!-- Joystick control sidebar -->
+            <div id="sidebar-joy" class="tab-pane panel panel-primary">
+              <div class="panel-heading">
+                <h3 class="panel-title">Joystick control</h3>
+              </div>
+              <div class="panel-body">
+              <form id="joy-form">
+                <div class="form-group">
+                  <label>Using Joystick:</label>
+                  <input type="text" id="joy-id" class="form-control" readonly>
+                </div>
+                <div class="form-group">
+                  <label>Dead man's switch</label>
+                  <input type="text" id="joy-deadman" class="form-control danger-danger" value="OFF" readonly>
+                </div>
+                <div class="row">
+                  <div class="form-group col-xs-6">
+                    <label>Throttle</label>
+                    <input type="text" id="joy-throttle" class="form-control" readonly>
+                  </div>
+                  <div class="form-group col-xs-6">
+                    <label>Yaw</label>
+                    <input type="text" id="joy-yaw" class="form-control" readonly>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="form-group col-xs-6">
+                    <label>X</label>
+                    <input type="text" id="joy-x" class="form-control" readonly>
+                  </div>
+                  <div class="form-group col-xs-6">
+                    <label>Y</label>
+                    <input type="text" id="joy-y" class="form-control" readonly>
+                  </div>
+                </div>
+                <button type="button" id="joy-begin" class="btn btn-primary btn-block" onclick="gpBegin()">
+                Begin
+                </button>
+                <button type="button" id="joy-end" class="btn btn-warning btn-block hidden" onclick="allStop()">
+                End
+                </button>
+              </form>
+              </div>
+            </div>
             <!-- Camera calibration sidebar -->
             <div id="sidebar-calibration" class="tab-pane panel panel-primary">
               <div class="panel-heading">
@@ -268,6 +315,8 @@
                     <option value="1">Centre of mass</option>
                     <option value="2">Camshift</option>
                     <option value="3">Connected components</option>
+                    <option value="4">Canny glyph detection</option>
+                    <option value="5">Thresholding glyph detection</option>
                     <option value="999">Colour training</option>
                   </select>
                 </div>
@@ -276,6 +325,11 @@
                 </div>
                 <div id="camera-calibration-inputs" class="hidden">
                   <div class="form-group">
+                    <label>Colourspace</label>
+                      <select id="camera-thresh-colourspace" class="input-large form-control">
+                      <option value="csp-hsv" selected="selected">HSV</option>
+                      <option value="csp-ycbcr">YCbCr</option>
+                    </select>
                     <label>Presets</label>
                      <select id="camera-colour-presets" class="input-large form-control">
                       <option value="preset-red" selected="selected">Red</option>
@@ -285,13 +339,23 @@
                       <option value="preset-blue">Blue</option>
                       <option value="preset-white">White</option>
                       <option value="preset-black">Black</option>
-                    </select>               
-                    <label>Hue</label>
-                    <div id="cal-hue"></div>
-                    <label>Saturation</label>
-                    <div id="cal-sat"></div>
-                    <label>Value</label>
-                    <div id="cal-val"></div>
+                    </select>
+                    <div id="cal-hsv">
+                      <label>Hue</label>
+                      <div id="cal-hue"></div>
+                      <label>Saturation</label>
+                      <div id="cal-sat"></div>
+                      <label>Value</label>
+                      <div id="cal-val"></div>
+                    </div>
+                    <div id="cal-ycbcr" class="hidden">
+                      <label>Y</label>
+                      <div id="cal-y"></div>
+                      <label>Cb</label>
+                      <div id="cal-cb"></div>
+                      <label>Cr</label>
+                      <div id="cal-cr"></div>
+                    </div>
                   </div>
                   <div class="btn-group btn-group-justified">
                     <div class="btn-group">
@@ -369,6 +433,7 @@
     <script src="js/external/leaflet.js"></script>
     <script src="js/jquery.coptermap.js"></script>
     <script src="js/ajax.js"></script>
+    <script src="js/joystick.js"></script>
     <script src="js/style.js"></script>
     <script src="js/autorun.js"></script>
   </body>

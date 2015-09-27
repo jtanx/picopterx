@@ -2,6 +2,7 @@
 
 #Set the included files
 set (SOURCE
+	 common.cpp
 	 log.cpp
 	 datalog.cpp
 	 opts.cpp
@@ -15,6 +16,7 @@ set (SOURCE
 	 flightcontroller.cpp
 	 PID.cpp
 	 camera_stream.cpp
+	 camera_glyphs.cpp
 	 mavcommsserial.cpp
 	 mavcommstcp.cpp
 	 lidar.cpp

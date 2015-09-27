@@ -42,7 +42,7 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
 
     TRACK_Kpw = opts->GetReal("TRACK_Kpw", 0.2);
     TRACK_Kpx = opts->GetReal("TRACK_Kpx", 0.2);
-    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 0.2);
+    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 0.5);
     //double TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
     TRACK_TauIw = opts->GetReal("TRACK_TauIw", 1.0);
     TRACK_TauIx = opts->GetReal("TRACK_TauIx", 1.0);
@@ -162,8 +162,6 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     TIME_TYPE last_loop = steady_clock::now() - m_task_start;     //the current time for the samples being collected below
     TIME_TYPE loop_start = last_loop;
     //TIME_TYPE last_fix = sample_time - seconds(2);   //no fix (deprecate)
-
-
     bool had_fix = false;
 
     while (!fc->CheckForStop()) {
@@ -180,6 +178,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         fc->fb->GetGimbalPose(&gimbal);
         fc->gps->GetLatest(&gps_position);
         fc->imu->GetLatest(&imu_data);
+
         double lidar_range = (double)fc->lidar->GetLatest() / (100.0); //convert lidar range to metres
 
         
@@ -249,6 +248,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 //                CalculateTrackingTrajectory(fc, &course, &detected_object, true);
 //                fc->fb->SetBodyVel(course);
 //            }
+
             if (!m_observation_mode) {
                 CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
                 fc->fb->SetBodyVel(course);
@@ -324,6 +324,7 @@ bool ObjectTracker::Finished() {
  * @param [in] gimbal The current gimbal angle.
  * @param [in,out] object The detected object.
  */
+
  /*
 void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range) {
     double heightAboveTarget = std::max(pos->fix.alt - pos->fix.groundalt, 0.0);
@@ -365,6 +366,7 @@ void ObjectTracker::EstimatePositionFromImageCoords(GPSData *pos, EulerAngle *gi
         RelBody *= k;
     }else if(useAlt){
         double k = heightAboveTarget / RelBody[2];
+
         RelBody *= k;
     }
 
