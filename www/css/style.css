@@ -55,20 +55,18 @@ color: #FFF !important;
   top: -50px;
 }
 
-@media screen and (min-height: 400px) {
-  /* To expand the map canvas to fill the page vertically */
-  .fill {
-height: 100%;
-  }
-  .semi-fill {
-    /* ~50px for the status bar at the bottom */
-height: calc(100% - 55px);
-  }
+/* Make the map/main contents area fill the screen vertically */
+#main-tab-content {
+  height: 80vh;
 }
 
-/* Doesn't look good if the map is too small */
-#map-canvas {
-  min-height: 200px;
+/* To expand the map canvas to fill the page vertically */
+.fill {
+  height: 100%;
+}
+.semi-fill {
+  /* ~50px for the status bar at the bottom */
+  height: calc(100% - 55px);
 }
 
 /* Tool tips on the sliders */
