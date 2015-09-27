@@ -19,7 +19,7 @@ using std::chrono::seconds;
 using std::chrono::milliseconds;
 
 #ifdef IS_ON_PI
-    using omxcv::OmxCv;
+    using namespace omxcv;
 #endif
 
 const std::vector<cv::Scalar> CameraStream::m_colours {
@@ -99,7 +99,12 @@ CameraStream::CameraStream(Options *opts)
     std::string f = GenerateFilename(
         PICOPTER_HOME_LOCATION "/videos", "save", ".mkv");
     Log(LOG_INFO, "Saving video to %s", f.c_str());
-    m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, (700 * INPUT_WIDTH)/320);
+    try {
+        m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, (700 * INPUT_WIDTH)/320);
+    } catch (std::invalid_argument e) {
+        Log(LOG_WARNING, "Cannot save video: %s", e.what());
+        m_enc = nullptr;
+    }
 #endif
 
     //Start the worker thread.
@@ -363,7 +368,8 @@ void CameraStream::ProcessImages() {
                 if(ConnectedComponents(image, backend) > 0) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
                 }
                 break;
@@ -371,7 +377,8 @@ void CameraStream::ProcessImages() {
                 if (CannyGlyphDetection(image, backend)) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
                 }
             break;
@@ -379,7 +386,8 @@ void CameraStream::ProcessImages() {
                 if (ThresholdingGlyphDetection(image, backend)) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
                 }
             break;
@@ -401,7 +409,9 @@ void CameraStream::ProcessImages() {
         }
 
 #ifdef IS_ON_PI
-        m_enc->Encode(image);
+        if (m_enc) {
+            m_enc->Encode(image);
+        }
 #endif
         //Stream image
         //Only write the image out for web streaming every 5th frame
@@ -654,7 +664,7 @@ void CameraStream::LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect ro
     cv::Mat sroi(src, roi);
     cv::medianBlur(sroi, sroi, 7);
     if (m_learning_thresholds.colourspace == THRESH_HSV) {
-        cv::cvtColor(sroi, sroi, CV_BGR2YCrCb);
+        cv::cvtColor(sroi, sroi, CV_BGR2HSV);
         std::vector<cv::Mat> channels;
         cv::split(sroi, channels);
 
