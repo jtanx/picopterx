@@ -19,7 +19,7 @@ using std::chrono::seconds;
 using std::chrono::milliseconds;
 
 #ifdef IS_ON_PI
-    using omxcv::OmxCv;
+    using namespace omxcv;
 #endif
 
 const std::vector<cv::Scalar> CameraStream::m_colours {
@@ -84,6 +84,7 @@ CameraStream::CameraStream(Options *opts)
     }
 
     //Resolution dependent parameters
+    STREAM_HEIGHT = (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH;
     PROCESS_HEIGHT = (INPUT_HEIGHT * PROCESS_WIDTH) / INPUT_WIDTH;
     PIXEL_THRESHOLD	= opts->GetInt("PIXEL_THRESHOLD", (30 * INPUT_WIDTH) / 320);
     PIXEL_SKIP = INPUT_WIDTH / PROCESS_WIDTH;
@@ -99,7 +100,12 @@ CameraStream::CameraStream(Options *opts)
     std::string f = GenerateFilename(
         PICOPTER_HOME_LOCATION "/videos", "save", ".mkv");
     Log(LOG_INFO, "Saving video to %s", f.c_str());
-    m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, (700 * INPUT_WIDTH)/320);
+    try {
+        m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, (700 * INPUT_WIDTH)/320);
+    } catch (std::invalid_argument e) {
+        Log(LOG_WARNING, "Cannot save video: %s", e.what());
+        m_enc = nullptr;
+    }
 #endif
 
     //Start the worker thread.
@@ -312,8 +318,19 @@ void CameraStream::SetTrackingArrow(navigation::Point3D arrow) {
  */
 void CameraStream::ProcessImages() {
     static const std::vector<int> saveparams = {CV_IMWRITE_JPEG_QUALITY, 90};
-    int frame_counter = 0, frame_duration = 0;
+    static const std::vector<int> streamparams {CV_IMWRITE_JPEG_QUALITY, 75};
+    int frame_counter = 0, frame_duration = 0, skip_factor = 5;
     auto sampling_start = steady_clock::now();
+#ifdef IS_ON_PI
+    OmxCvJpeg *streamer = nullptr, *saver = nullptr;
+    try {
+        streamer = new OmxCvJpeg(STREAM_WIDTH, STREAM_HEIGHT, 75);
+        saver = new OmxCvJpeg(INPUT_WIDTH, INPUT_HEIGHT, 90);
+        skip_factor = 2;
+    } catch (std::invalid_argument e) {
+        Log(LOG_WARNING, "Cannot start hardware JPEG encoders: %s", e.what());
+    }
+#endif
 
     while (!m_stop) {
         std::unique_lock<std::mutex> lock(m_worker_mutex, std::defer_lock);
@@ -327,6 +344,11 @@ void CameraStream::ProcessImages() {
         
         //Save it, if requested to.
         if (m_save_photo) {
+#ifdef IS_ON_PI
+            if (saver) {
+                saver->Encode(m_save_filename.c_str(), image, true);
+            } else
+#endif
             cv::imwrite(m_save_filename, image, saveparams);
             m_save_photo = false;
          }
@@ -363,7 +385,8 @@ void CameraStream::ProcessImages() {
                 if(ConnectedComponents(image, backend) > 0) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
                 }
                 break;
@@ -371,7 +394,8 @@ void CameraStream::ProcessImages() {
                 if (CannyGlyphDetection(image, backend)) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
                 }
             break;
@@ -379,8 +403,14 @@ void CameraStream::ProcessImages() {
                 if (ThresholdingGlyphDetection(image, backend)) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
+                }
+            break;
+            case MODE_HOUGH:
+                if (HoughDetection(image, backend)) {
+                    //??????
                 }
             break;
         }
@@ -401,21 +431,27 @@ void CameraStream::ProcessImages() {
         }
 
 #ifdef IS_ON_PI
-        m_enc->Encode(image);
+        if (m_enc) {
+            m_enc->Encode(image);
+        }
 #endif
         //Stream image
         //Only write the image out for web streaming every 5th frame
-        if ((frame_counter % 5) == 0) {
-            static const std::vector<int> params {CV_IMWRITE_JPEG_QUALITY, 75};
+        if ((frame_counter % skip_factor) == 0) {
             if (m_show_backend) {
-                cv::imwrite(STREAM_FILE, backend, params);
+                cv::imwrite(STREAM_FILE, backend, streamparams);
             } else {
                 if (STREAM_WIDTH < INPUT_WIDTH) {
                     cv::resize(image, image,
                         cv::Size(STREAM_WIDTH,
                             (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH));
                 }
-                cv::imwrite(STREAM_FILE, image, params);
+#ifdef IS_ON_PI
+                if (streamer) {
+                    streamer->Encode(STREAM_FILE, image);
+                } else
+#endif
+                cv::imwrite(STREAM_FILE, image, streamparams);
             }
         }
 
@@ -429,6 +465,10 @@ void CameraStream::ProcessImages() {
             //Log(LOG_INFO, "FPS: %.2f", m_fps);
         }
     }
+#ifdef IS_ON_PI
+    delete streamer;
+    delete saver;
+#endif
 }
 
 /**
@@ -486,6 +526,11 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     sprintf(string_buf, "GS: %.1fm/s AS:%.1f m/s", hud.ground_speed, hud.air_speed);
     cv::putText(img, string_buf, cv::Point(5*img.cols/100, 20*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    //Enter the battery statistics
+    sprintf(string_buf, "%.2fV, %.1fA (%3d %%)", 
+        hud.batt_voltage, hud.batt_current, hud.batt_remaining);
+    cv::putText(img, string_buf, cv::Point(5*img.cols/100, 25*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.32, cv::Scalar(255, 255, 255), 1, 8);
     
     if (hud.status2.size()) {
         cv::putText(img, hud.status2,  cv::Point(5*img.cols/100, 87*img.rows/100),
@@ -654,7 +699,7 @@ void CameraStream::LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect ro
     cv::Mat sroi(src, roi);
     cv::medianBlur(sroi, sroi, 7);
     if (m_learning_thresholds.colourspace == THRESH_HSV) {
-        cv::cvtColor(sroi, sroi, CV_BGR2YCrCb);
+        cv::cvtColor(sroi, sroi, CV_BGR2HSV);
         std::vector<cv::Mat> channels;
         cv::split(sroi, channels);
 

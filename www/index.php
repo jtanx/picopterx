@@ -100,7 +100,7 @@
     </div>
 
     <!-- Main body content -->
-    <div id="main-body" class="container fill">
+    <div id="main-body" class="container">
       <!-- Tab bar -->
       <ul id="main-tab-nav" class="nav nav-tabs nav-no-underline">
         <li class="dropdown active">
@@ -122,10 +122,10 @@
         </li>
       </ul>
       <!-- Content below the tab bar -->
-      <div class="row fill">
-        <div class="col-md-9 fill">
+      <div class="row">
+        <div class="col-md-9">
           <!-- Main tab contents -->
-          <div id="main-tab-content" class="tab-content fill">
+          <div id="main-tab-content" class="tab-content">
             <div class="tab-pane active in semi-fill" id="tab-map">
               <div id="map-canvas" class="fill">
                 <!-- Our map area -->
@@ -213,7 +213,7 @@
                     <li><a href="#" data-toggle="modal" data-target="#rtl-modal">Return to launch (RTL)</a></li>
                   </ul>
                 </div>
-                <div id="wpt-editalert" class="alert alert-info hidden" id="status-bar">
+                <div id="wpt-editalert" class="alert alert-info hidden">
                   Edit mode engaged - click on the map to modify waypoints.
                 </div>
               </div>
@@ -317,6 +317,7 @@
                     <option value="3">Connected components</option>
                     <option value="4">Canny glyph detection</option>
                     <option value="5">Thresholding glyph detection</option>
+                    <option value="6">Hough circle detection</option>
                     <option value="999">Colour training</option>
                   </select>
                 </div>

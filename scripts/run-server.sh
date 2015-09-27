@@ -52,7 +52,7 @@ while [ $fails -lt 1 ]; do
 	logrotate -f /etc/logrotate.d/picopter.conf
 	log_status "(Re)starting the server..."
     #$SERVER $CONFIG
-	gdb -ex 'handle SIGILL nostop' -ex run --args $SERVER $CONFIG
+	gdb -ex 'handle SIGILL nostop' -ex "set args $CONFIG" -ex run $SERVER
 	error=$?
 	if [ "$error" == "0" ]; then
 		exit 0
