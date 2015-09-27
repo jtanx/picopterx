@@ -92,6 +92,7 @@ namespace picopter {
                 MODE_CONNECTED_COMPONENTS = 3,
                 MODE_CANNY_GLYPH = 4,
                 MODE_THRESH_GLYPH = 5,
+                MODE_HOUGH = 6,
                 MODE_LEARN_COLOUR = 999
             } CameraMode;
 
@@ -183,7 +184,9 @@ namespace picopter {
             bool CamShift(cv::Mat& src, cv::Mat& threshold);
             bool CannyGlyphDetection(cv::Mat& src, cv::Mat& proc);
             bool ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& proc);
+            bool GlyphDetection(cv::Mat &src, cv::Mat& roi, cv::Rect bounds);
             bool GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours);
+            bool HoughDetection(cv::Mat& src, cv::Mat& proc);
 
             /** Copy constructor (disabled) **/
             CameraStream(const CameraStream &other);

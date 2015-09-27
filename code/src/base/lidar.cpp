@@ -64,7 +64,7 @@ void Lidar::Worker() {
         while (wiringPiI2CWriteReg8(m_fd, 
             MEASURE_REGISTER, MEASURE_VALUE) < 0 && !m_stop) {
             sleep_for(milliseconds(100));
-            Log(LOG_DEBUG, "WAITING FOR LIDARLITE");
+            //Log(LOG_DEBUG, "WAITING FOR LIDARLITE");
         }
 
         int high = wiringPiI2CReadReg8(m_fd, READ_HIGH);

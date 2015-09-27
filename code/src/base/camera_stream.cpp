@@ -408,6 +408,11 @@ void CameraStream::ProcessImages() {
                     }
                 }
             break;
+            case MODE_HOUGH:
+                if (HoughDetection(image, backend)) {
+                    //??????
+                }
+            break;
         }
 
         DrawCrosshair(image, cv::Point(image.cols/2, image.rows/2),
