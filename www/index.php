@@ -213,7 +213,7 @@
                     <li><a href="#" data-toggle="modal" data-target="#rtl-modal">Return to launch (RTL)</a></li>
                   </ul>
                 </div>
-                <div id="wpt-editalert" class="alert alert-info hidden" id="status-bar">
+                <div id="wpt-editalert" class="alert alert-info hidden">
                   Edit mode engaged - click on the map to modify waypoints.
                 </div>
               </div>
