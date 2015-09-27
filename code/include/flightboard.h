@@ -43,6 +43,13 @@ namespace picopter {
         /** LIDAR reading (m) **/
         float lidar;
         
+        /** Battery voltage, in Volts **/
+        float batt_voltage;
+        /** Battery current, in Amps **/
+        float batt_current;
+        /** Remaining battery capacity (percentage) **/
+        int32_t batt_remaining;
+        
         /** Position (altitude is above ground) **/
         navigation::Coord3D pos;
         /** Status message **/
@@ -65,6 +72,7 @@ namespace picopter {
             GPS* GetGPSInstance();
             IMU* GetIMUInstance();
             void GetGimbalPose(navigation::EulerAngle *p);
+            bool GetHomePosition(navigation::Coord3D *p);
             void GetLatestHUD(HUDInfo *i);
             
             bool IsAutoMode();
@@ -130,10 +138,14 @@ namespace picopter {
             std::atomic<bool> m_is_in_air;
             /** Are the motors armed? **/
             std::atomic<bool> m_is_armed;
+            /** Do we have a home position? **/
+            bool m_has_home_position;
             /** Watchdog counter on sending relative commands. **/
             int m_rel_watchdog;
             /** The current gimbal position **/
             navigation::EulerAngle m_gimbal;
+            /** The home position (usually launch point) **/
+            navigation::Coord3D m_home_position;
             /** The event handler table **/
             EventHandler m_handler_table[256];
 

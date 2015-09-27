@@ -94,6 +94,8 @@ FlightController::FlightController(Options *opts)
         std::bind(&FlightController::HUDParser, this, _1));
     m_fb->RegisterHandler(MAVLINK_MSG_ID_STATUSTEXT,
         std::bind(&FlightController::HUDParser, this, _1));
+    m_fb->RegisterHandler(MAVLINK_MSG_ID_SYS_STATUS,
+        std::bind(&FlightController::HUDParser, this, _1));
 
     Log(LOG_INFO, "Initialised components!"); 
     m_buzzer->PlayWait(200, 200, 100);
@@ -171,6 +173,12 @@ void FlightController::HUDParser(const mavlink_message_t *msg) {
         st.text[49] = 0; //Null-terminate string. Truncates to 49 chars long...
         m_fb_status_text = st.text;
         m_fb_status_counter = 0;
+    } else if (msg->msgid == MAVLINK_MSG_ID_SYS_STATUS) {
+        mavlink_sys_status_t status;
+        mavlink_msg_sys_status_decode(msg, &status);
+        m_hud.batt_voltage = status.voltage_battery*1e-3;
+        m_hud.batt_current = status.current_battery*1e-2;
+        m_hud.batt_remaining = status.battery_remaining;
     }
     m_fb_status_counter++;
 }

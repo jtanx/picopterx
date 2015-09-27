@@ -38,8 +38,10 @@ FlightBoard::FlightBoard(Options *opts)
 , m_is_rtl{false}
 , m_is_in_air{false}
 , m_is_armed{false}
+, m_has_home_position(false)
 , m_rel_watchdog(0)
 , m_gimbal{}
+, m_home_position{}
 , m_handler_table{}
 {
     if (opts) {
@@ -110,6 +112,24 @@ void FlightBoard::GetGimbalPose(EulerAngle *p) {
 }
 
 /**
+ * Get the home position, if any.
+ * NOTE: Without MAV_CMD_GET_HOME_POSITION being implemented by ArduCopter,
+ * the value here MAY NOT CORRESPOND to the actual home position of the copter!
+ * Especially if this software is started while the copter is flying!
+ * User beware.
+ * @param [out] p The location to store the home position.
+ * @return true iff the home position was returned.
+ */
+bool FlightBoard::GetHomePosition(navigation::Coord3D *p) {
+    //Technically should use atomic fencing since we're not using locks here...
+    if (m_has_home_position) {
+        *p = m_home_position;
+        return true;
+    }
+    return false;
+}
+
+/**
  * Input loop to process MAVLink messages received from the copter (Pixhawk).
  */
 void FlightBoard::InputLoop() {
@@ -143,6 +163,23 @@ void FlightBoard::InputLoop() {
                         //heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, 
                         //heartbeat.system_status, (int)m_is_auto_mode);
                         
+                        if (heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED) {
+                            if (!m_has_home_position) {
+                                GPSData d;
+                                m_gps->GetLatest(&d);
+                                if (!std::isnan(d.fix.lat) && !std::isnan(d.fix.lon)) {
+                                    m_home_position.lat = d.fix.lat;
+                                    m_home_position.lon = d.fix.lon;
+                                    m_has_home_position = true;
+                                    Log(LOG_NOTICE, "Home position set as: %.7f, %.7f",
+                                        d.fix.lat, d.fix.lon);
+                                }
+                            }
+                        } else {
+                            //Need a new home position if we're not armed.
+                            m_has_home_position = false;
+                        }
+                        
                         if (needs_refresh) {
                             mavlink_request_data_stream_t stream{};
                             mavlink_message_t smsg;
@@ -175,7 +212,11 @@ void FlightBoard::InputLoop() {
                             m_link->WriteMessage(&smsg);
                             //Time at 1Hz - only for syncing w/ copter (GPS).
                             stream.req_stream_id = MAV_DATA_STREAM_EXTRA3;
-                            stream.req_message_rate = 1;
+                            mavlink_msg_request_data_stream_encode(
+                                m_system_id, m_flightboard_id, &smsg, &stream);
+                            m_link->WriteMessage(&smsg);
+                            //Battery info at 1Hz.
+                            stream.req_stream_id = MAV_DATA_STREAM_EXTENDED_STATUS;
                             mavlink_msg_request_data_stream_encode(
                                 m_system_id, m_flightboard_id, &smsg, &stream);
                             m_link->WriteMessage(&smsg);

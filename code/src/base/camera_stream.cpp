@@ -521,6 +521,11 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     sprintf(string_buf, "GS: %.1fm/s AS:%.1f m/s", hud.ground_speed, hud.air_speed);
     cv::putText(img, string_buf, cv::Point(5*img.cols/100, 20*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    //Enter the battery statistics
+    sprintf(string_buf, "%.2fV, %.1fA (%3d %%)", 
+        hud.batt_voltage, hud.batt_current, hud.batt_remaining);
+    cv::putText(img, string_buf, cv::Point(5*img.cols/100, 25*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.32, cv::Scalar(255, 255, 255), 1, 8);
     
     if (hud.status2.size()) {
         cv::putText(img, hud.status2,  cv::Point(5*img.cols/100, 87*img.rows/100),
