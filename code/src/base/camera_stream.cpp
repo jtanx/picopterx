@@ -84,6 +84,7 @@ CameraStream::CameraStream(Options *opts)
     }
 
     //Resolution dependent parameters
+    STREAM_HEIGHT = (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH;
     PROCESS_HEIGHT = (INPUT_HEIGHT * PROCESS_WIDTH) / INPUT_WIDTH;
     PIXEL_THRESHOLD	= opts->GetInt("PIXEL_THRESHOLD", (30 * INPUT_WIDTH) / 320);
     PIXEL_SKIP = INPUT_WIDTH / PROCESS_WIDTH;
@@ -317,8 +318,19 @@ void CameraStream::SetTrackingArrow(navigation::Point3D arrow) {
  */
 void CameraStream::ProcessImages() {
     static const std::vector<int> saveparams = {CV_IMWRITE_JPEG_QUALITY, 90};
-    int frame_counter = 0, frame_duration = 0;
+    static const std::vector<int> streamparams {CV_IMWRITE_JPEG_QUALITY, 75};
+    int frame_counter = 0, frame_duration = 0, skip_factor = 5;
     auto sampling_start = steady_clock::now();
+#ifdef IS_ON_PI
+    OmxCvJpeg *streamer = nullptr, *saver = nullptr;
+    try {
+        streamer = new OmxCvJpeg(STREAM_WIDTH, STREAM_HEIGHT, 75);
+        saver = new OmxCvJpeg(INPUT_WIDTH, INPUT_HEIGHT, 90);
+        skip_factor = 2;
+    } catch (std::invalid_argument e) {
+        Log(LOG_WARNING, "Cannot start hardware JPEG encoders: %s", e.what());
+    }
+#endif
 
     while (!m_stop) {
         std::unique_lock<std::mutex> lock(m_worker_mutex, std::defer_lock);
@@ -332,6 +344,11 @@ void CameraStream::ProcessImages() {
         
         //Save it, if requested to.
         if (m_save_photo) {
+#ifdef IS_ON_PI
+            if (saver) {
+                saver->Encode(m_save_filename.c_str(), image, true);
+            } else
+#endif
             cv::imwrite(m_save_filename, image, saveparams);
             m_save_photo = false;
          }
@@ -415,17 +432,21 @@ void CameraStream::ProcessImages() {
 #endif
         //Stream image
         //Only write the image out for web streaming every 5th frame
-        if ((frame_counter % 5) == 0) {
-            static const std::vector<int> params {CV_IMWRITE_JPEG_QUALITY, 75};
+        if ((frame_counter % skip_factor) == 0) {
             if (m_show_backend) {
-                cv::imwrite(STREAM_FILE, backend, params);
+                cv::imwrite(STREAM_FILE, backend, streamparams);
             } else {
                 if (STREAM_WIDTH < INPUT_WIDTH) {
                     cv::resize(image, image,
                         cv::Size(STREAM_WIDTH,
                             (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH));
                 }
-                cv::imwrite(STREAM_FILE, image, params);
+#ifdef IS_ON_PI
+                if (streamer) {
+                    streamer->Encode(STREAM_FILE, image);
+                } else
+#endif
+                cv::imwrite(STREAM_FILE, image, streamparams);
             }
         }
 
@@ -439,6 +460,10 @@ void CameraStream::ProcessImages() {
             //Log(LOG_INFO, "FPS: %.2f", m_fps);
         }
     }
+#ifdef IS_ON_PI
+    delete streamer;
+    delete saver;
+#endif
 }
 
 /**
