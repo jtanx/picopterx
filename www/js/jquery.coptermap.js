@@ -596,6 +596,7 @@ L.NumberedDivIconRed = L.Icon.extend({
           hide(data.splMarkers, data.map);
           for (var i = 0; i < data.excMarkers.length; i++)
             hide(data.excMarkers[i], data.map);
+          instance.removeMapLayer(data.map, data.paths, 'lawnmowerOverlay');
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
           instance.removeMapLayer(data.map, data, 'boundRegion');
           instance.removeMapLayer(data.map, data, 'upperBoundRegion');
