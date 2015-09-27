@@ -44,6 +44,8 @@ UtilityModule::~UtilityModule() {
  *             opts is interpreted as the takeoff altitude (cast to int).
  */
 void UtilityModule::Run(FlightController *fc, void *opts) {
+    bool wait_longer = false;
+    
     Log(LOG_INFO, "Utility module initiated; awaiting authorisation...");
     SetCurrentState(fc, STATE_AWAITING_AUTH);
     if (!fc->WaitForAuth()) {
@@ -56,11 +58,18 @@ void UtilityModule::Run(FlightController *fc, void *opts) {
         case UTILITY_TAKEOFF:
             SetCurrentState(fc, STATE_UTILITY_AWAITING_ARM);
             Log(LOG_INFO, "Waiting for motors to be armed before take-off...");
+            if (!fc->fb->IsArmed()) {
+                wait_longer = true;
+            }
+            
             while (!fc->fb->IsArmed() && !fc->CheckForStop()) {
                 fc->Sleep(100);
             }
-            //Wait a while for motor spinup
-            fc->Sleep(300);
+            
+            //Wait a while for motor spinup, otherwise it will go into land mode.
+            if (wait_longer) {
+                fc->Sleep(700);
+            }
             
             if (fc->fb->IsArmed() && !fc->CheckForStop()) {
                 Log(LOG_INFO, "Performing take-off!");
