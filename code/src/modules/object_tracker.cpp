@@ -273,17 +273,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             SetCurrentState(fc, STATE_TRACKING_LOCKED);
 
             //Set PID update intervals
+            m_pidw.SetInterval(update_rate);
             m_pidx.SetInterval(update_rate);    //FIXME!
-            m_pidy.SetInterval(update_rate);
+            m_pidy.SetInterval(update_rate);    //we have a loop timer now.
             
-            Coord3D vantage = CalculateVantagePoint(fc, &gps_position, &knownThings.front(), true);
-//            EstimatePositionFromImageCoords(&gps_position, &gimbal, &imu_data, &detected_object, lidar_range);
-//
-//            if (!m_observation_mode) {
-//                CalculateTrackingTrajectory(fc, &course, &detected_object, true);
-//                fc->fb->SetBodyVel(course);
-//            }
-
+            Coord3D vantage = CalculateVantagePoint(&gps_position, &knownThings.front(), true);
             if (!m_observation_mode) {
                 CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
                 fc->fb->SetBodyVel(course);
@@ -293,20 +287,15 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             had_fix = true;
 
 
-        //} else if (had_fix && steady_clock::now() - last_fix < seconds(2)) {
+
+    //There's probably a use for this code segment other than holding the phone for a while, but I can't think of one.
         } else if (had_fix && knownThings.front().lastObservation() < seconds(2)) {
             
-            //We had an object, attempt to follow according to last known position, but slower
-            //Set PID update intervals
+            m_pidw.SetInterval(update_rate);
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
-            
-            m_pidx.Reset();
-            m_pidy.Reset();
-            
-            //Determine trajectory to track the object (PID control)
-            Coord3D vantage = CalculateVantagePoint(fc, &gps_position, &knownThings.front(), true);
 
+            Coord3D vantage = CalculateVantagePoint(&gps_position, &knownThings.front(), true);
             if (!m_observation_mode) {
                 CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
                 //CalculateTrackingTrajectory(fc, &course, &detected_object, false);
@@ -314,6 +303,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             }
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
+
+
         } else {
             //Object lost; we should do a search pattern (TBA)
             SetCurrentState(fc, STATE_TRACKING_SEARCHING);
@@ -640,39 +631,33 @@ void ObjectTracker::CalculateTrackingTrajectory(FlightController *fc, Vec3D *cou
  * @param [in] object The detected object.
  * @param [in] has_fix Indicates if we have a fix on the object or not. (deprecate?)
  */
-Coord3D ObjectTracker::CalculateVantagePoint(FlightController *fc, GPSData *pos, Observations *object, bool has_fix){
+Coord3D ObjectTracker::CalculateVantagePoint(GPSData *pos, Observations *object, bool has_fix){
     //spit out a Coord3D indicating the optimal location to see the object
-
-//    if (has_fix) {
-        
         //go to a fixed radius from the object (or fly to the north, into the sun etc)
         //calculate a position to make a better observation from?
 
-        Coord3D copter_coord = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
-        Vec3d copterloc = GroundFromGPS(copter_coord);
-        Vec3d rel_loc =  object->getLocation().vect - copterloc;
-        if(rel_loc(2)<0){
-            //copter is below the target, don't move.
-            return copter_coord;
-        }
-        double height_above_target = rel_loc(2);
-        double level_radius = sqrt((rel_loc(0) * rel_loc(0))+(rel_loc(1) * rel_loc(1)));
+    Coord3D copter_coord = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
+    Vec3d copterloc = GroundFromGPS(copter_coord);
+    Vec3d rel_loc =  object->getLocation().vect - copterloc;
+    if(rel_loc(2)<0){
+        //copter is below the target, don't move.
+        return copter_coord;
+    }
+    double height_above_target = rel_loc(2);
+    double level_radius = sqrt((rel_loc(0) * rel_loc(0))+(rel_loc(1) * rel_loc(1)));
+    double desiredSlope = 0.8;    //Maintain about the same camera angle 
+    double des_level_radius = rel_loc(2)/desiredSlope;  //what radius is comfortable for this height?
 
-        double desiredSlope = 0.8;    //Maintain about the same camera angle 
-        double des_level_radius = rel_loc(2)/desiredSlope;  //what radius is comfortable for this height?
-        rel_loc *= des_level_radius/level_radius;   //
-        rel_loc(2) = height_above_target;
-        Vec3d des_copter_loc = object->getLocation().vect - rel_loc;
-        return GPSFromGround(des_copter_loc);
+    rel_loc *= des_level_radius/level_radius;   //
+    rel_loc(2) = height_above_target;
+    Vec3d des_copter_loc = object->getLocation().vect - rel_loc;
 
-//    }else{
-        //go to a fixed radius from where we think the object is (or fly to the north, into the sun etc)
-        //the aim here could be to see the object at all
-
-//    }
-    return GPSFromGround(object->getLocation().vect);    //obviously not here.
+    return GPSFromGround(des_copter_loc);
 
 }
+
+
+
 void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *imu_data, Coord3D dest, Vec3D *course){
     //Observe Exclusion Zones?
     //really feel like I shouldn't be handling this on the Pi. I can just spool the above waypoint to the pixhawk.

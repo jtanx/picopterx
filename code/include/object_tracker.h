@@ -56,6 +56,8 @@ namespace picopter {
 
             CLOCK_TYPE m_task_start;
             
+            navigation::Coord3D CalculateVantagePoint(GPSData *pos, Observations *object, bool has_fix);
+            
         private:
 
             bool m_observation_mode;
@@ -80,7 +82,6 @@ namespace picopter {
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
             //void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
 
-            navigation::Coord3D CalculateVantagePoint(FlightController *fc, GPSData *pos, Observations *object, bool has_fix);
             
             void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Vec3D *course);
 

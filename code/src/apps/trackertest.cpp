@@ -126,11 +126,11 @@ int main(int argc, char *argv[]) {
 
     EulerAngle gimbal;
     gimbal.roll = 0;
-    gimbal.pitch = 20;
+    gimbal.pitch = 10;
     gimbal.yaw = 0;
 
     IMUData imu_data;
-    imu_data.roll = 60;
+    imu_data.roll = 10;
     imu_data.pitch = 0;
     imu_data.yaw = 0;
 
@@ -140,10 +140,14 @@ int main(int argc, char *argv[]) {
     object.position.x = 0;
 
     Observation firstSighting = testTracker.ObservationFromImageCoords(testTracker.m_task_start-steady_clock::now(), &gps_pos, &gimbal, &imu_data, &object);
-    Observations new_thing(firstSighting);
-    new_thing.appendObservation(testTracker.AssumptionGroundLevel());
+    Observations new_thing(testTracker.AssumptionGroundLevel());    //start with the assumption
+    new_thing.appendObservation(firstSighting);
 
     printVector(new_thing.getLocation().vect);
+
+    std::cout << "Test Vantage Point" << std::endl;
+    Coord3D vantage = testTracker.CalculateVantagePoint(&gps_pos, &new_thing, true);
+    printVector(testTracker.GroundFromGPS(vantage));
 
 
     //Distrib ntloc = new_thing.getLocation();
