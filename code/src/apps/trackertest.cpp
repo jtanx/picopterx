@@ -40,6 +40,8 @@ void printCoord3d(Coord3D coord){
 
 
 int main(int argc, char *argv[]) {
+    
+    CLOCK_TYPE m_task_start = steady_clock::now();
 
     std::cout << "Test Rotation Matrix: 30 deg roll" << std::endl;
 
@@ -162,7 +164,7 @@ int main(int argc, char *argv[]) {
     object.position.x = 0;
 
     std::cout << "Initialise cam observation" << std::endl;
-    Observation firstSighting = testTracker.ObservationFromImageCoords(testTracker.m_task_start-steady_clock::now(), &gps_pos, &gimbal, &imu_data, &object);
+    Observation firstSighting = testTracker.ObservationFromImageCoords(m_task_start-steady_clock::now(), &gps_pos, &gimbal, &imu_data, &object);
     printMatrix(firstSighting.location.axes);
     printVector(firstSighting.location.vect);
 

@@ -175,8 +175,6 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     fc->gps->GetLatest(&gps_position);
     launch_point = Coord3D{gps_position.fix.lat, gps_position.fix.lon, gps_position.fix.alt};
 
-    Observation theGround = AssumptionGroundLevel();
-
     Mat observation_map(observation_image_rows, observation_image_cols, CV_8UC4);
 
     while (!fc->CheckForStop()) {
@@ -262,32 +260,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 storeDistrib(&observation_map, filename);
             }
 
+
             //distinguish between many objects
-            for(uint j=0; j<visibles.size(); j++){
-                uint bestFit = 0;
-                double fit=0;
-                for(uint i=0; i<knownThings.size(); i++){
-                    //Find the best fit
-                    //compare characteristic data here.
-                    double thisFit = knownThings.at(i).getSameProbability(visibles.at(j));
-                    if(thisFit>fit){
-                        bestFit = i;
-                        fit=thisFit;
-                    }
-                }
-                //How well does it fit?
-                if(fit>OVERLAP_CONFIDENCE){
-                    LogSimple(LOG_DEBUG,"new observation for object %d", bestFit);
-                    knownThings.at(bestFit).appendObservation(visibles.at(j));
-                    knownThings.at(bestFit).appendObservation(theGround);   //maintain the assertion that the object is on or near the ground.
-                }else{
-                    LogSimple(LOG_DEBUG,"Adding new object");
-                    //doesn't fit anything well. Track it for later.
-                    Observations newThing(theGround);   //starting assumption
-                    newThing.appendObservation(visibles.at(j));
-                    knownThings.push_back(newThing);
-                }
-            }
+            matchObsToObj(visibles, knownThings);
         }
 
         //Now we have some things to track with known locations, without needing to see them.
@@ -550,6 +525,46 @@ Observation ObjectTracker::AssumptionGroundLevel(){
 }
 
 /**
+ * Try to match observations to objects.
+ * @param [in] visibles The observations, 
+ * @param [in] knownThings The objects.
+ */
+void ObjectTracker::matchObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings){
+    Observation theGround = AssumptionGroundLevel();
+
+    //currently generates and cycles half a dozen objects when the image motion isn't related to the IMU
+    //A good system test would be to use glyph IDs rather than probability overlap
+    for(uint j=0; j<visibles.size(); j++){
+        uint bestFit = 0;
+        double fit=0;
+        for(uint i=0; i<knownThings.size(); i++){
+            //Find the best fit
+            //compare characteristic data here.
+            double thisFit = knownThings.at(i).getSameProbability(visibles.at(j));
+            if(thisFit>fit){
+                bestFit = i;
+                fit=thisFit;
+            }
+        }
+        //How well does it fit?
+        if(fit>OVERLAP_CONFIDENCE){
+            LogSimple(LOG_DEBUG,"new observation for object %d", bestFit);
+            knownThings.at(bestFit).appendObservation(visibles.at(j));
+            knownThings.at(bestFit).appendObservation(theGround);   //maintain the assertion that the object is on or near the ground.
+        }else{
+            LogSimple(LOG_DEBUG,"Adding new object");
+            //doesn't fit anything well. Track it for later.
+            Observations newThing(theGround);   //starting assumption
+            newThing.appendObservation(visibles.at(j));
+            knownThings.push_back(newThing);
+        }
+    }
+}
+
+
+
+
+/**
  * Calculates the desired location of the copter based on the estimated location of the object.
  * @param [in] fc The flight controller.
  * @param [in] object The detected object.
@@ -583,7 +598,14 @@ Coord3D ObjectTracker::CalculateVantagePoint(GPSData *pos, Observations *object,
 }
 
 
-
+/**
+ * Execute a control loop to put the copter at the vantage point
+ * @param [in] fc The flight controller.
+ * @param [in] pos The GPS location of the copter
+ * @param [in] imu_data The pitch and roll of the copter
+ * @param [in] dest The settling point of the loop
+ * @param [out] course The velocity output from the loops
+ */
 void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *imu_data, Coord3D dest, Vec3D *course){
     //Observe Exclusion Zones?
     //really feel like I shouldn't be handling this on the Pi. I can just spool the above waypoint to the pixhawk.
@@ -626,12 +648,6 @@ void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *i
     //course->gimbal = 50;
     fc->cam->SetTrackingArrow({trackx/TRACK_SPEED_LIMIT_X,
         -tracky/TRACK_SPEED_LIMIT_Y, trackw/TRACK_SPEED_LIMIT_W});
-
-
-
-
-
-
 
 
 

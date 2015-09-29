@@ -54,11 +54,13 @@ namespace picopter {
             cv::Matx33d BodyToLevel(IMUData *imu_data);
             cv::Matx33d LevelToGround(IMUData *imu_data);
 
-            CLOCK_TYPE m_task_start;
             
             navigation::Coord3D CalculateVantagePoint(GPSData *pos, Observations *object, bool has_fix);
             
+            void matchObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings);
+            
         private:
+            CLOCK_TYPE m_task_start;
 
             bool m_observation_mode;
 
