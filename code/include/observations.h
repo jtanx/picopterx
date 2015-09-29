@@ -48,8 +48,12 @@ Motivated by investigation into the monocular case of:
 #include <opencv2/opencv.hpp>
 
 #define TICKS_PER_SEC 1000000000l
-#define TIME_TYPE std::chrono::duration<long int, std::ratio<1l, TICKS_PER_SEC> >
-#define CLOCK_TYPE std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1l, TICKS_PER_SEC> > >
+
+//#define TIME_TYPE std::chrono::duration<long int, std::ratio<1l, TICKS_PER_SEC> >
+#define TIME_TYPE std::chrono::steady_clock::duration
+
+//#define CLOCK_TYPE std::chrono::time_point<std::chrono::_V2::steady_clock, std::chrono::duration<long int, std::ratio<1l, TICKS_PER_SEC> > >
+#define CLOCK_TYPE std::chrono::time_point<std::chrono::steady_clock>
 namespace picopter {
 
     //a 3d gaussian elliptical structure
@@ -112,7 +116,7 @@ namespace picopter {
     Distrib generatedistrib(DistribParams params);                              //generate an distrib struct from a primitive and operators
     DistribParams getdistribParams(Distrib A);                                  //calculate the centre and covariance widths of this object
     
-    double sampleDistrib(Distrib *A, cv::Vec3d *B);
+    double sampleDistrib(Distrib &A, cv::Vec3d &B);
 
     Distrib combineDistribs(Distrib A, Distrib B);                              //combine two distrib distributions (as though statistically independent)
 

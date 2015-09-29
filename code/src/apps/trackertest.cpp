@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 
     Matx33d rot = rotationMatrix(30,0,0);
     printMatrix(rot);
-
+    /*
     std::cout << "Test Base Distribution" << std::endl;
     Distrib A = generatedistrib();
     printMatrix(A.axes);
@@ -70,10 +70,33 @@ int main(int argc, char *argv[]) {
     Distrib F = vectorSum(D,E);
     printMatrix(F.axes);
     printVector(F.vect);
+    */
     //B = rotateDistrib(stretchDistrib(A, 1, 2, 1), rotationMatrix(0,0,30));
     //C = stretchDistrib(A, 2, 1, 1);
 //    Mat mat(rows, cols, CV_8UC4);
 //    storeDistrib(&mat, &F, "alpha.png");
+
+    std::cout << "Test broken Distribs" << std::endl;
+    Matx33d brokenAxesA (
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0); //totally unknown
+    Vec3d brokenVectA (0,0,0);
+    Distrib brokenDistribA = {brokenAxesA,brokenVectA};
+    Matx33d brokenAxesB (
+        0, 0, 0,
+        0, 0, 0,
+        0, 0, 0); //totally unknown
+    Vec3d brokenVectB (0,0,0);
+    Distrib brokenDistribB = {brokenAxesB,brokenVectB};
+
+    Distrib brokenDistribC = combineDistribs(brokenDistribA,brokenDistribB);
+
+    printMatrix(brokenDistribC.axes);
+    printVector(brokenDistribC.vect);
+
+
+/*
 
     Mat mat(240, 320, CV_8UC4);
 
@@ -88,7 +111,7 @@ int main(int argc, char *argv[]) {
     rasterDistrib(&mat, &A, colour, 1.0);
     storeDistrib(&mat, filename);
 
-
+*/
     std::cout << "Test NED ground coords" << std::endl;
 
     ObjectTracker testTracker;
@@ -116,7 +139,6 @@ int main(int argc, char *argv[]) {
     Vec3d testCoord = testTracker.GroundFromGPS(testLoc);
     printVector(testCoord);
 
-
     std::cout << "Test Observations" << std::endl;
 
     GPSData gps_pos;
@@ -139,8 +161,19 @@ int main(int argc, char *argv[]) {
     object.position.y = 100;
     object.position.x = 0;
 
+    std::cout << "Initialise cam observation" << std::endl;
     Observation firstSighting = testTracker.ObservationFromImageCoords(testTracker.m_task_start-steady_clock::now(), &gps_pos, &gimbal, &imu_data, &object);
+    printMatrix(firstSighting.location.axes);
+    printVector(firstSighting.location.vect);
+
+    std::cout << "Initialise ground assumption" << std::endl;
     Observations new_thing(testTracker.AssumptionGroundLevel());    //start with the assumption
+    printMatrix(new_thing.getLocation().axes);
+    printVector(new_thing.getLocation().vect);
+
+    std::cout << "combination determinant = " << determinant(new_thing.getLocation().axes + firstSighting.location.axes) << std::endl;
+
+    std::cout << "Append Observation" << std::endl;
     new_thing.appendObservation(firstSighting);
 
     printVector(new_thing.getLocation().vect);

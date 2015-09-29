@@ -11,6 +11,12 @@
 
 using namespace picopter;
 using namespace cv;
+using std::chrono::steady_clock;
+using std::chrono::milliseconds;
+using std::chrono::microseconds;
+using std::chrono::seconds;
+using std::chrono::duration_cast;
+using std::this_thread::sleep_for;
 
 namespace picopter{
 
@@ -18,13 +24,6 @@ Observations::Observations(Observation firstSighting) {
 
     accumulator = firstSighting;
     sightings.push_back(firstSighting);
-//    location = {Matx33d( 
-//        0, 0, 0,
-//        0, 0, 0,
-//        0, 0, 0),
-//        Vec3d(0,0,0)};
-//    velocity = stretchDistrib(generatedistrib(),0.1);   //0.1m/s uncertainty
-//    acceleration = stretchDistrib(generatedistrib(),0.1);   //0.1m/s/s uncertainty
 
 //    appendObservation(firstSighting);
 }
@@ -33,10 +32,15 @@ Observations::Observations(Observation firstSighting) {
 //estimate the probability the given observation is of the same object
 //return the integral of  e^((x-l1).t()*A*(x-l1)) * e^((x-l2).t()*B*(x-l2))
 double Observations::getSameProbability(Observation observation){ 
-    Distrib C;
-    C.axes = (accumulator.location.axes.inv() + observation.location.axes.inv()).inv();
-    C.vect = accumulator.location.vect - observation.location.vect;
-    double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0)));
+    //In many cases, we can't invert the matrices, directly sample them instead.
+    //Distrib C;
+    //C.axes = (accumulator.location.axes.inv() + observation.location.axes.inv()).inv();
+    //C.vect = accumulator.location.vect - observation.location.vect;
+    //double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0)));
+    double retval;
+    retval  = sampleDistrib(observation.location, accumulator.location.vect);
+    retval *= sampleDistrib(accumulator.location, observation.location.vect);
+    
 return retval;
 }
 
@@ -47,17 +51,22 @@ void Observations::appendObservation(Observation observation){
     accumulator.location = combineDistribs(accumulator.location, observation.location);
     accumulator.velocity = combineDistribs(accumulator.velocity, observation.velocity);
     //update the time stamp
-    if(accumulator.sample_time < observation.sample_time) accumulator.sample_time=observation.sample_time;
+    //if(observation.sample_time > accumulator.sample_time){
+        accumulator.sample_time = observation.sample_time;
+    //}
     accumulator.source = observation.source;
 }
 void Observations::updateObject(TIME_TYPE timestep){
 
-    accumulator.location = vectorSum(accumulator.location, stretchDistrib(accumulator.velocity, ((double)(timestep.count()))/TICKS_PER_SEC ));
+    //accumulator.location = vectorSum(accumulator.location, stretchDistrib(accumulator.velocity, ((double)(timestep.count()))/TICKS_PER_SEC ));
+    accumulator.location = vectorSum(accumulator.location, stretchDistrib(accumulator.velocity, (duration_cast<microseconds>(timestep).count())/1000000.0 ));
+    
+    
     //velocity = vectorSum(velocity, stretchDistrib(acceleration, timestep));
     //acceleration = vectorSum(acceleration, something);
 
     
-    accumulator.sample_time += timestep;
+    //accumulator.sample_time += timestep;
     accumulator.source = INTERPOLATION;
 }
 
@@ -119,14 +128,18 @@ DistribParams getDistribParams(Distrib A){
     D.y = -A.vect(2);
     return D;
 }
-double sampleDistrib(Distrib *A, Vec3d *B){
-    return exp(-(((A->vect-*B).t() * (A->axes * (A->vect-*B)))(0)));
+double sampleDistrib(Distrib &A, Vec3d &B){
+    return exp(-(((A.vect-B).t() * (A.axes * (A.vect-B)))(0)));
 }
 
 //combine two distributions (as though statistically independent, so beware of biases)
 Distrib combineDistribs(Distrib A, Distrib B){
     Distrib C;
     C.axes = A.axes + B.axes;
+    if(determinant(C.axes) <= DBL_MIN){
+        std::cout << "Combine result is a non-invertible matrix!" << std::endl;
+    }
+
     C.vect = C.axes.inv() * (A.axes * A.vect + B.axes * B.vect);    //takes two lines to prove
     //you can see here how if B is a zero matrix, it fully cancels out of this equation.
     //If no velocity or acceleration data is returned by a given sensor, the variance matrix is set to zeroes
@@ -194,6 +207,12 @@ Distrib stretchDistrib(Distrib A, double sx, double sy, double sz){
     //we want the convolution of e^((x-l1).t()*A*(x-l1)), e^((x-l2).t()*B*(x-l2))
     //The translation of one Distrib by another. Can be used to encode velocity uncertainty
 Distrib vectorSum(Distrib A, Distrib B){
+
+    if((determinant(A.axes) <= DBL_MIN) || (determinant(B.axes) <= DBL_MIN)){
+        std::cout << "vector sum non-invertible matrix!" << std::endl;
+        return A;
+    }
+    
     Distrib C;
     C.vect = A.vect + B.vect;
     C.axes = (A.axes.inv() + B.axes.inv()).inv();
@@ -222,9 +241,9 @@ void rasterDistrib(Mat *mat, Distrib *dist, Vec4b colour, double scale)
             
             Vec3d B((j-(mat->cols/2.0))*scale, (i-(mat->rows/2.0))*scale,dist->vect[2]);    //always sample in the plane of the measurement
 
-            C(0) = colour(0) * sampleDistrib(dist, &B);
-            C(1) = colour(1) * sampleDistrib(dist, &B);
-            C(2) = colour(2) * sampleDistrib(dist, &B);
+            C(0) = colour(0) * sampleDistrib(*dist, B);
+            C(1) = colour(1) * sampleDistrib(*dist, B);
+            C(2) = colour(2) * sampleDistrib(*dist, B);
 
             ////screen layering
             rgba[0] = saturate_cast<uchar>(
