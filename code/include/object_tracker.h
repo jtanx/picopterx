@@ -6,17 +6,22 @@
 #ifndef _PICOPTERX_OBJECT_TRACKER_H
 #define _PICOPTERX_OBJECT_TRACKER_H
 
+#define FOCAL_LENGTH (3687.5/2592.0)
+#define OVERLAP_CONFIDENCE 0.9
+
 /* For the Options class */
 #include "opts.h"
 #include "flightcontroller.h"
 #include "navigation.h"
 #include "PID.h"
+#include "observations.h"
 #include <opencv2/opencv.hpp>
  
 namespace picopter {
     /**
      * Class for moving the hexacopter through waypoints.
      */
+
     class ObjectTracker : public FlightTask {
         public:
             typedef enum {
@@ -32,8 +37,31 @@ namespace picopter {
             void SetTrackMethod(TrackMethod method);
             void Run(FlightController *fc, void *opts) override;
             bool Finished() override;
+
+            cv::Vec3d GroundFromGPS(navigation::Coord3D coord);
+            navigation::Coord3D GPSFromGround(cv::Vec3d coord);
+
+            navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
+
+
+            Observation ObservationFromImageCoords(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
+            Observation ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_range);
+            Observation AssumptionGroundLevel();
+
+            //transformation matrices for gimbal and body
+            cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
+            cv::Matx33d BodyToGround(IMUData *imu_data);
+            cv::Matx33d BodyToLevel(IMUData *imu_data);
+            cv::Matx33d LevelToGround(IMUData *imu_data);
+
+            CLOCK_TYPE m_task_start;
+            
+            navigation::Coord3D CalculateVantagePoint(GPSData *pos, Observations *object, bool has_fix);
+            
         private:
+
             bool m_observation_mode;
+
             PID m_pidw, m_pidx, m_pidy;//, m_pidz;
             std::atomic<TrackMethod> m_track_method;
             std::atomic<bool> m_finished;
@@ -45,14 +73,25 @@ namespace picopter {
             double TRACK_TauDw, TRACK_TauDx, TRACK_TauDy, TRACK_TauDz; 
             double TRACK_SETPOINT_W, TRACK_SETPOINT_X, TRACK_SETPOINT_Y, TRACK_SETPOINT_Z;
             int TRACK_SPEED_LIMIT_W, TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Z;
-            
-            void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_distance, ObjectInfo *object);
+            int observation_image_rows, observation_image_cols;
+            bool print_observation_map;
+            int observation_map_count = 0;
+
+            //void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range);
+
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
-            void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
+            //void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
+
+            
+            void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Vec3D *course);
+
+            bool UseLidar(ObjectInfo *object, double lidar_range);
+
             /** Copy constructor (disabled) **/
             ObjectTracker(const ObjectTracker &other);
             /** Assignment operator (disabled) **/
             ObjectTracker& operator= (const ObjectTracker &other);
+
     };
 }
 
