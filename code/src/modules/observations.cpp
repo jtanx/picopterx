@@ -33,15 +33,15 @@ Observations::Observations(Observation firstSighting) {
 //return the integral of  e^((x-l1).t()*A*(x-l1)) * e^((x-l2).t()*B*(x-l2))
 double Observations::getSameProbability(Observation observation){ 
     //In many cases, we can't invert the matrices, directly sample them instead.
-    //Distrib C;
-    //C.axes = (accumulator.location.axes.inv() + observation.location.axes.inv()).inv();
-    //C.vect = accumulator.location.vect - observation.location.vect;
-    //double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0)));
-    double retval;
-    retval  = sampleDistrib(observation.location, accumulator.location.vect);
-    retval *= sampleDistrib(accumulator.location, observation.location.vect);
+    Distrib C;
+    C.axes = (accumulator.location.axes.inv() + observation.location.axes.inv()).inv();
+    C.vect = accumulator.location.vect - observation.location.vect;
+    double retval = exp(-(((C.vect).t() * (C.axes * C.vect))(0)));
+    //double retval;
+    //retval  = sampleDistrib(observation.location, accumulator.location.vect);
+    //retval *= sampleDistrib(accumulator.location, observation.location.vect);
     
-return retval;
+    return retval;
 }
 
 //add another sighting to this object
@@ -51,9 +51,9 @@ void Observations::appendObservation(Observation observation){
     accumulator.location = combineDistribs(accumulator.location, observation.location);
     accumulator.velocity = combineDistribs(accumulator.velocity, observation.velocity);
     //update the time stamp
-    //if(observation.sample_time > accumulator.sample_time){
+    if(observation.sample_time > accumulator.sample_time){
         accumulator.sample_time = observation.sample_time;
-    //}
+    }
     accumulator.source = observation.source;
 }
 void Observations::updateObject(TIME_TYPE timestep){

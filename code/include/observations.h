@@ -76,14 +76,14 @@ namespace picopter {
 
     //where the observation came from
     typedef enum Source {   //should probably be a collection of booleans instead of splitting sensor values
-        CAMERA_BLOB,    //blob detection has no sense of range, (include a picture)
-        CAMERA_SIFT,    //SIFT doesn't resolve range (include a picture, and the SIFT characteristic data)
-        CAMERA_FLOW,    //optical flow will resolve a range and blob (probably include two images and IMU velocity)
-        LIDAR,          //lidar sensor has a small dot, but can't identify objects
-        FLOW,           //flow sensor has a large width uncertainty
-        TELEM,           //objects transmitted from external sources
-        ASSUMPTION,      //Fairy stories we tell our robots.
-        INTERPOLATION
+        CAMERA_BLOB,    /** blob detection has no sense of range, (include a picture) **/
+        CAMERA_SIFT,    /** SIFT doesn't resolve range (include a picture, and the SIFT characteristic data) **/
+        CAMERA_FLOW,    /** optical flow will resolve a range and blob (probably include two images and IMU velocity) **/
+        LIDAR,          /** lidar sensor has a small dot, but can't identify objects **/
+        FLOW,           /** flow sensor has a large width uncertainty **/
+        TELEM,          /** objects transmitted from external sources **/
+        ASSUMPTION,     /** Fairy stories we tell our robots. **/
+        INTERPOLATION   /** Current state derived from our model of the object's motion **/
     } Source;
     //ObjectInfo    //detections from the camera stream (grouped into single objects)
 

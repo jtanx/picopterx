@@ -171,11 +171,11 @@ int main(int argc, char *argv[]) {
     printMatrix(new_thing.getLocation().axes);
     printVector(new_thing.getLocation().vect);
 
-    std::cout << "combination determinant = " << determinant(new_thing.getLocation().axes + firstSighting.location.axes) << std::endl;
+//    std::cout << "combination determinant = " << determinant(new_thing.getLocation().axes + firstSighting.location.axes) << std::endl;
 
     std::cout << "Append Observation" << std::endl;
     new_thing.appendObservation(firstSighting);
-
+    printMatrix(new_thing.getLocation().axes);
     printVector(new_thing.getLocation().vect);
 
     std::cout << "Test Vantage Point" << std::endl;

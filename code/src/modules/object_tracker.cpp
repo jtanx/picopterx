@@ -172,6 +172,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
     TIME_TYPE loop_start = last_loop;
     //TIME_TYPE last_fix = sample_time - seconds(2);   //no fix (deprecate)
     bool had_fix = false;
+    fc->gps->GetLatest(&gps_position);
+    launch_point = Coord3D{gps_position.fix.lat, gps_position.fix.lon, gps_position.fix.alt};
 
     Observation theGround = AssumptionGroundLevel();
 
@@ -194,8 +196,11 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         fc->gps->GetLatest(&gps_position);
         fc->imu->GetLatest(&imu_data);
 
-        LogSimple(LOG_DEBUG, "Copter is at: lat: %.4f, lon: %.4f, alt %.4f", gps_position.fix.lat, gps_position.fix.lon, gps_position.fix.alt);
-        LogSimple(LOG_DEBUG, "loop_start %u", duration_cast<microseconds>(loop_start).count());
+        //LogSimple(LOG_DEBUG, "Copter is at: lat: %.4f, lon: %.4f, alt %.4f", gps_position.fix.lat, gps_position.fix.lon, gps_position.fix.alt);
+        //LogSimple(LOG_DEBUG, "IMU is at: roll: %.4f, pitch: %.4f, yaw %.4f", imu_data.roll, imu_data.pitch, imu_data.yaw);
+        //LogSimple(LOG_DEBUG, "Gimbal is at: roll: %.4f, pitch: %.4f, yaw %.4f", gimbal.roll, gimbal.pitch, gimbal.yaw);
+        
+        //LogSimple(LOG_DEBUG, "loop_start %u", duration_cast<microseconds>(loop_start).count());
 
 
 
@@ -204,7 +209,13 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         
         //Now would be a good time to use the velocity and acceleration handler
         for(uint i=0; i<knownThings.size(); i++){
-            LogSimple(LOG_DEBUG, "object %d observed at %u", i, duration_cast<microseconds>(knownThings.at(i).lastObservation()).count());
+            //LogSimple(LOG_DEBUG, "object %d observed %uuS ago", i, duration_cast<microseconds>(loop_start - knownThings.at(i).lastObservation()).count());
+            //LogSimple(LOG_DEBUG, "object %d observed at %u", i, duration_cast<microseconds>(knownThings.at(i).lastObservation()).count());
+            //Vec3d V = knownThings.at(i).getLocation().vect;
+            //Matx33d A = knownThings.at(i).getLocation().axes;
+            //LogSimple(LOG_DEBUG, " at ground coords [%.4f,%.4f,%.4f]", V(0),V(1),V(2));
+            //LogSimple(LOG_DEBUG, " with covariance\n\t\t\t\t[%.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f]", A(0,0),A(1,0),A(2,0),A(0,1),A(1,1),A(2,1),A(0,2),A(1,2),A(2,2));
+
             if( (loop_start - knownThings.at(i).lastObservation()) < seconds(5) ){
 
                 knownThings.at(i).updateObject(loop_period);
@@ -236,6 +247,13 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             visibles.reserve(locations.size()); //save multiple reallocations
             for(uint i=0; i<locations.size(); i++){
                 visibles.push_back(ObservationFromImageCoords(loop_start, &gps_position, &gimbal, &imu_data, &detected_object));
+                
+                //Vec3d V = visibles.back().location.vect;
+                //Matx33d A = visibles.back().location.axes;
+                //LogSimple(LOG_DEBUG, " detection:");
+                //LogSimple(LOG_DEBUG, " at ground coords [%.4f,%.4f,%.4f]", V(0),V(1),V(2));
+                //LogSimple(LOG_DEBUG, " with covariance\n\t\t\t\t[%.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f]", A(0,0),A(1,0),A(2,0),A(0,1),A(1,1),A(2,1),A(0,2),A(1,2),A(2,2));
+
             }
 
             if(print_observation_map){
@@ -261,7 +279,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 if(fit>OVERLAP_CONFIDENCE){
                     LogSimple(LOG_DEBUG,"new observation for object %d", bestFit);
                     knownThings.at(bestFit).appendObservation(visibles.at(j));
-                    //knownThings.at(bestFit).appendObservation(theGround);
+                    knownThings.at(bestFit).appendObservation(theGround);   //maintain the assertion that the object is on or near the ground.
                 }else{
                     LogSimple(LOG_DEBUG,"Adding new object");
                     //doesn't fit anything well. Track it for later.
@@ -282,7 +300,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
          
         if(knownThings.size() > 0){   
             Coord3D object_gps_location = GPSFromGround(knownThings.front().getLocation().vect);
-            LogSimple(LOG_DEBUG, "last observation at: %u", duration_cast<microseconds>(loop_start).count());
+            
+            //LogSimple(LOG_DEBUG, "last observation at: %u", duration_cast<microseconds>(loop_start).count());
+            LogSimple(LOG_DEBUG, "object %d observed %uuS ago", 0, duration_cast<microseconds>(loop_start - knownThings.at(0).lastObservation()).count());
             LogSimple(LOG_DEBUG, "Object is at: lat: %.4f, lon: %.4f, alt %.4f", object_gps_location.lat, object_gps_location.lon, object_gps_location.alt);
         }
 
@@ -416,13 +436,13 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     //Matx33d MYaw = LevelToGround(imu_data);
 
     Matx33d axes (
-        0.5, 0, 0,
-        0, 0.5, 0,
-        0, 0, 0.0); //totally unknown depth
+        0.5, 0,   0,
+        0,   0.5, 0,
+        0,   0,   0.0); //totally unknown depth
     Vec3d vect (0,0,0);
     Distrib occular_ray = {axes,vect};
 
-    occular_ray = stretchDistrib(occular_ray, 3);   //how big? we can't have conical distributions yet.
+    occular_ray = stretchDistrib(occular_ray, 30);   //how big? we can't have conical distributions yet.
 
     occular_ray = rotateDistrib(occular_ray, Mblob);
     occular_ray = rotateDistrib(occular_ray, Mbody);
@@ -516,7 +536,7 @@ Observation ObjectTracker::AssumptionGroundLevel(){
     Vec3d groundLevel = GroundFromGPS(launch_ground);
 
     Distrib flatDistrib = {flatAxes, groundLevel};
-    Distrib zeroDistrib = {zeroAxes, vect};
+    //Distrib zeroDistrib = {zeroAxes, vect};
     Distrib slowDistrib = {slowAxes, vect};
     Observation Assumption;
 
