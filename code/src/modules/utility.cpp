@@ -76,7 +76,7 @@ void UtilityModule::Run(FlightController *fc, void *opts) {
                 SetCurrentState(fc, STATE_UTILITY_TAKEOFF);
                 int alt = (int)(intptr_t)opts;
                 if (fc->fb->DoGuidedTakeoff(alt)) {
-                    while (fc->gps->GetLatestRelAlt() < (alt-0.2) && !fc->CheckForStop()) {
+                    while (fc->gps->GetLatestRelAlt() < (alt-0.2) && !fc->CheckForStop() && fc->fb->IsArmed()) {
                         fc->Sleep(100);
                     }
                     Log(LOG_INFO, "Takeoff complete!");

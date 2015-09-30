@@ -166,6 +166,11 @@ void FlightBoard::InputLoop() {
                         
                         if (heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED) {
                             if (!m_has_home_position) {
+                                //Apparently the home position is returned as
+                                //the first waypoint. For now, set the home
+                                //position as the current position, and request
+                                //the first waypoint. If we get that, use that
+                                //instead.
                                 GPSData d;
                                 m_gps->GetLatest(&d);
                                 if (!std::isnan(d.fix.lat) && !std::isnan(d.fix.lon)) {
@@ -176,6 +181,10 @@ void FlightBoard::InputLoop() {
                                     Log(LOG_NOTICE, "Home position set as: %.7f, %.7f",
                                         d.fix.lat, d.fix.lon);
                                 }
+                                mavlink_msg_mission_request_pack(
+                                    m_system_id, m_flightboard_id, &msg,
+                                    m_system_id, m_component_id, 0);
+                                m_link->WriteMessage(&msg);
                             }
                         } else {
                             //Need a new home position if we're not armed.
@@ -226,6 +235,22 @@ void FlightBoard::InputLoop() {
                             needs_refresh = false;
                         }
                         wdog.Touch();
+                    }
+                } break;
+                case MAVLINK_MSG_ID_MISSION_ITEM: {
+                    mavlink_mission_item_t item;
+                    mavlink_msg_mission_item_decode(&msg, &item);
+                    if (item.seq == 0) { //This is supposedly the home position.
+                        m_has_home_position = false;
+                        m_home_position.lat = item.x;
+                        m_home_position.lon = item.y;
+                        std::atomic_thread_fence(std::memory_order_release);
+                        m_has_home_position.store(true, std::memory_order_relaxed);
+                        Log(LOG_NOTICE, "Home position set via MI as: %.7f, %.7f",
+                            item.x, item.y);
+                    } else {
+                        Log(LOG_DEBUG, "Mission item! %d, %.7f, %.7f, %.1f",
+                            item.seq, item.x, item.y, item.z);
                     }
                 } break;
                 //case MAVLINK_MSG_ID_SYS_STATUS: {
