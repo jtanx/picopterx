@@ -38,7 +38,7 @@ FlightBoard::FlightBoard(Options *opts)
 , m_is_rtl{false}
 , m_is_in_air{false}
 , m_is_armed{false}
-, m_has_home_position(false)
+, m_has_home_position{false}
 , m_rel_watchdog(0)
 , m_gimbal{}
 , m_home_position{}
@@ -121,8 +121,9 @@ void FlightBoard::GetGimbalPose(EulerAngle *p) {
  * @return true iff the home position was returned.
  */
 bool FlightBoard::GetHomePosition(navigation::Coord3D *p) {
-    //Technically should use atomic fencing since we're not using locks here...
-    if (m_has_home_position) {
+    bool has_home_position = m_has_home_position.load(std::memory_order_relaxed);
+    if (has_home_position) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         *p = m_home_position;
         return true;
     }
@@ -170,7 +171,8 @@ void FlightBoard::InputLoop() {
                                 if (!std::isnan(d.fix.lat) && !std::isnan(d.fix.lon)) {
                                     m_home_position.lat = d.fix.lat;
                                     m_home_position.lon = d.fix.lon;
-                                    m_has_home_position = true;
+                                    std::atomic_thread_fence(std::memory_order_release);
+                                    m_has_home_position.store(true, std::memory_order_relaxed);
                                     Log(LOG_NOTICE, "Home position set as: %.7f, %.7f",
                                         d.fix.lat, d.fix.lon);
                                 }

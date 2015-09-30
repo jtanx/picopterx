@@ -48,7 +48,7 @@ CameraStream::CameraStream(Options *opts)
 
     //Load the glyphs, if any.
     LoadGlyphs(opts);
-    
+
     //Set the input/processing/streaming width parameters
     opts->SetFamily("CAMERA_STREAM");
     INPUT_WIDTH   = opts->GetInt("INPUT_WIDTH", 320);
@@ -66,7 +66,7 @@ CameraStream::CameraStream(Options *opts)
     m_thresholds.p3_max = opts->GetInt("MAX_VAL", 255);
     m_thresholds.colourspace = THRESH_HSV;
     m_learning_thresholds.colourspace = THRESH_HSV;
-    
+
    if (!m_capture.isOpened()) {
         Log(LOG_WARNING, "cv::VideoCapture failed.");
         throw std::invalid_argument("Could not open camera stream.");
@@ -91,6 +91,9 @@ CameraStream::CameraStream(Options *opts)
 
     //Initialise the thresholding lookup table
     BuildThreshold(m_lookup_threshold, m_thresholds);
+
+    //Initialise the HOG detector
+    m_hog.setSVMDetector(cv::HOGDescriptor::getDefaultPeopleDetector());
 
     //Determine if we're running in demo mode.
     opts->SetFamily("GLOBAL");
@@ -185,7 +188,7 @@ int CameraStream::GetInputHeight() {
 void CameraStream::GetConfig(Options *config) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     config->SetFamily("CAMERA_STREAM");
-    
+
     config->Set("THRESH_COLOURSPACE", m_thresholds.colourspace);
     if (m_thresholds.colourspace == THRESH_HSV) {
         config->Set("MIN_HUE", m_thresholds.p1_min);
@@ -217,7 +220,7 @@ void CameraStream::SetConfig(Options *config) {
     config->SetFamily("CAMERA_STREAM");
     config->GetBool("SHOW_BACKEND", &m_show_backend);
 
-    
+
     config->GetInt("THRESH_COLOURSPACE", &colourspace);
     switch(colourspace) {
         default: //Deliberate fall-through
@@ -240,9 +243,9 @@ void CameraStream::SetConfig(Options *config) {
             refresh |= config->GetInt("MAX_Cr", &m_thresholds.p3_max, 0, 255);
             break;
     }
-    
+
     m_learning_thresholds.colourspace = m_thresholds.colourspace;
-    
+
     if (refresh) {
         BuildThreshold(m_lookup_threshold, m_thresholds);
     }
@@ -300,7 +303,7 @@ bool CameraStream::TakePhoto(std::string filename) {
     return false;
 }
 
-/** 
+/**
  * Set an arrow to be displayed from the centre of the image.
  * @param [in] arrow The arrow vector, as percentage ([0-1] range for x,y,z)
  *             E.g. 100% vec.x draws an arrow from centre to the right side
@@ -338,10 +341,10 @@ void CameraStream::ProcessImages() {
 
         //Grab image
         m_capture >> image;
-        
+
         //Acquire the mutex
         lock.lock();
-        
+
         //Save it, if requested to.
         if (m_save_photo) {
 #ifdef IS_ON_PI
@@ -413,6 +416,15 @@ void CameraStream::ProcessImages() {
                     //??????
                 }
             break;
+            case MODE_HOG_PEOPLE:
+                if (HOGPeople(image, backend)) {
+                    for (size_t i = 0; i < m_detected.size(); i++) {
+                        cv::rectangle(image, m_detected[i].bounds.tl(),
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
+                    }
+                }
+           break;
         }
 
         DrawCrosshair(image, cv::Point(image.cols/2, image.rows/2),
@@ -443,8 +455,7 @@ void CameraStream::ProcessImages() {
             } else {
                 if (STREAM_WIDTH < INPUT_WIDTH) {
                     cv::resize(image, image,
-                        cv::Size(STREAM_WIDTH,
-                            (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH));
+                        cv::Size(STREAM_WIDTH, STREAM_HEIGHT));
                 }
 #ifdef IS_ON_PI
                 if (streamer) {
@@ -488,11 +499,11 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     std::unique_lock<std::mutex> lock(m_aux_mutex);
     HUDInfo hud = m_hud;
     lock.unlock();
-    
+
     char string_buf[128];
     time_t ts = time(NULL) + hud.unix_time_offset;
     struct tm tsp;
-    
+
     //Enter the time
     localtime_r(&ts, &tsp);
     strftime(string_buf, sizeof(string_buf), "%H:%M:%S", &tsp);
@@ -509,7 +520,7 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     sprintf(string_buf, "L: %.2fm", hud.lidar);
     cv::putText(img, string_buf, cv::Point(70*img.cols/100, 20*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
-    
+
     //Enter the position
     sprintf(string_buf, "%.7f, %.7f", hud.pos.lat, hud.pos.lon);
     cv::putText(img, string_buf, cv::Point(5*img.cols/100, 5*img.rows/100),
@@ -527,11 +538,11 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     cv::putText(img, string_buf, cv::Point(5*img.cols/100, 20*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
     //Enter the battery statistics
-    sprintf(string_buf, "%.2fV, %.1fA (%3d %%)", 
+    sprintf(string_buf, "%.2fV, %.1fA (%3d %%)",
         hud.batt_voltage, hud.batt_current, hud.batt_remaining);
     cv::putText(img, string_buf, cv::Point(5*img.cols/100, 25*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.32, cv::Scalar(255, 255, 255), 1, 8);
-    
+
     if (hud.status2.size()) {
         cv::putText(img, hud.status2,  cv::Point(5*img.cols/100, 87*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
@@ -605,7 +616,7 @@ void CameraStream::RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t 
     } else {
         *h = 171 + 43 * (r-g)/delta;
     }
-    
+
     *h = (uint8_t)(((int)180*(*h))/255);
 }
 
@@ -636,11 +647,11 @@ void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], Th
         for(g = 0; g < THRESH_SIZE; g++) {
             for(b = 0; b < THRESH_SIZE; b++) {
                 lookup[r][g][b] = 0;
-                
+
                 if (thresh.colourspace == THRESH_HSV) {
                     uint8_t h, s, v;
                     RGB2HSV(UNREDUCE(r), UNREDUCE(g), UNREDUCE(b), &h, &s, &v);
-                    
+
                     if (v >= thresh.p3_min && v <= thresh.p3_max &&
                         s >= thresh.p2_min && s <= thresh.p2_max) {
                         if (thresh.p1_min < 0) {
@@ -655,7 +666,7 @@ void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], Th
                 } else if (thresh.colourspace == THRESH_YCbCr) {
                     uint8_t y, cb, cr;
                     RGB2YCbCr(UNREDUCE(r), UNREDUCE(g), UNREDUCE(b), &y, &cb, &cr);
-                    
+
                     if (y >= thresh.p1_min && y <= thresh.p1_max &&
                         cb >= thresh.p2_min && cb <= thresh.p2_max &&
                         cr >= thresh.p3_min && cr <= thresh.p3_max) {
@@ -719,10 +730,10 @@ void CameraStream::LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect ro
 
         cv::Scalar mean_cr = cv::mean(channels[1]);
         cv::Scalar mean_cb = cv::mean(channels[2]);
-        
+
         m_learning_thresholds.p2_min = std::max((int)mean_cb[0]-15, 0);
         m_learning_thresholds.p2_max = std::min((int)mean_cb[0]+15, 255);
-        
+
         m_learning_thresholds.p3_min = std::max((int)mean_cr[0]-15, 0);
         m_learning_thresholds.p3_max = std::min((int)mean_cr[0]+15, 255);
     }
@@ -799,7 +810,7 @@ int CameraStream::ConnectedComponents(cv::Mat& src, cv::Mat& threshold) {
     [] (const ctm_t &a, const ctm_t &b) {
         return (int)b.second.m00 < (int)a.second.m00;
     });
-    
+
     m_detected.clear();
 
     ObjectInfo object = {0};
@@ -892,4 +903,40 @@ bool CameraStream::CamShift(cv::Mat& src, cv::Mat& threshold) {
     }
 
     return false;
+
+}
+
+/**
+ * Uses the HOG descriptor to detect people.
+ * @param [in] src The image to compute from.
+ * @param [in] process The process buffer.
+ * @return true iff people were detected.
+ */
+bool CameraStream::HOGPeople(cv::Mat &src, cv::Mat& process) {
+    std::vector<cv::Rect> found;
+
+    cv::resize(src, process, cv::Size(PROCESS_WIDTH, PROCESS_HEIGHT));
+    cv::cvtColor(process, process, CV_BGR2GRAY);
+    m_hog.detectMultiScale(process, found);
+    m_detected.clear();
+
+    if (m_demo_mode) {
+        cv::imshow("Thresholded image", process);
+    }
+
+    for (size_t i = 0; i < found.size(); i++) {
+        ObjectInfo object{};
+        cv::Rect r(found[i].x*PIXEL_SKIP, found[i].y*PIXEL_SKIP,
+                   found[i].width*PIXEL_SKIP, found[i].height*PIXEL_SKIP);
+
+        object.image_width = INPUT_WIDTH;
+        object.image_height = INPUT_HEIGHT;
+        object.position.x = r.x + r.width/2 - src.cols/2;
+        object.position.y = -(r.y + r.height/2) + src.rows/2;
+        object.bounds = r;
+        m_detected.push_back(object);
+        Log(LOG_DEBUG, "DETECTED HOG");
+    }
+
+    return m_detected.size() > 0;
 }

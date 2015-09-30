@@ -93,6 +93,7 @@ namespace picopter {
                 MODE_CANNY_GLYPH = 4,
                 MODE_THRESH_GLYPH = 5,
                 MODE_HOUGH = 6,
+                MODE_HOG_PEOPLE = 7,
                 MODE_LEARN_COLOUR = 999
             } CameraMode;
 
@@ -159,6 +160,9 @@ namespace picopter {
             /** Colour lookup thresholding table **/
             uint8_t m_lookup_threshold[THRESH_SIZE][THRESH_SIZE][THRESH_SIZE];
 
+            /** HOG Detector **/
+            cv::HOGDescriptor m_hog;
+
             int INPUT_WIDTH, INPUT_HEIGHT, PROCESS_WIDTH, PROCESS_HEIGHT;
             int STREAM_WIDTH, STREAM_HEIGHT, PIXEL_SKIP, PIXEL_THRESHOLD;
             int LEARN_SIZE;
@@ -187,6 +191,7 @@ namespace picopter {
             bool GlyphDetection(cv::Mat &src, cv::Mat& roi, cv::Rect bounds);
             bool GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours);
             bool HoughDetection(cv::Mat& src, cv::Mat& proc);
+            bool HOGPeople(cv::Mat &src, cv::Mat& process);
 
             /** Copy constructor (disabled) **/
             CameraStream(const CameraStream &other);
