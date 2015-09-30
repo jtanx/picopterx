@@ -86,7 +86,7 @@ namespace picopter {
             //void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
 
             
-            void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Vec3D *course);
+            void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Coord3D Poi, navigation::Vec3D *course);
 
             bool UseLidar(ObjectInfo *object, double lidar_range);
 

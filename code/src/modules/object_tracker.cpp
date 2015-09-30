@@ -216,7 +216,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             //LogSimple(LOG_DEBUG, " at ground coords [%.4f,%.4f,%.4f]", V(0),V(1),V(2));
             //LogSimple(LOG_DEBUG, " with covariance\n\t\t\t\t[%.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f]", A(0,0),A(1,0),A(2,0),A(0,1),A(1,1),A(2,1),A(0,2),A(1,2),A(2,2));
 
-            if( (loop_start - knownThings.at(i).lastObservation()) < seconds(5) ){
+            if( (loop_start - knownThings.at(i).lastObservation()) < seconds(20) ){
 
                 knownThings.at(i).updateObject(loop_period);
 
@@ -284,13 +284,14 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
         }
 
 
+//        if(true){
+
         //Which one do we track?  The first thing it saw sounds right.
         if(knownThings.size() <= 0){
             LogSimple(LOG_WARNING, "No object detected. Waiting.");
 
         //had_fix && knownThings.front().lastObservation() < seconds(2)
         } else if((loop_start - knownThings.front().lastObservation()) <= milliseconds(500)){    //Did we see the thing this loop?
-            //CalculateTrackingTrajectory(knownThings.front());
 
             SetCurrentState(fc, STATE_TRACKING_LOCKED);
 
@@ -298,10 +299,19 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             m_pidw.SetInterval(update_rate);
             m_pidx.SetInterval(update_rate);    //FIXME!
             m_pidy.SetInterval(update_rate);    //we have a loop timer now.
-            
+  
+            //Coord3D testpoint = launch_point;
+            //testpoint.lat += 0.0001;
+            //testpoint.lon += 0.0001;
+            //Coord3D poi_point = launch_point;
+            //poi_point.lat -= 0.0001;
+            //poi_point.lon += 0.0002;
+                
             Coord3D vantage = CalculateVantagePoint(&gps_position, &knownThings.front(), true);
+            Coord3D poi_point = GPSFromGround(knownThings.front().getLocation().vect);
             if (!m_observation_mode) {
-                CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
+                CalculatePath(fc, &gps_position, &imu_data, vantage, poi_point, &course);
+//                CalculatePath(fc, &gps_position, &imu_data, testpoint, poi_point, &course);
                 fc->fb->SetBodyVel(course);
             }
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
@@ -311,16 +321,16 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
 
     //There's probably a use for this code segment other than holding the phone for a while, but I can't think of one.
-        } else if (had_fix && (loop_start - knownThings.front().lastObservation()) < seconds(2)) {
+        } else if (had_fix && (loop_start - knownThings.front().lastObservation()) < seconds(10)) {
             
             m_pidw.SetInterval(update_rate);
             m_pidx.SetInterval(update_rate);
             m_pidy.SetInterval(update_rate);
 
             Coord3D vantage = CalculateVantagePoint(&gps_position, &knownThings.front(), true);
+            Coord3D poi_point = GPSFromGround(knownThings.front().getLocation().vect);
             if (!m_observation_mode) {
-                CalculatePath(fc, &gps_position, &imu_data, vantage, &course);
-                //CalculateTrackingTrajectory(fc, &course, &detected_object, false);
+                CalculatePath(fc, &gps_position, &imu_data, vantage, poi_point, &course);
                 fc->fb->SetBodyVel(course);
             }
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
@@ -608,7 +618,7 @@ Coord3D ObjectTracker::CalculateVantagePoint(GPSData *pos, Observations *object,
  * @param [in] dest The settling point of the loop
  * @param [out] course The velocity output from the loops
  */
-void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *imu_data, Coord3D dest, Vec3D *course){
+void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *imu_data, Coord3D dest, Coord3D poi, Vec3D *course){
     //Observe Exclusion Zones?
     //really feel like I shouldn't be handling this on the Pi. I can just spool the above waypoint to the pixhawk.
 
@@ -617,26 +627,40 @@ void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *i
     memset(course, 0, sizeof(Vec3D));
 
     Coord3D copter_coord = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
-    Vec3d copter_loc = GroundFromGPS(copter_coord);    
+    Vec3d copter_loc = GroundFromGPS(copter_coord);
     Vec3d dest_loc = GroundFromGPS(dest);
+    Vec3d poi_loc = GroundFromGPS(poi);
+
     Vec3d offset = dest_loc - copter_loc;
+    Vec3d poi_offset = poi_loc - copter_loc;
 
-    double phi = RAD2DEG( M_PI/2 - atan2(offset(0),offset(1)));   //yaw Angle to object (what is our current yaw?)
-    phi -= imu_data->yaw;
-    Matx33d phi_mat = rotationMatrix(0,0,phi);
 
-    m_pidw.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
+    double phi = RAD2DEG((M_PI/2) - atan2(poi_offset(0),poi_offset(1)));   //yaw Angle to object (what is our current yaw?)
+        LogSimple(LOG_DEBUG, "Path: copter at N %.2f, E %.2f, Yaw %.2f", copter_loc(0), copter_loc(1), imu_data->yaw);
+        LogSimple(LOG_DEBUG, "Path: dest   at N %.2f, E %.2f, Yaw %.2f", dest_loc(0), dest_loc(1), RAD2DEG(atan2(offset(1),offset(0))));
+        LogSimple(LOG_DEBUG, "Path: target at N %.2f, E %.2f, Yaw %.2f", poi_loc(0), poi_loc(1), phi);
+
+
+    Matx33d phi_mat = rotationMatrix(0,0,-imu_data->yaw);
+        LogSimple(LOG_DEBUG, "Path: relative: Forward %.2f, Right %.2f", (phi_mat * offset)(0), (phi_mat * offset)(1));
+
+    //m_pidw.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
     m_pidx.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
     m_pidy.SetSetPoint(0);  //maybe swap x,y out for PID on distance and object bearing?
 
     //Now we can take full advantage of this omnidirectional platform.
-    m_pidw.SetProcessValue(-phi);
-    m_pidx.SetProcessValue((phi_mat * offset)(0));
-    m_pidy.SetProcessValue((phi_mat * offset)(1));
+    //m_pidw.SetProcessValue(-phi);
+
+    m_pidx.SetProcessValue(-(phi_mat * offset)(0));
+    m_pidy.SetProcessValue(-(phi_mat * offset)(1));
+    //m_pidx.SetProcessValue(-offset(0));
+    //m_pidy.SetProcessValue(-offset(1));
+    
+
     //m_pidz.SetProcessValue(  //throttle controller not used
 
 
-    LogSimple(LOG_DEBUG, "PIDW: %.2f, PIDY: %.2f", -phi, -offset(1));
+//    LogSimple(LOG_DEBUG, "PIDW: %.2f, PIDY: %.2f", -phi, -offset(1));
     trackw = m_pidw.Compute();
     trackx = m_pidx.Compute();
     tracky = m_pidy.Compute();
@@ -644,21 +668,24 @@ void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *i
 
     //TODO: course->z? This controls altitude.
     //To change yaw, use fb->SetYaw(bearing_or_offset, is_relative)
-    course->x = trackx;
-    course->y = tracky;
+    fc->fb->SetYaw(phi, false);
+    //is the course vector in NED?
+    course->y = trackx;
+    course->x = tracky;
     //Fix the angle for now...
     //course->gimbal = 50;
-    fc->cam->SetTrackingArrow({trackx/TRACK_SPEED_LIMIT_X,
-        -tracky/TRACK_SPEED_LIMIT_Y, trackw/TRACK_SPEED_LIMIT_W});
+    fc->cam->SetTrackingArrow({course->x/TRACK_SPEED_LIMIT_X,
+        -course->y/TRACK_SPEED_LIMIT_Y, trackw/TRACK_SPEED_LIMIT_W});
 
 
 
 }
 //using North, East, Down coordinates
 Vec3d ObjectTracker::GroundFromGPS(Coord3D coord){
+
     Vec3d retval(
         DEG2RAD(coord.lat - launch_point.lat) * (1000*RADIUS_OF_EARTH),
-        DEG2RAD(coord.lon - launch_point.lon) * (1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))),
+        DEG2RAD(coord.lon - launch_point.lon) * (1000*RADIUS_OF_EARTH*cos(DEG2RAD(launch_point.lat))),
         (launch_point.alt - coord.alt)
         );
     return retval;
@@ -666,7 +693,7 @@ Vec3d ObjectTracker::GroundFromGPS(Coord3D coord){
 Coord3D ObjectTracker::GPSFromGround(Vec3d coord){
     Coord3D retval;
     retval.lat = launch_point.lat + RAD2DEG(coord(0)/(1000*RADIUS_OF_EARTH));
-    retval.lon = launch_point.lon + RAD2DEG(coord(1)/(1000*RADIUS_OF_EARTH*cos(RAD2DEG(launch_point.lat))));
+    retval.lon = launch_point.lon + RAD2DEG(coord(1)/(1000*RADIUS_OF_EARTH*cos(DEG2RAD(launch_point.lat))));
     retval.alt = launch_point.alt - coord(2);
     return retval;
 }
