@@ -7,7 +7,7 @@
 #define _PICOPTERX_OBJECT_TRACKER_H
 
 #define FOCAL_LENGTH (3687.5/2592.0)
-#define OVERLAP_CONFIDENCE 0.9
+#define OVERLAP_CONFIDENCE 0.1
 
 /* For the Options class */
 #include "opts.h"
@@ -57,7 +57,7 @@ namespace picopter {
             
             navigation::Coord3D CalculateVantagePoint(GPSData *pos, Observations *object, bool has_fix);
             
-            void matchObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings);
+            bool matchObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings);
             
         private:
             CLOCK_TYPE m_task_start;

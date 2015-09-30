@@ -234,6 +234,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
             }else{
                 LogSimple(LOG_DEBUG,"Removing Lost Object %d", i);
+                if((i==0) && (knownThings.size()>1)){
+                    Log(LOG_WARNING, "Switching targets");
+                }
                 knownThings.erase(knownThings.begin()+i);
                 i--;
             }
@@ -423,8 +426,8 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     
     double L = FOCAL_LENGTH * object->image_width;     
     Vec3d RelCam(object->position.y, object->position.x, L);    
-    double theta = atan2(RelCam[0],RelCam[2]); //Pitch angle of target in camera frame from vertical    
-    double phi   = atan2(RelCam[1],RelCam[2]); //Roll angle of target in camera frame from vertical     
+    double theta = RAD2DEG(atan2(RelCam[0],RelCam[2])); //Pitch angle of target in camera frame from vertical    
+    double phi   = RAD2DEG(atan2(RelCam[1],RelCam[2])); //Roll angle of target in camera frame from vertical     
     
     Matx33d Mblob = rotationMatrix(phi,theta,0);   //the angle between the camera normal and the blob (deg)
     //find the transformation matrix from camera frame to ground.
@@ -463,16 +466,16 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     imageObservation.sample_time = sample_time;
 
 
-    Distrib estLocation = combineDistribs(occular_ray, AssumptionGroundLevel().location);
-    Vec3d C = GroundFromGPS(copterloc);
-    Vec3d B = estLocation.vect;
-    Vec3d V = B-C;
-    Matx33d &A = estLocation.axes;
-    LogSimple(LOG_DEBUG, " detection:");
-    LogSimple(LOG_DEBUG, " at copter [%.4f,%.4f,%.4f]", B(0),B(1),B(2));
-    LogSimple(LOG_DEBUG, " at object [%.4f,%.4f,%.4f]", C(0),C(1),C(2));
-    LogSimple(LOG_DEBUG, " at relative [%.4f,%.4f,%.4f]", V(0),V(1),V(2));
-    LogSimple(LOG_DEBUG, " with covariance\n\t\t\t\t[%.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f]", A(0,0),A(1,0),A(2,0),A(0,1),A(1,1),A(2,1),A(0,2),A(1,2),A(2,2));
+    //Distrib estLocation = combineDistribs(occular_ray, AssumptionGroundLevel().location);
+    //Vec3d C = GroundFromGPS(copterloc);
+    //Vec3d B = estLocation.vect;
+    //Vec3d V = B-C;
+    //Matx33d &A = estLocation.axes;
+    //LogSimple(LOG_DEBUG, " detection:");
+    //LogSimple(LOG_DEBUG, " at copter [%.4f,%.4f,%.4f]", B(0),B(1),B(2));
+    //LogSimple(LOG_DEBUG, " at object [%.4f,%.4f,%.4f]", C(0),C(1),C(2));
+    //LogSimple(LOG_DEBUG, " at relative [%.4f,%.4f,%.4f]", V(0),V(1),V(2));
+    //LogSimple(LOG_DEBUG, " with covariance\n\t\t\t\t[%.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f\n\t\t\t\t %.4f,%.4f,%.4f]", A(0,0),A(1,0),A(2,0),A(0,1),A(1,1),A(2,1),A(0,2),A(1,2),A(2,2));
 
 
     return imageObservation;
@@ -544,9 +547,9 @@ Observation ObjectTracker::AssumptionGroundLevel(){
         0, 0, 0.5);   //1m variance on ground level
 
     Matx33d slowAxes (
-        0.05, 0, 0,
-        0, 0.05, 0,
-        0, 0, 0.05);   //3m variance on ground level
+        0.5, 0, 0,
+        0, 0.5, 0,
+        0, 0, 0.5);   //1m variance per second
 
 
     Coord3D launch_ground = launch_point;
@@ -572,37 +575,82 @@ Observation ObjectTracker::AssumptionGroundLevel(){
  * @param [in] visibles The observations, 
  * @param [in] knownThings The objects.
  */
-void ObjectTracker::matchObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings){
+bool ObjectTracker::matchObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings){
     Observation theGround = AssumptionGroundLevel();
 
-    //currently generates and cycles half a dozen objects when the image motion isn't related to the IMU
-    //A good system test would be to use glyph IDs rather than probability overlap
-    for(uint j=0; j<visibles.size(); j++){
-        uint bestFit = 0;
-        double fit=0;
-        for(uint i=0; i<knownThings.size(); i++){
-            //Find the best fit
-            //compare characteristic data here.
-            double thisFit = knownThings.at(i).getSameProbability(visibles.at(j));
-            if(thisFit>fit){
-                bestFit = i;
-                fit=thisFit;
-            }
-        }
-        //How well does it fit?
-        if(fit>OVERLAP_CONFIDENCE){
-//            LogSimple(LOG_DEBUG,"new observation for object %d", bestFit);
-            knownThings.at(bestFit).appendObservation(visibles.at(j));
-            knownThings.at(bestFit).appendObservation(theGround);   //maintain the assertion that the object is on or near the ground.
-        }else{
-//            LogSimple(LOG_DEBUG,"Adding new object");
-            //doesn't fit anything well. Track it for later.
-            Observations newThing(theGround);   //starting assumption
-            newThing.appendObservation(visibles.at(j));
-            knownThings.push_back(newThing);
+    uint n_obj = knownThings.size();
+    uint n_obs = visibles.size();
+    uint m_obs = n_obs;
+    LogSimple(LOG_DEBUG,"Sorting out %d objects and %d observations", n_obj, n_obs);
+//************ Warning, Coding Tired.
+//              Sorry about the segfaults and memory leaks
+//              I'm using integers were I should have pointers.
+    double *fits = new double [n_obj * n_obs];
+    if(fits==NULL) return false;
+    uint *obj_index = new uint [n_obj];
+    if(obj_index==NULL) {
+        delete[] fits;
+        return false;
+    }
+    uint *obs_index = new uint [n_obs];
+    if(obs_index==NULL){
+        delete[] fits;
+        delete[] obj_index;
+        return false;
+    }
+
+    uint best_obj = 0;  //the index of the best fitting object
+    uint best_obs = 0;  //the index of the best fitting observation
+    double fit;
+    
+    //compute all the fit factors
+    for(uint j=0; j<n_obs; j++){
+        obs_index[j] = j;
+    }
+    for(uint i=0; i<n_obj; i++){
+        obj_index[i] = i;
+        for(uint j=0; j<visibles.size(); j++){
+            fits[i*m_obs + j] = knownThings.at(i).getSameProbability(visibles.at(j));            
         }
     }
+
+    while((n_obj>0) && (n_obs>0)){
+        //LogSimple(LOG_DEBUG,"Remainder: %d objects and %d observations", n_obj, n_obs);
+        fit = 0;
+        for(uint i=0; i<n_obj; i++){
+            for(uint j=0; j<n_obs; j++){
+                if( fit < fits[obj_index[i]*m_obs + obs_index[j]]){
+                    fit = fits[obj_index[i]*m_obs + obs_index[j]];     //take only the best fit
+                    best_obj = obj_index[i];
+                    best_obs = obs_index[j];
+                }
+            }
+        }
+        if(fit>OVERLAP_CONFIDENCE){
+            LogSimple(LOG_DEBUG,"Matching observation %d to object %d", best_obs, best_obj);
+            knownThings.at(best_obj).appendObservation(visibles.at(best_obs));
+            knownThings.at(best_obj).appendObservation(theGround);   //maintain the assertion that the object is on or near the ground.
+            best_obj = obj_index[--n_obj];  //remove one of each (put the tail in the gap)
+            best_obs = obs_index[--n_obs];
+        }else{
+            LogSimple(LOG_DEBUG,"Confidence below threshold, creating %d objects", n_obs);
+            break;
+        }
+    }
+    if(n_obj == 0) LogSimple(LOG_DEBUG,"Run out of objects, Creating %d objects", n_obs);
+    for(uint j=0; j<n_obs; j++){
+        LogSimple(LOG_DEBUG,"Adding new object from obs %d", obs_index[j]);
+        Observations newThing(theGround);   //starting assumption
+        newThing.appendObservation(visibles.at(obs_index[j]));
+        knownThings.push_back(newThing);
+        LogSimple(LOG_DEBUG,"Done sorting");
+    }
+    delete[] fits;
+    delete[] obj_index;
+    delete[] obs_index;
+    return true;
 }
+
 
 
 
