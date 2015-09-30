@@ -7,6 +7,7 @@
 #define _PICOPTERX_GRID_SPACE_H
 
 #include "waypoints.h"
+#include "pathplan.h"
 #include <iostream>
 
 namespace picopter {
@@ -24,9 +25,10 @@ namespace picopter {
                 double z;
             } index3D;
             
-            GridSpace(/*FLightController *fc*/);
+            GridSpace(PathPlan *p /*, FLightController *fc*/);
             void raycast(/*FLightController *fc*/);
             void printToConsole(int rangeMin, int rangeMax, int zDepth);
+            void writeImage();
             
 
             
@@ -38,7 +40,9 @@ namespace picopter {
             navigation::Coord3D launchPoint;
             navigation::Coord3D getGPS();
             index3D worldToGrid(navigation::Coord3D GPSloc);
-            double degToRad(double deg);    
+            navigation::Coord3D gridToWorld(index3D loc);
+            double degToRad(double deg);
+            PathPlan *pathPlan;    
     };
 }
 

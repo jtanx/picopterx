@@ -15,18 +15,17 @@ using namespace picopter::navigation;
  */
 PathPlan::PathPlan(){
     numNodes = 0;
-    edgeMatrixSize =64;
     //errorRadius = 2*asin(6.0 / (2*6378137.00) );//6 metres
     errorRadius = 0.00003;
     
     //set up edge matrices
+    edgeMatrixSize =64;
     collisionBoundary.resize(edgeMatrixSize);
     paths.resize(edgeMatrixSize);
     for(int i = 0; i<edgeMatrixSize; i++){
         collisionBoundary[i].resize(edgeMatrixSize);
         paths[i].resize(edgeMatrixSize);
     } 
-    
     for(int i = 0; i<edgeMatrixSize; i++){
         for(int j = 0; j<edgeMatrixSize; j++){
             collisionBoundary[i][j] = -1.0;
@@ -41,17 +40,19 @@ PathPlan::PathPlan(){
  */
 void PathPlan::addPolygon(std::deque<Coord3D> c){
 	polygonSides.push_back(c.size());
-    
+std::cout << "Creating collision zone:   ";   
     int startpoint = numNodes;
     
     for (size_t i=0; i<c.size(); i++){
         addNode(c[i].lat, c[i].lon);
-        
+std::cout << " (" << c[i].lat << ", " << c[i].lon << ", " << c[i].alt << "), ";     
         //join node to previous node with edge
         if(numNodes-1 > startpoint) addCollisionEdge(numNodes-2, numNodes-1);
     }
     //close the polygon by creating an edge 'twixt first and last nodes
     addCollisionEdge(numNodes-1, startpoint);
+ 
+std::cout << "\n";
     
 }
 
@@ -63,7 +64,9 @@ void PathPlan::addPolygon(std::deque<Coord3D> c){
 std::deque<Waypoints::Waypoint> PathPlan::generateFlightPlan(std::deque<Waypoints::Waypoint> waypoints){
     std::deque<Waypoints::Waypoint> flightPlan;
     generateGraph();
-
+   
+    if(fencePosts.size() == 0) return waypoints;
+    
     while(waypoints.size() > 1){
         std::deque<int> path = detour(waypoints[0].pt, waypoints[1].pt);
         
@@ -88,7 +91,7 @@ std::deque<Waypoints::Waypoint> PathPlan::generateFlightPlan(std::deque<Waypoint
  * @param [in] lon the longitude of the node's location.
  */
 void PathPlan::addNode(double lat, double lon){
-    //if(numNodes > edgeMatrixSize) resizeEdgeMatrices();
+    //if(nodes.size() > edgeMatrixSize) resizeEdgeMatrices();
     
     node n;
     n.y = lat;
@@ -105,8 +108,7 @@ void PathPlan::addNode(double lat, double lon){
 void PathPlan::deleteNode(int index){
     nodes.erase (nodes.begin()+index);
     //remove from edge martices' row
-    for(int i=0; i<numNodes; i++){
-        paths[i].erase (paths[i].begin()+index);
+    for(size_t i=0; i<nodes.size(); i++){
         collisionBoundary[i].erase (collisionBoundary[i].begin()+index);
     }
     //remove edge matrices' column
@@ -121,13 +123,16 @@ void PathPlan::deleteNode(int index){
  * @param [in] index The index of the node.
  */
 void PathPlan::deleteFencePost(int index){
-    nodes.erase (fencePosts.begin()+index);
+
     //remove from edge martices' row
     for(size_t i=0; i<fencePosts.size(); i++){
         paths[i].erase (paths[i].begin()+index);
     }
     //remove edge matrices' column
     paths.erase (paths.begin()+index);
+    
+    //remove the node
+    fencePosts.erase (fencePosts.begin()+index);
 }
 
 /**
@@ -254,13 +259,6 @@ bool PathPlan::checkInsidePolygon(node n){
  * @return A std::deque of indeces indicating a sequence of nodes.
  */
 std::deque<int> PathPlan::detour(Coord3D A, Coord3D B ){
-	/*
-	int start = numNodes; //index of the path origin
-	addNode(A.lat, A.lon);
-	
-	int end = numNodes; //index of the path terminus
-	addNode(B.lat, B.lon);
-	*/
 	
 	node start; start.x = A.lon; start.y = A.lat;
 	node end; end.x = B.lon; end.y = B.lat;
@@ -326,8 +324,8 @@ std::deque<int> PathPlan::detour(Coord3D A, Coord3D B ){
 		OPEN.erase (OPEN.begin()+n);
 	}
 
-    //deleteFencePost(endIndex);
-    //deleteFencePost(startIndex);	
+    deleteFencePost(endIndex);
+    deleteFencePost(startIndex);	
     
     
     //create path from pathtree
@@ -390,8 +388,8 @@ void PathPlan::generateGraph(){
 	        for(size_t k = 0; k < nodes.size(); k++){          //compare with the edges of the collision zones for intersections
 	            for(size_t l = k; l < nodes.size(); l++){
 	                if(collisionBoundary[k][l] > 0){
-	                    //if( checkIntersection(fencePosts[i], fencePosts[j], nodes[k], nodes[l]) ){
-	                    if( checkIntersection(fencePosts[i], fencePosts[j], fencePosts[k], fencePosts[l]) || checkIntersection(fencePosts[i], fencePosts[j], nodes[k], nodes[l])){ 
+	                    if( checkIntersection(fencePosts[i], fencePosts[j], nodes[k], nodes[l]) ){
+	                    //if( /*checkIntersection(fencePosts[i], fencePosts[j], fencePosts[k], fencePosts[l]) ||*/ checkIntersection(fencePosts[i], fencePosts[j], nodes[k], nodes[l])){ 
 	                        traversable = false;
 	                        break;
 	                    }
@@ -421,33 +419,36 @@ void PathPlan::writeGraphSVGJamesOval(const char *fileName, std::deque<Waypoints
 	std::ofstream map;
     map.open (fileName);
     map << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n\n<svg\n    id=\"svg6165\"\n    version=\"1.1\"\n    width=\"417\"\n    height=\"505\">\n\n";
-    map << "    <image\n     width=\"417\"  \n     height=\"505\" \n     xlink:href=\"file:///home/wash/Documents/workspace/Screenshot%20from%202015-09-13%2017:02:44.png\"  \n     id=\"image6173\"\n     x=\"0\"\n     y=\"0\" />\n";
+    map << "    <image\n     width=\"417\"  \n     height=\"505\" \n     xlink:href=\"file:./Screenshot%20from%202015-09-13%2017:02:44.png\"  \n     id=\"image6173\"\n     x=\"0\"\n     y=\"0\" />\n";
     
     //Draw collision zones
-    int index = 0;
-    for(size_t i = 0; i<polygonSides.size(); i++){
-        map << "   <path\n     style=\"fill:#ff0000;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1;opacity:0.5\"\n" << "        d=\"M   ";
- 
-        for(int j=0; j<polygonSides[i]; j++){
-            map << (nodes[index].x-originx)/(terminx-originx) * width  << ',' << (nodes[index].y-originy)/(terminy-originy) * height << " ";
-            index++;
+    if(nodes.size() > 0){
+        int index = 0;
+        for(size_t i = 0; i<polygonSides.size(); i++){
+            map << "   <path\n     style=\"fill:#ff0000;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1;opacity:0.5\"\n" << "        d=\"M   ";
+     
+            for(int j=0; j<polygonSides[i]; j++){
+                map << (nodes[index].x-originx)/(terminx-originx) * width  << ',' << (nodes[index].y-originy)/(terminy-originy) * height << " ";
+                index++;
+            }
+            map << " Z\"\n     id=\"path3068\"/>\n";
         }
-        map << " Z\"\n     id=\"path3068\"/>\n";
     }
     
     //Draw traversable paths
-    for(size_t i=0; i<fencePosts.size()-1; i++){
-        for(size_t j=i+1; j<fencePosts.size(); j++){
-            if(paths[i][j] > 0){
-                map << "   <path\n     style=\"fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n     d=\"M ";
-                map << (fencePosts[i].x-originx)/(terminx-originx) * width  << ',' << (fencePosts[i].y-originy)/(terminy-originy) * height;
-                map << ' ';
-                map << (fencePosts[j].x-originx)/(terminx-originx) * width  << ',' << (fencePosts[j].y-originy)/(terminy-originy) * height;
-                map << "\"\n     id=\"path" << i << j << "\"/>\n";
+    if(fencePosts.size() > 0){
+        for(size_t i=0; i<fencePosts.size()-1; i++){
+            for(size_t j=i+1; j<fencePosts.size(); j++){
+                if(paths[i][j] > 0){
+                    map << "   <path\n     style=\"fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n     d=\"M ";
+                    map << (fencePosts[i].x-originx)/(terminx-originx) * width  << ',' << (fencePosts[i].y-originy)/(terminy-originy) * height;
+                    map << ' ';
+                    map << (fencePosts[j].x-originx)/(terminx-originx) * width  << ',' << (fencePosts[j].y-originy)/(terminy-originy) * height;
+                    map << "\"\n     id=\"path" << i << j << "\"/>\n";
+                }
             }
         }
     }
-    
     //Draw flight plan
     if(flightPlan.size() > 1){
         map << "   <path\n     style=\"fill:none;stroke:#ffff00;stroke-width:3px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\"\n     d=\"M ";
@@ -469,9 +470,9 @@ void PathPlan::writeGraphSVGJamesOval(const char *fileName, std::deque<Waypoints
  * Used for testing purposes. The picopter should never need to call this function.
  */
 void PathPlan::printAdjacencyMatrix(){
-    for(int i=0; i< numNodes; i++){        
-        for(int j=0; j< numNodes; j++){
-            std::cout << paths[i][j] << " ";
+    for(size_t i=0; i< nodes.size(); i++){        
+        for(size_t j=0; j< nodes.size(); j++){
+            std::cout << collisionBoundary[i][j] << " ";
         }
         std::cout << "\n";
     }

@@ -10,7 +10,7 @@ using namespace picopter::navigation;
 
 int main(int argc, char *argv[]) {
 	PathPlan pathPlan;
-    std::deque<Coord3D> czone[4];
+    
     
     Coord3D coords[14];
         coords[0].lat=-31.979570497849565;  coords[0].lon=115.817621648311615;
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
         coords[16].lat=-31.98022097622701;   coords[16].lon=115.818327069282532;
         coords[17].lat=-31.9799183824092031; coords[17].lon=115.818088352680206;
         
-
+    std::deque<Coord3D> czone[4];
     for(int i=0;i<5;i++){
         czone[0].push_front(coords[i]);
     }
@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
      //   newWaypoint.pt = coords[i];
 	   // czone[0].push_front(newWaypoint);
 
-    //pathPlan.addPolygon(czone[0]);
+    /*pathPlan.addPolygon(czone[0]);
     pathPlan.addPolygon(czone[1]);
-    //pathPlan.addPolygon(czone[2]);
-    pathPlan.addPolygon(czone[3]);
+    pathPlan.addPolygon(czone[2]);
+    pathPlan.addPolygon(czone[3]);*/
     
     std::deque<Waypoints::Waypoint> waypoints;
     
@@ -72,11 +72,11 @@ int main(int argc, char *argv[]) {
     waypoint1.pt = coords[12];
     waypoints.push_front(waypoint1);   
     
-    //pathPlan.printAdjacencyMatrix();
     
     //pathPlan.generateFlightPlan(waypoints);
     pathPlan.writeGraphSVGJamesOval("map.svg",pathPlan.generateFlightPlan(waypoints));
 
+    //pathPlan.printAdjacencyMatrix();
     
     return 0;
 }
