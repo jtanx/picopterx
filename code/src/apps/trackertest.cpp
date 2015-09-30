@@ -41,7 +41,7 @@ void printCoord3d(Coord3D coord){
 
 int main(int argc, char *argv[]) {
     
-    CLOCK_TYPE m_task_start = steady_clock::now();
+    //CLOCK_TYPE m_task_start = steady_clock::now();
 
     std::cout << "Test Rotation Matrix: 30 deg roll" << std::endl;
 
@@ -114,6 +114,7 @@ int main(int argc, char *argv[]) {
     storeDistrib(&mat, filename);
 
 */
+    /*
     std::cout << "Test NED ground coords" << std::endl;
 
     ObjectTracker testTracker;
@@ -184,7 +185,7 @@ int main(int argc, char *argv[]) {
     Coord3D vantage = testTracker.CalculateVantagePoint(&gps_pos, &new_thing, true);
     printVector(testTracker.GroundFromGPS(vantage));
 
-
+*/
     //Distrib ntloc = new_thing.getLocation();
 
 

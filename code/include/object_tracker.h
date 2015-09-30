@@ -41,12 +41,12 @@ namespace picopter {
             cv::Vec3d GroundFromGPS(navigation::Coord3D coord);
             navigation::Coord3D GPSFromGround(cv::Vec3d coord);
 
-            navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
 
 
             Observation ObservationFromImageCoords(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
             Observation ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_range);
             Observation AssumptionGroundLevel();
+            Observation ObservationFromRemote(navigation::Coord3D &pos);
 
             //transformation matrices for gimbal and body
             cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
@@ -61,6 +61,7 @@ namespace picopter {
             
         private:
             CLOCK_TYPE m_task_start;
+            navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
 
             bool m_observation_mode;
 

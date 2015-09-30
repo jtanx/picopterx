@@ -1,6 +1,7 @@
 {
 	"GLOBAL": {
-		"DEMO_MODE" : true
+		"DEMO_MODE" : true,
+		"OBSERVATION_MODE" : false
 	},
 	"CAMERA_STREAM": {
 		"INPUT_WIDTH" : 320,
