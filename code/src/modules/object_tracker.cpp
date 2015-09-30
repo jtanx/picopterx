@@ -65,6 +65,8 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
     
     TRACK_SETPOINT_X = opts->GetReal("TRACK_SETPOINT_X", 0);
     TRACK_SETPOINT_Y = opts->GetReal("TRACK_SETPOINT_Y", 0);
+
+    desiredSlope = opts->GetReal("TRACK_SLOPE", 0.8);
     observation_image_rows = opts->GetReal("OBS_IMAGE_ROWS",240);
     observation_image_cols = opts->GetReal("OBS_IMAGE_COLS",320);
     print_observation_map = opts->GetBool("PRINT_OBS_MAP",false);
@@ -584,7 +586,7 @@ Coord3D ObjectTracker::CalculateVantagePoint(GPSData *pos, Observations *object,
     }
     double height_above_target = rel_loc(2);
     double level_radius = sqrt((rel_loc(0) * rel_loc(0))+(rel_loc(1) * rel_loc(1)));
-    double desiredSlope = 0.8;    //Maintain about the same camera angle 
+    //double desiredSlope = 0.8;    //Maintain about the same camera angle 
     double des_level_radius = rel_loc(2)/desiredSlope;  //what radius is comfortable for this height?
 
     rel_loc *= des_level_radius/level_radius;   //
