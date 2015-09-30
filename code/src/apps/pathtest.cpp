@@ -31,6 +31,11 @@ int main(int argc, char *argv[]) {
         coords[12].lat=-31.979812;           coords[12].lon=115.817324;
         coords[13].lat=-31.979779;           coords[13].lon=115.818586;
         
+        coords[14].lat=-31.9798319268494216; coords[14].lon=115.8182492852211;
+        coords[15].lat=-31.9800480655961725; coords[15].lon=115.818488001823425;
+        coords[16].lat=-31.98022097622701;   coords[16].lon=115.818327069282532;
+        coords[17].lat=-31.9799183824092031; coords[17].lon=115.818088352680206;
+        
 
     for(int i=0;i<5;i++){
         czone[0].push_front(coords[i]);
@@ -41,13 +46,17 @@ int main(int argc, char *argv[]) {
     for(int i=9;i<12;i++){
 	    czone[2].push_front(coords[i]);
     }
+    for(int i=14;i<18;i++){
+	    czone[3].push_front(coords[i]);
+    }
     //Waypoints::Waypoint newWaypoint = templateWaypoint;
      //   newWaypoint.pt = coords[i];
 	   // czone[0].push_front(newWaypoint);
 
-    pathPlan.addPolygon(czone[0]);
+    //pathPlan.addPolygon(czone[0]);
     pathPlan.addPolygon(czone[1]);
-    pathPlan.addPolygon(czone[2]);
+    //pathPlan.addPolygon(czone[2]);
+    pathPlan.addPolygon(czone[3]);
     
     std::deque<Waypoints::Waypoint> waypoints;
     
@@ -63,9 +72,11 @@ int main(int argc, char *argv[]) {
     waypoint1.pt = coords[12];
     waypoints.push_front(waypoint1);   
     
+    //pathPlan.printAdjacencyMatrix();
+    
     //pathPlan.generateFlightPlan(waypoints);
-    std::cout << "Writing" << std::endl;
     pathPlan.writeGraphSVGJamesOval("map.svg",pathPlan.generateFlightPlan(waypoints));
+
     
     return 0;
 }
