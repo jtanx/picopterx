@@ -155,6 +155,8 @@ void FlightBoard::InputLoop() {
                     
                     //Skip heartbeats that aren't from the copter
                     if (heartbeat.type != MAV_TYPE_GCS) {
+                        mavlink_message_t smsg;
+                        
                         m_is_auto_mode = (heartbeat.custom_mode == GUIDED);
                         m_is_rtl = (heartbeat.custom_mode == RTL);
                         m_is_in_air = (heartbeat.system_status == MAV_STATE_ACTIVE);
@@ -182,9 +184,9 @@ void FlightBoard::InputLoop() {
                                         d.fix.lat, d.fix.lon);
                                 }
                                 mavlink_msg_mission_request_pack(
-                                    m_system_id, m_flightboard_id, &msg,
+                                    m_system_id, m_flightboard_id, &smsg,
                                     m_system_id, m_component_id, 0);
-                                m_link->WriteMessage(&msg);
+                                m_link->WriteMessage(&smsg);
                             }
                         } else {
                             //Need a new home position if we're not armed.
@@ -193,7 +195,6 @@ void FlightBoard::InputLoop() {
                         
                         if (needs_refresh) {
                             mavlink_request_data_stream_t stream{};
-                            mavlink_message_t smsg;
 
                             m_system_id = msg.sysid;
                             m_component_id = msg.compid;
@@ -248,6 +249,7 @@ void FlightBoard::InputLoop() {
                         m_has_home_position.store(true, std::memory_order_relaxed);
                         Log(LOG_NOTICE, "Home position set via MI as: %.7f, %.7f",
                             item.x, item.y);
+                        
                     } else {
                         Log(LOG_DEBUG, "Mission item! %d, %.7f, %.7f, %.1f",
                             item.seq, item.x, item.y, item.z);
