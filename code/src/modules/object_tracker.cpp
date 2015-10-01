@@ -44,7 +44,7 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
 
     TRACK_Kpw = opts->GetReal("TRACK_Kpw", 0.5);
     TRACK_Kpx = opts->GetReal("TRACK_Kpx", 0.5);
-    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 0.05);
+    TRACK_Kpy = opts->GetReal("TRACK_Kpy", 0.5);
     //double TRACK_Kpz = opts->GetReal("TRACK_Kpz", 50);
     TRACK_TauIw = opts->GetReal("TRACK_TauIw", 0);
     TRACK_TauIx = opts->GetReal("TRACK_TauIx", 0);
@@ -274,7 +274,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
 
             //distinguish between many objects
-            matchObsToObj(visibles, knownThings);
+            //matchObsToObj(visibles, knownThings);
+            //ChooseObsToObj(visibles, knownThings);
+            NoObjectMemory(visibles, knownThings);
         }
 
         //Now we have some things to track with known locations, without needing to see them.
@@ -610,7 +612,7 @@ bool ObjectTracker::matchObsToObj(std::vector<Observation> &visibles, std::vecto
     for(uint i=0; i<n_obj; i++){
         obj_index[i] = i;
         for(uint j=0; j<visibles.size(); j++){
-            fits[i*m_obs + j] = knownThings.at(i).getSameProbability(visibles.at(j));            
+            fits[i*m_obs + j] = knownThings.at(i).getSameProbability(visibles.at(j));
         }
     }
 
@@ -651,9 +653,42 @@ bool ObjectTracker::matchObsToObj(std::vector<Observation> &visibles, std::vecto
     return true;
 }
 
+bool ObjectTracker::ChooseObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings){
+    Observation theGround = AssumptionGroundLevel();
+    if(knownThings.size() <= 0){
+        if(visibles.size() > 0){    //add the first thing on the list
+            LogSimple(LOG_DEBUG,"Adding new object from obs %d", 0);
+            Observations newThing(theGround);   //starting assumption
+            newThing.appendObservation(visibles.at(0));
+            knownThings.push_back(newThing);
+        }
+    }else{
+        uint best = 0;  //the index of the best fitting object
+        double fit = 0; //how well that object fit.
+        for(uint i=0; i<visibles.size(); i++){
+            double thisFit = knownThings.at(0).getSameProbability(visibles.at(i));
+            if(thisFit>fit){
+                fit = thisFit;
+                best = i;
+            }
+        }
+        knownThings.at(0).appendObservation(visibles.at(best));
+        knownThings.at(0).appendObservation(theGround);
+    }
+    return true;
+}
 
 
-
+bool ObjectTracker::NoObjectMemory(std::vector<Observation> &visibles, std::vector<Observations> &knownThings){
+    Observation theGround = AssumptionGroundLevel();
+    if(visibles.size() > 0){    //add the first thing on the list
+        knownThings.clear();    //destroy previous objects
+        Observations newThing(theGround);   //starting assumption
+        newThing.appendObservation(visibles.at(0));
+        knownThings.push_back(newThing);
+    }
+    return true;
+}
 
 /**
  * Calculates the desired location of the copter based on the estimated location of the object.

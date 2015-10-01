@@ -6,5 +6,24 @@
 	"CAMERA_STREAM": {
 		"INPUT_WIDTH" : 320,
 		"INPUT_HEIGHT" : 240
+	},
+	"OBJECT_TRACKER" :  {
+
+		"TRACK_Kpw" : 0.05,
+		"TRACK_Kpx" : 0.05,
+		"TRACK_Kpy" : 0.05,
+		"TRACK_Kpz" : 0.05,
+		"TRACK_TauIw" : 0.0,
+		"TRACK_TauIx" : 0.0,
+		"TRACK_TauIy" : 0.0,
+		"TRACK_TauIz" : 0.0,
+		"TRACK_TauDw" : 0.000,
+		"TRACK_TauDx" : 0.000,
+		"TRACK_TauDy" : 0.000,
+		"TRACK_TauDz" : 0.000,
+		"TRACK_SLOPE" : 10,
+		"OBS_IMAGE_ROWS" : 240,
+		"OBS_IMAGE_COLS" : 320,
+		"PRINT_OBS_MAP" : false
 	}
 }

@@ -58,7 +58,10 @@ namespace picopter {
             navigation::Coord3D CalculateVantagePoint(GPSData *pos, Observations *object, bool has_fix);
             
             bool matchObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings);
-            
+            bool ChooseObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings);
+            bool NoObjectMemory(std::vector<Observation> &visibles, std::vector<Observations> &knownThings);
+
+
         private:
             CLOCK_TYPE m_task_start;
             navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
