@@ -25,9 +25,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.24748737"
-     inkscape:cx="-260.21968"
-     inkscape:cy="404.11916"
+     inkscape:zoom="0.69999999"
+     inkscape:cx="282.07565"
+     inkscape:cy="163.58838"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -44,7 +44,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -114,15 +114,28 @@
        height="80.812202"
        x="595.0835"
        y="437.25409" />
+    <rect
+       style="opacity:1;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4718"
+       width="252.85699"
+       height="252.85699"
+       x="43.571495"
+       y="698.79083"
+       inkscape:export-xdpi="35.59"
+       inkscape:export-ydpi="35.59" />
     <circle
        style="opacity:1;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:10;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="path4156"
        cx="170"
        cy="825.21936"
-       r="121.42857" />
+       r="121.42857"
+       inkscape:export-xdpi="35.59"
+       inkscape:export-ydpi="35.59" />
     <g
        id="g4162"
-       transform="translate(-4.2857274,28.571402)">
+       transform="translate(-4.2857274,28.571402)"
+       inkscape:export-xdpi="35.59"
+       inkscape:export-ydpi="35.59">
       <ellipse
          ry="26.180574"
          rx="63.323433"
