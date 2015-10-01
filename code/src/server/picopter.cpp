@@ -41,7 +41,7 @@ private:
     /** Our list of waypoints **/
     std::deque<Waypoints::Waypoint> m_pts;
     /** Our list of exclusion zones **/
-    std::deque<std::deque<Waypoints::Waypoint>> m_zones;
+    std::deque<std::deque<navigation::Coord3D>> m_zones;
     /** A handle to our user tracker (if any) to update the user position. **/
     std::shared_ptr<FlightTask> m_user_tracker;
     /** A handle to our joystick control (if any) to update joystick inputs. **/
@@ -122,7 +122,7 @@ public:
             }
             
             std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(
-                m_opts, m_pts, static_cast<WaypointMethod>(mode));
+                m_opts, m_pts, m_zones, static_cast<WaypointMethod>(mode));
             if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
                 return false;
             }
@@ -409,12 +409,15 @@ public:
         int i = 1;
         m_zones.clear();
         for (std::vector<coordDeg> z : zones) {
+            std::deque<navigation::Coord3D> zone;
             int j = 1;
             for (coordDeg v : z) {
+                zone.push_back(navigation::Coord3D{v.lat, v.lon, v.alt});
                 Log(LOG_INFO, "%d:%d: (%.6f, %.6f, %.1f)",
                     i, j++, v.lat, v.lon, v.alt);
             }
             i++;
+            m_zones.push_back(zone);
         }
         return false;
     }
