@@ -73,9 +73,8 @@ void GPSMAV::GPSInput(const mavlink_message_t *msg) {
         }
         lock.unlock();
 
-        m_log.Write(": (%.6f +/- %.1fm, %.6f +/- %.1fm) [%.2f +/- %.2f at %.2f +/- %.2f]",
-            d.fix.lat, d.err.lat, d.fix.lon, d.err.lon,
-            d.fix.speed, d.err.speed, d.fix.heading, d.err.heading);
+        m_log.Write(": (%.7f, %.7f, %.3f) [%.3f]",
+            d.fix.lat, d.fix.lon, pos.relative_alt*1e-3, d.fix.heading);
         
         last_fix = steady_clock::now();
         m_had_fix = true;

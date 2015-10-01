@@ -33,7 +33,7 @@ static struct tm GetTimestamp() {
  * folder/name-YYYY-MM-DD-NNN.ext
  * @param [in] folder The folder for this file.
  * @param [in] name The name of this file.
- * @param [in] ext The extension of this file.
+ * @param [in] ext The extension of this file, e.g. '.txt'.
  * @return The generated filename.
  */
 std::string picopter::GenerateFilename(const char *folder, const char *name, const char *ext) {

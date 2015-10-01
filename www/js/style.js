@@ -88,6 +88,13 @@ function detectionShow() {
   console.log(data);
 }
 
+function detectionExport() {
+  var log = $("#detection-review option:selected");
+  if (log.val()) {
+    window.open("ajax-review-gpx.php?log=" + log.val(), "_blank");
+  }
+}
+
 function detectionClear() {
   $("#map-canvas").copterMap('clearDetectionMarkers');
 }

@@ -1,0 +1,4 @@
+/training/
+bin/
+gen/
+*cascade*.xml

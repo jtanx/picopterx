@@ -7,7 +7,7 @@
 #define _PICOPTERX_OBJECT_TRACKER_H
 
 #define FOCAL_LENGTH (3687.5/2592.0)
-#define OVERLAP_CONFIDENCE 0.9
+#define OVERLAP_CONFIDENCE 0.1
 
 /* For the Options class */
 #include "opts.h"
@@ -41,12 +41,12 @@ namespace picopter {
             cv::Vec3d GroundFromGPS(navigation::Coord3D coord);
             navigation::Coord3D GPSFromGround(cv::Vec3d coord);
 
-            navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
 
 
             Observation ObservationFromImageCoords(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object);
             Observation ObservationFromLidar(TIME_TYPE sample_time, GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, double lidar_range);
             Observation AssumptionGroundLevel();
+            Observation ObservationFromRemote(navigation::Coord3D &pos);
 
             //transformation matrices for gimbal and body
             cv::Matx33d GimbalToBody(navigation::EulerAngle *gimbal);
@@ -54,11 +54,14 @@ namespace picopter {
             cv::Matx33d BodyToLevel(IMUData *imu_data);
             cv::Matx33d LevelToGround(IMUData *imu_data);
 
-            CLOCK_TYPE m_task_start;
             
             navigation::Coord3D CalculateVantagePoint(GPSData *pos, Observations *object, bool has_fix);
             
+            bool matchObsToObj(std::vector<Observation> &visibles, std::vector<Observations> &knownThings);
+            
         private:
+            CLOCK_TYPE m_task_start;
+            navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
 
             bool m_observation_mode;
 
@@ -73,6 +76,7 @@ namespace picopter {
             double TRACK_TauDw, TRACK_TauDx, TRACK_TauDy, TRACK_TauDz; 
             double TRACK_SETPOINT_W, TRACK_SETPOINT_X, TRACK_SETPOINT_Y, TRACK_SETPOINT_Z;
             int TRACK_SPEED_LIMIT_W, TRACK_SPEED_LIMIT_X, TRACK_SPEED_LIMIT_Y, TRACK_SPEED_LIMIT_Z;
+            double desiredSlope;
             int observation_image_rows, observation_image_cols;
             bool print_observation_map;
             int observation_map_count = 0;
@@ -83,7 +87,7 @@ namespace picopter {
             //void CalculateTrackingTrajectory(FlightController *fc, navigation::Vec3D *current, ObjectInfo *object, bool has_fix);
 
             
-            void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Vec3D *course);
+            void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Coord3D Poi, navigation::Vec3D *course);
 
             bool UseLidar(ObjectInfo *object, double lidar_range);
 
