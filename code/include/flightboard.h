@@ -139,7 +139,7 @@ namespace picopter {
             /** Are the motors armed? **/
             std::atomic<bool> m_is_armed;
             /** Do we have a home position? **/
-            bool m_has_home_position;
+            std::atomic<bool> m_has_home_position;
             /** Watchdog counter on sending relative commands. **/
             int m_rel_watchdog;
             /** The current gimbal position **/

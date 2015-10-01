@@ -146,6 +146,7 @@ bool CameraStream::GlyphDetection(cv::Mat &src, cv::Mat& roi, cv::Rect bounds) {
     if (m_glyphs.size() > 0) {
         cv::resize(roi, rquad, 
             cv::Size(m_glyphs[0].image.cols, m_glyphs[0].image.rows));
+        cv::normalize(rquad, rquad, 0, 255, cv::NORM_MINMAX, CV_8UC3);
     }
     
     for(size_t i = 0; i < m_glyphs.size(); i++) {
@@ -198,7 +199,7 @@ bool CameraStream::GlyphContourDetection(cv::Mat& src, std::vector<std::vector<c
     bool ret = false;
     m_detected.clear();
     
-    for (size_t i = 0; i < 2 && i < contours.size(); i++) {
+    for (size_t i = 0; i < contours.size(); i++) {
         double perimiter = cv::arcLength(contours[i], true);
         std::vector<cv::Point> approx;
         cv::approxPolyDP(contours[i], approx, 0.01*perimiter, true);
@@ -244,7 +245,7 @@ bool CameraStream::CannyGlyphDetection(cv::Mat& src, cv::Mat& proc) {
     std::sort(contours.begin(), contours.end(), ContourSort);
     //Translate from threshold point space back into source point space.
     //I'm sure there's an OpenCV way to do this with matrices, but whatever.
-    for (size_t i = 0; i < 2 && i < contours.size(); i++) {
+    for (size_t i = 0; i < contours.size(); i++) {
         for (size_t j = 0; j < contours[i].size(); j++) {
             contours[i][j].x *= PIXEL_SKIP;
             contours[i][j].y *= PIXEL_SKIP;
@@ -286,7 +287,7 @@ bool CameraStream::ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& threshold) 
     std::sort(contours.begin(), contours.end(), ContourSort);
     //Translate from threshold point space back into source point space.
     //I'm sure there's an OpenCV way to do this with matrices, but whatever.
-    for (size_t i = 0; i < 2 && i < contours.size(); i++) {
+    for (size_t i = 0; i < contours.size(); i++) {
         for (size_t j = 0; j < contours[i].size(); j++) {
             contours[i][j].x *= PIXEL_SKIP;
             contours[i][j].y *= PIXEL_SKIP;

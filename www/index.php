@@ -318,6 +318,7 @@
                     <option value="4">Canny glyph detection</option>
                     <option value="5">Thresholding glyph detection</option>
                     <option value="6">Hough circle detection</option>
+                    <option value="7">HOG people detection</option>
                     <option value="999">Colour training</option>
                   </select>
                 </div>
