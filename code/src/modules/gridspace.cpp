@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "gridspace.h"
+#include "observations.h"
 
 #include <math.h>
 #include <iostream>
@@ -18,14 +19,14 @@ using namespace picopter::navigation;
 /** 
  * Constructor. Constructs with default settings.
  */
-GridSpace::GridSpace(PathPlan *p/*, FlightController *fc*/)
+GridSpace::GridSpace(PathPlan *p, FlightController *fc)
 : grid (64,vector<vector<voxel> >(64,vector <voxel>(64)))
 {
     pathPlan = p;
     double copterRadius = 3.0; //metres
     double copterHeight = 3.0; //metres
     
-    launchPoint = getGPS();
+    fc->fb->GetHomePosition(&launchPoint);
     
     double earthRadius = 6378137.00; //metres
     double R2 = earthRadius * cos( degToRad(launchPoint.lat) );
@@ -35,42 +36,59 @@ GridSpace::GridSpace(PathPlan *p/*, FlightController *fc*/)
     voxelHeight = copterHeight;
 
 voxelWidth *= 100;
+#include "gridspace.h"
 voxelLength *= 100;    
     
 }
 
 
-/*
-Index3D GridSpace::findEndPoint(FlightController *fc){
-    I
-    Matx33d MLidar = rotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
-    //find the transformation matrix from camera frame to ground.
-    Matx33d Mbody = GimbalToBody(gimbal);
-    //Matx33d Mstable = BodyToLevel(imu_data);
-    //Matx33d MYaw = LevelToGround(imu_data);
-    Matx33d MGnd = BodyToGround(imu_data);
+
+GridSpace::index3D GridSpace::findEndPoint(FlightController *fc){
+
+    if (fc->lidar){        
+        
+        double lidarm = fc->lidar->GetLatest() / 100.0;
+        Vec3d ray(0, 0, lidarm);                                                //Vector representing the lidar ray
+        
+        Matx33d MLidar = rotationMatrix(-6,-3,0);                               //the angle between the camera and the lidar (deg)
+        
+        EulerAngle gimbal;
+        fc->fb->GetGimbalPose(&gimbal);
+        Matx33d Mbody = rotationMatrix(gimbal.roll, gimbal.pitch, gimbal.yaw);  //find the transformation matrix from camera frame to the body.
+        
+        IMUData imu;
+        fc->imu->GetLatest(&imu);
+        Matx33d MGnd = rotationMatrix(imu.roll, imu.pitch, imu.yaw);            //find the transformation matrix from the body to the ground.
+        
+        //apply rotations to ray
+        ray =   MGnd *  Mbody * MLidar * ray;
+        
+        GPSData d;
+        fc->gps->GetLatest(&d);
+          
+        return worldToGrid( navigation::CoordAddOffset( navigation::Coord3D{d.fix.lat, d.fix.lon, d.fix.alt}, navigation::Point3D{ray(0), ray(1), ray(2)} ) );
+    }
+    
+    index3D voxelLoc{ 0,0,0};
+    return voxelLoc;
 }
 
-*/
 
-void GridSpace::raycast(/*FlightController *fc*/){
+
+void GridSpace::raycast(FlightController *fc){
     
+    if ( !(fc->lidar) ) cout << "no lidar. \n";
     
-    //IMUData imu;
-    //fc->imu->GetLatest(&imu);
-    ////imu.pitch, imu.roll, imu.yaw
-    //EulerAngle gimbal;
-    //fc->fb->GetGimbalPose(&gimbal);
-    //if (fc->lidar) double lidarm = fc->lidar->GetLatest() / 100.0;
-    double lidar = 2.0;
-    
-    //GPSData d;
-    //fc->gps->GetLatest(&d);
-    //index3D startPoint = worldToGrid(Coord3D{d.fix.lat, d.fix.lon, d.fix.alt});
+    GPSData d;
+    fc->gps->GetLatest(&d);
+    index3D startPoint = worldToGrid(Coord3D{d.fix.lat, d.fix.lon, d.fix.alt});
+    index3D endPoint   = findEndPoint(fc);
+    /*
     index3D startPoint = worldToGrid(getGPS());
     index3D endPoint = startPoint; 
     endPoint.x += 1.0;
     endPoint.y += 1.0;
+    */
     
     double dx = endPoint.x-startPoint.x;
     double dy = endPoint.y-startPoint.y;
@@ -138,8 +156,10 @@ void GridSpace::raycast(/*FlightController *fc*/){
     //update endpoint location    
     grid[window[0]][window[1]][window[2]].observations++;
     
+    
     //fill voxel with observation
-    if(lidar > 0 && grid[window[0]][window[1]][window[2]].isFull==false){
+    double lidarm = fc->lidar->GetLatest() / 100.0;
+    if(lidarm > 0 && grid[window[0]][window[1]][window[2]].isFull==false){
     
 cout << "Requesting collision zone: ";
          
@@ -154,13 +174,8 @@ cout << " (" << collisionZone[2].lat << ", " << collisionZone[2].lon << ", " << 
          collisionZone[3] = gridToWorld( index3D{ (double)window[0], (double)(window[1]+1), (double)window[2]} );         
 cout << " (" << collisionZone[3].lat << ", " << collisionZone[3].lon << ", " << collisionZone[3].alt << ")\n";
          
-         pathPlan->addPolygon(collisionZone);
-         
- 
-          
-    }
-    
-    
+         pathPlan->addPolygon(collisionZone); 
+    }  
 }
 
 Coord3D GridSpace::getGPS(){   
@@ -230,39 +245,4 @@ void GridSpace::writeImage(){
 
     imwrite("alpha.png", m, compression_params);   
 }
-/*
 
-void rasterDistrib(Mat &mat, Distrib *dist)
-{
-    for (int i = 0; i < mat.rows; ++i) {
-        for (int j = 0; j < mat.cols; ++j) {
-                Vec4b& rgba = mat.at<Vec4b>(i, j);
-                Vec3d B(j-(mat.cols/2.0), i-(mat.rows/2.0),0);
-                rgba[0] = saturate_cast<uchar>(sampleDistrib(dist, &B) * UCHAR_MAX);
-                rgba[1] = 0;//rgba[0];
-                rgba[2] = 0;//rgba[0];
-                rgba[3] = UCHAR_MAX;
-
-                
-                //rgba[0] = UCHAR_MAX;
-                //rgba[1] = saturate_cast<uchar>((float (mat.cols - j)) / ((float)mat.cols) * UCHAR_MAX);
-                //rgba[2] = saturate_cast<uchar>((float (mat.rows - i)) / ((float)mat.rows) * UCHAR_MAX);
-            //rgba[3] = saturate_cast<uchar>(0.5 * (rgba[1] + rgba[2]));
-
-        }
-    }
-}
-
-void storeDistrib(Distrib* dist, int rows, int cols){
-    Mat mat(rows, cols, CV_8UC4);
-    rasterDistrib(mat,dist);
-
-    vector<int> compression_params;
-    compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-    compression_params.push_back(9);
-
-    imwrite("alpha.png", mat, compression_params);
-
-    std::cout <<  "Saved PNG file with alpha data." << std::endl;
-}
-*/

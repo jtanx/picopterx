@@ -25,9 +25,9 @@ namespace picopter {
                 double z;
             } index3D;
             
-            GridSpace(PathPlan *p /*, FLightController *fc*/);
+            GridSpace(PathPlan *p , FlightController *fc);
             
-            void raycast(/*FLightController *fc*/);
+            void raycast(FlightController *fc);
             void printToConsole(int rangeMin, int rangeMax, int zDepth);
             void writeImage();
                
@@ -36,13 +36,16 @@ namespace picopter {
             double voxelLength;
             double voxelWidth;
             double voxelHeight;
+            PathPlan *pathPlan;             
             navigation::Coord3D launchPoint;
+            
+            index3D findEndPoint(FlightController *fc);
             navigation::Coord3D getGPS();
             index3D worldToGrid(navigation::Coord3D GPSloc);
             navigation::Coord3D gridToWorld(index3D loc);
             double degToRad(double deg);
             
-            PathPlan *pathPlan;    
+               
     };
 }
 

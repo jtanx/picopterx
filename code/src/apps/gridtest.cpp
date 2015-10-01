@@ -10,6 +10,7 @@ using namespace picopter::navigation;
 using namespace std;
 
 int main(int argc, char *argv[]) {
+/*
     double originy = -31.979272, originx = 115.817147;
     double terminy = -31.980967, terminx = 115.818789;
     cout << "bounding coordinates:      ";
@@ -23,7 +24,7 @@ int main(int argc, char *argv[]) {
 	GridSpace world( &pathPlan );
 	//world.printToConsole(0, 8, 0);
 	//cout << "\n";
-	world.raycast();world.raycast();world.raycast();world.raycast();world.raycast();world.raycast();
+	//world.raycast(fc);world.raycast();world.raycast();world.raycast();world.raycast();world.raycast();
 	world.writeImage();
 	
 	Coord3D coords[5];
@@ -57,6 +58,6 @@ int main(int argc, char *argv[]) {
     pathPlan.writeGraphSVGJamesOval("map.svg",pathPlan.generateFlightPlan(waypoints));
 	
 	//cout << "\n\n";
-	//pathPlan.printAdjacencyMatrix();
+	//pathPlan.printAdjacencyMatrix();*/
 	return 0;
 }
