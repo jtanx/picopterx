@@ -26,12 +26,11 @@ namespace picopter {
             } index3D;
             
             GridSpace(PathPlan *p /*, FLightController *fc*/);
+            
             void raycast(/*FLightController *fc*/);
             void printToConsole(int rangeMin, int rangeMax, int zDepth);
             void writeImage();
-            
-
-            
+               
         private:
             std::vector< std::vector< std::vector<voxel> > > grid;
             double voxelLength;
@@ -42,6 +41,7 @@ namespace picopter {
             index3D worldToGrid(navigation::Coord3D GPSloc);
             navigation::Coord3D gridToWorld(index3D loc);
             double degToRad(double deg);
+            
             PathPlan *pathPlan;    
     };
 }

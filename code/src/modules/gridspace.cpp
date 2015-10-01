@@ -42,10 +42,16 @@ voxelLength *= 100;
 
 /*
 Index3D GridSpace::findEndPoint(FlightController *fc){
-    
+    I
+    Matx33d MLidar = rotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
+    //find the transformation matrix from camera frame to ground.
+    Matx33d Mbody = GimbalToBody(gimbal);
+    //Matx33d Mstable = BodyToLevel(imu_data);
+    //Matx33d MYaw = LevelToGround(imu_data);
+    Matx33d MGnd = BodyToGround(imu_data);
 }
-*/
 
+*/
 
 void GridSpace::raycast(/*FlightController *fc*/){
     
