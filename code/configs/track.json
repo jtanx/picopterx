@@ -4,10 +4,10 @@
 	},
 	"OBJECT_TRACKER" :  {
 
-		"TRACK_Kpw" : 60.0,
-		"TRACK_Kpx" : 40.0,
-		"TRACK_Kpy" : 30.0,
-		"TRACK_Kpz" : 50.0,
+		"TRACK_Kpw" : 6.0,
+		"TRACK_Kpx" : 4.0,
+		"TRACK_Kpy" : 3.0,
+		"TRACK_Kpz" : 5.0,
 		"TRACK_TauIw" : 5.0,
 		"TRACK_TauIx" : 5.0,
 		"TRACK_TauIy" : 5.0,
@@ -15,6 +15,9 @@
 		"TRACK_TauDw" : 0.000,
 		"TRACK_TauDx" : 0.000,
 		"TRACK_TauDy" : 0.000,
-		"TRACK_TauDz" : 0.000
+		"TRACK_TauDz" : 0.000,
+		"OBS_IMAGE_ROWS" : 240,
+		"OBS_IMAGE_COLS" : 320,
+		"PRINT_OBS_MAP" : false
 	}
 }

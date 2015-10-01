@@ -124,6 +124,32 @@ function updateWptInfo(e) {
 }
 
 /**
+ * Uses information received from the server to update the displayed parameters.
+ * @param [in] ret The JSON object of the CAMERA_STREAM family.
+ */
+function updateDisplayedCameraConfig(ret) {
+  if (ret) {
+    switch (ret["THRESH_COLOURSPACE"]) {
+      default: case 0:
+        $("#camera-thresh-colourspace").val("csp-hsv");
+        $("#cal-hue").val([ret["MIN_HUE"], ret["MAX_HUE"]]);
+        $("#cal-sat").val([ret["MIN_SAT"], ret["MAX_SAT"]]);
+        $("#cal-val").val([ret["MIN_VAL"], ret["MAX_VAL"]]);
+        break;
+      case 1:
+        $("#camera-thresh-colourspace").val("csp-ycbcr");
+        $("#cal-y").val([ret["MIN_Y"], ret["MAX_Y"]]);
+        $("#cal-cb").val([ret["MIN_Cb"], ret["MAX_Cb"]]);
+        $("#cal-cr").val([ret["MIN_Cr"], ret["MAX_Cr"]]);
+        break;
+    }
+    
+    $("#camera-thresh-colourspace").trigger("change");
+  }
+}
+
+
+/**
  * JS hooks to make the site interactive/display properly.
  */
 $(document).ready(function () {
@@ -210,11 +236,20 @@ $(document).ready(function () {
   $("#detection-review").change(function() {
     detectionShow();
   });
+  
+  /* Camera thresholding colourspace menu */
+   $("#camera-thresh-colourspace").change(function() {
+     console.log("COLOURSPACE UPDATED!");
+    var cs = $("#camera-thresh-colourspace option:selected").val();
+    $("#cal-hsv").toggleClass("hidden", cs!=="csp-hsv");
+    $("#cal-ycbcr").toggleClass("hidden", cs!=="csp-ycbcr");
+  });
 
   /* Camera presets menu */
   $("#camera-colour-presets").change(function() {
+    var cs = $("#camera-thresh-colourspace option:selected").val();
     var preset = $("#camera-colour-presets option:selected").val();
-    var presetMap = {
+    var huePresetMap = {
       "preset-red" : [[-20, 20], [97, 255], [127, 255]],
       "preset-orange" : [[15,36], [97, 255], [127, 255]],
       "preset-yellow" : [[12,45], [62, 255], [153, 255]],
@@ -222,13 +257,32 @@ $(document).ready(function () {
       "preset-blue" : [[104,152], [83, 255], [70, 255]],
       "preset-white" : [[-180,180], [0, 32], [156, 255]],
       "preset-black" : [[-180,180], [0, 255], [0, 62]]
-    }
+    };
+    
+    var ycbcrPresetMap = {
+      "preset-red" : [[0, 255], [86, 141], [167, 255]],
+      "preset-orange" : [[0, 255], [76, 106], [164, 194]],
+      "preset-yellow" : [[0, 255], [0, 91], [118, 159]],
+      "preset-green" : [[0, 255], [114, 168], [31, 61]],
+      "preset-blue" : [[0, 255], [164, 255], [51, 84]],
+      "preset-white" : [[150, 255], [113, 133], [113, 133]],
+      "preset-black" : [[0, 105], [113, 133], [113,133]]
+    };
 
-    if (preset in presetMap) {
-      var vals = presetMap[preset];
-      $("#cal-hue").val(vals[0]);
-      $("#cal-sat").val(vals[1]);
-      $("#cal-val").val(vals[2]);
+    if (cs === "csp-hsv") {
+      if (preset in huePresetMap) {
+        var vals = huePresetMap[preset];
+        $("#cal-hue").val(vals[0]);
+        $("#cal-sat").val(vals[1]);
+        $("#cal-val").val(vals[2]);
+      }
+    } else if (cs === "csp-ycbcr") {
+      if (preset in ycbcrPresetMap) {
+        var vals = ycbcrPresetMap[preset];
+        $("#cal-y").val(vals[0]);
+        $("#cal-cb").val(vals[1]);
+        $("#cal-cr").val(vals[2]);
+      }
     }
   });
   

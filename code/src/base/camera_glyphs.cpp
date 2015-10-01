@@ -131,70 +131,85 @@ static bool WarpPerspective(cv::Mat &in, cv::Mat &out, std::vector<cv::Point2f> 
 }
 
 /**
+ * Attempts to match the provided image with a known glyph.
+ * @param [in] src The source image. Only used to get image bounds.
+ * @param [in] roi The image to match to a glpyh.
+ * @param [in] bounds The bounding rectangle of the glyph.
+ * @return true iff glyphs were matched.
+ */
+bool CameraStream::GlyphDetection(cv::Mat &src, cv::Mat& roi, cv::Rect bounds) {
+    bool ret = false;
+    cv::Mat rquad;
+    ObjectInfo obj{};
+    
+    //Perform initial resize.
+    if (m_glyphs.size() > 0) {
+        cv::resize(roi, rquad, 
+            cv::Size(m_glyphs[0].image.cols, m_glyphs[0].image.rows));
+        cv::normalize(rquad, rquad, 0, 255, cv::NORM_MINMAX, CV_8UC3);
+    }
+    
+    for(size_t i = 0; i < m_glyphs.size(); i++) {
+        //Resize if necessary
+        if (rquad.cols != m_glyphs[i].image.cols || rquad.rows != m_glyphs[i].image.rows) {
+            cv::resize(roi, rquad, 
+                cv::Size(m_glyphs[i].image.cols, m_glyphs[i].image.rows));
+        }
+        
+        //Display the warped and resized image
+        if (m_demo_mode) {
+            cv::imshow("Test", rquad);
+        }
+        
+        //Perform template matching. This is the bottleneck if the template image is large.
+        cv::Mat result(1, 1, CV_32FC1);
+        cv::matchTemplate(rquad, m_glyphs[i].image, result, CV_TM_CCORR_NORMED);
+
+        //Get the correlation value (no need for minMaxLoc - one result only)
+        //double minVal; double maxVal;
+        //cv::minMaxLoc(result, &minVal, &maxVal, NULL, NULL, cv::Mat());
+        
+        //Check goodness of fit. If good, add it.
+        if (result.at<float>(0,0) > 0.8) {
+            Log(LOG_DEBUG, "DETECTED %d<%s>! %.2f", 
+                m_glyphs[i].id, m_glyphs[i].description.c_str(),
+                result.at<float>(0,0));
+            obj.id = m_glyphs[i].id;
+            obj.image_width = src.cols;
+            obj.image_height = src.rows;
+            obj.bounds = bounds;
+            obj.position = navigation::Point2D{
+                obj.bounds.x + obj.bounds.width/2.0,
+                obj.bounds.y + obj.bounds.height/2.0};
+            m_detected.push_back(obj);
+            
+            ret = true;
+        }
+    }
+    return ret;
+}
+
+/**
  * Performs glyph detection on the contour list.
  * @param [in] src The source image to detect glyphs from.
  * @param [in] contours The corresponding contour list.
  * @return true iff detected.
  */
 bool CameraStream::GlyphContourDetection(cv::Mat& src, std::vector<std::vector<cv::Point>> contours) {
-    ObjectInfo obj{};
     bool ret = false;
     m_detected.clear();
     
-    for (size_t i = 0; i < 2 && i < contours.size(); i++) {
+    for (size_t i = 0; i < contours.size(); i++) {
         double perimiter = cv::arcLength(contours[i], true);
         std::vector<cv::Point> approx;
         cv::approxPolyDP(contours[i], approx, 0.01*perimiter, true);
         
-        if (approx.size() == 4) { //We probably have a quad.
+        if (approx.size() == 4 && cv::isContourConvex(approx)) { //We probably have a quad.
             cv::Mat quad;
             std::vector<cv::Point2f> pts = std::move(OrderPoints(approx));
             
             if (WarpPerspective(src, quad, pts)) {
-                cv::Mat rquad;
-                //Perform initial resize.
-                if (m_glyphs.size() > 0) {
-                    cv::resize(quad, rquad, 
-                        cv::Size(m_glyphs[0].image.cols, m_glyphs[0].image.rows));
-                }
-                
-                for(size_t i = 0; i < m_glyphs.size(); i++) {
-                    //Resize if necessary
-                    if (rquad.cols != m_glyphs[i].image.cols || rquad.rows != m_glyphs[i].image.rows) {
-                        cv::resize(quad, rquad, 
-                            cv::Size(m_glyphs[i].image.cols, m_glyphs[i].image.rows));
-                    }
-                    
-                    //Display the warped and resized image
-                    if (m_demo_mode) {
-                        cv::imshow("Test", rquad);
-                    }
-                    
-                    //Perform template matching. This is the bottleneck if the template image is large.
-                    cv::Mat result(1, 1, CV_32FC1);
-                    cv::matchTemplate(rquad, m_glyphs[i].image, result, CV_TM_CCORR_NORMED);
-
-                    //Get the correlation value (no need for minMaxLoc - one result only)
-                    //double minVal; double maxVal;
-                    //cv::minMaxLoc(result, &minVal, &maxVal, NULL, NULL, cv::Mat());
-                    
-                    //Check goodness of fit. If good, add it.
-                    if (result.at<float>(0,0) > 0.8) {
-                        Log(LOG_DEBUG, "DETECTED %d<%s>! %.2f", 
-                            m_glyphs[i].id, m_glyphs[i].description.c_str(),
-                            result.at<float>(0,0));
-                        obj.id = m_glyphs[i].id;
-                        obj.image_width = src.cols;
-                        obj.image_height = src.rows;
-                        obj.bounds = std::move(cv::boundingRect(pts));
-                        obj.position = navigation::Point2D{
-                            obj.bounds.x + obj.bounds.width/2.0,
-                            obj.bounds.y + obj.bounds.height/2.0};
-                        m_detected.push_back(obj);
-                        
-                        ret = true;
-                    }
-                }
+                ret = GlyphDetection(src, quad, cv::boundingRect(pts));
             }
         }
     }
@@ -230,7 +245,7 @@ bool CameraStream::CannyGlyphDetection(cv::Mat& src, cv::Mat& proc) {
     std::sort(contours.begin(), contours.end(), ContourSort);
     //Translate from threshold point space back into source point space.
     //I'm sure there's an OpenCV way to do this with matrices, but whatever.
-    for (size_t i = 0; i < 2 && i < contours.size(); i++) {
+    for (size_t i = 0; i < contours.size(); i++) {
         for (size_t j = 0; j < contours[i].size(); j++) {
             contours[i][j].x *= PIXEL_SKIP;
             contours[i][j].y *= PIXEL_SKIP;
@@ -272,7 +287,7 @@ bool CameraStream::ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& threshold) 
     std::sort(contours.begin(), contours.end(), ContourSort);
     //Translate from threshold point space back into source point space.
     //I'm sure there's an OpenCV way to do this with matrices, but whatever.
-    for (size_t i = 0; i < 2 && i < contours.size(); i++) {
+    for (size_t i = 0; i < contours.size(); i++) {
         for (size_t j = 0; j < contours[i].size(); j++) {
             contours[i][j].x *= PIXEL_SKIP;
             contours[i][j].y *= PIXEL_SKIP;
@@ -281,4 +296,53 @@ bool CameraStream::ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& threshold) 
     
     //Get the detected glyphs.
     return GlyphContourDetection(src, contours);
+}
+
+/**
+ * Glyph detection using Hough circles.
+ * @param [in] src The source image to search for a glyph.
+ * @param [in] threshold The process buffer.
+ * @return true iff glyph was detected.
+ */
+bool CameraStream::HoughDetection(cv::Mat& src, cv::Mat& proc) {
+    bool ret = false;
+    cv::Mat gray;
+    //Downscale
+    cv::resize(src, gray, cv::Size(PROCESS_WIDTH, PROCESS_HEIGHT));
+    //Convert to grayscale
+    cv::cvtColor(gray, gray, CV_BGR2GRAY);
+    //Blur it a bit
+    cv::GaussianBlur(gray, gray, cv::Size(9,9), 0);
+    
+    //Apply the Hough circle transform
+    std::vector<cv::Vec3f> circles;
+    cv::HoughCircles(gray, circles, CV_HOUGH_GRADIENT, 1, 30, 200, 50, 0, 0 );
+
+    //Clear the detection list.
+    m_detected.clear();
+    
+    //Draw the circles detected
+    for(size_t i = 0; i < circles.size(); i++) {
+        cv::Point centre(cvRound(circles[i][0])*PIXEL_SKIP, cvRound(circles[i][1])*PIXEL_SKIP);
+        int radius = cvRound(circles[i][2])*PIXEL_SKIP;
+        
+        //Calculate ROI
+        cv::Rect roi(centre.x-radius, centre.y-radius, radius*2, radius*2);
+        if (roi.x >= 0 && roi.y >= 0 && roi.width > 0) {
+            if (roi.x + roi.width > src.cols) {
+                roi.width = src.cols - roi.x;
+            }
+            if (roi.y + roi.height > src.rows) {
+                roi.height = src.rows - roi.y;
+            }
+            cv::Mat sroi(src, roi);
+            ret = GlyphDetection(src, sroi, roi);
+        }
+
+        //Draw circles on the image...
+        cv::circle(src, centre, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
+        cv::circle(src, centre, radius, cv::Scalar(0, 0, 255), 3, 8, 0);
+    }
+
+    return ret;
 }

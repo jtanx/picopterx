@@ -19,7 +19,7 @@ using std::chrono::seconds;
 using std::chrono::milliseconds;
 
 #ifdef IS_ON_PI
-    using omxcv::OmxCv;
+    using namespace omxcv;
 #endif
 
 const std::vector<cv::Scalar> CameraStream::m_colours {
@@ -48,7 +48,7 @@ CameraStream::CameraStream(Options *opts)
 
     //Load the glyphs, if any.
     LoadGlyphs(opts);
-    
+
     //Set the input/processing/streaming width parameters
     opts->SetFamily("CAMERA_STREAM");
     INPUT_WIDTH   = opts->GetInt("INPUT_WIDTH", 320);
@@ -58,12 +58,14 @@ CameraStream::CameraStream(Options *opts)
     LEARN_SIZE    = picopter::clamp(opts->GetInt("LEARN_SIZE", 50), 20, 100);
 
     //Set the default hue thresholds
-    m_thresholds.hue_min = opts->GetInt("MIN_HUE", -10);
-    m_thresholds.hue_max = opts->GetInt("MAX_HUE", 10);
-    m_thresholds.sat_min = opts->GetInt("MIN_SAT", 95);
-    m_thresholds.sat_max = opts->GetInt("MAX_SAT", 255);
-    m_thresholds.val_min = opts->GetInt("MIN_VAL", 127);
-    m_thresholds.val_max = opts->GetInt("MAX_VAL", 255);
+    m_thresholds.p1_min = opts->GetInt("MIN_HUE", -10);
+    m_thresholds.p1_max = opts->GetInt("MAX_HUE", 10);
+    m_thresholds.p2_min = opts->GetInt("MIN_SAT", 95);
+    m_thresholds.p2_max = opts->GetInt("MAX_SAT", 255);
+    m_thresholds.p3_min = opts->GetInt("MIN_VAL", 127);
+    m_thresholds.p3_max = opts->GetInt("MAX_VAL", 255);
+    m_thresholds.colourspace = THRESH_HSV;
+    m_learning_thresholds.colourspace = THRESH_HSV;
 
    if (!m_capture.isOpened()) {
         Log(LOG_WARNING, "cv::VideoCapture failed.");
@@ -82,12 +84,16 @@ CameraStream::CameraStream(Options *opts)
     }
 
     //Resolution dependent parameters
+    STREAM_HEIGHT = (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH;
     PROCESS_HEIGHT = (INPUT_HEIGHT * PROCESS_WIDTH) / INPUT_WIDTH;
     PIXEL_THRESHOLD	= opts->GetInt("PIXEL_THRESHOLD", (30 * INPUT_WIDTH) / 320);
     PIXEL_SKIP = INPUT_WIDTH / PROCESS_WIDTH;
 
     //Initialise the thresholding lookup table
     BuildThreshold(m_lookup_threshold, m_thresholds);
+
+    //Initialise the HOG detector
+    m_hog.setSVMDetector(cv::HOGDescriptor::getDefaultPeopleDetector());
 
     //Determine if we're running in demo mode.
     opts->SetFamily("GLOBAL");
@@ -97,7 +103,12 @@ CameraStream::CameraStream(Options *opts)
     std::string f = GenerateFilename(
         PICOPTER_HOME_LOCATION "/videos", "save", ".mkv");
     Log(LOG_INFO, "Saving video to %s", f.c_str());
-    m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, (700 * INPUT_WIDTH)/320);
+    try {
+        m_enc = new OmxCv(f.c_str(), INPUT_WIDTH, INPUT_HEIGHT, (700 * INPUT_WIDTH)/320);
+    } catch (std::invalid_argument e) {
+        Log(LOG_WARNING, "Cannot save video: %s", e.what());
+        m_enc = nullptr;
+    }
 #endif
 
     //Start the worker thread.
@@ -177,12 +188,23 @@ int CameraStream::GetInputHeight() {
 void CameraStream::GetConfig(Options *config) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     config->SetFamily("CAMERA_STREAM");
-    config->Set("MIN_HUE", m_thresholds.hue_min);
-    config->Set("MAX_HUE", m_thresholds.hue_max);
-    config->Set("MIN_SAT", m_thresholds.sat_min);
-    config->Set("MAX_SAT", m_thresholds.sat_max);
-    config->Set("MIN_VAL", m_thresholds.val_min);
-    config->Set("MAX_VAL", m_thresholds.val_max);
+
+    config->Set("THRESH_COLOURSPACE", m_thresholds.colourspace);
+    if (m_thresholds.colourspace == THRESH_HSV) {
+        config->Set("MIN_HUE", m_thresholds.p1_min);
+        config->Set("MAX_HUE", m_thresholds.p1_max);
+        config->Set("MIN_SAT", m_thresholds.p2_min);
+        config->Set("MAX_SAT", m_thresholds.p2_max);
+        config->Set("MIN_VAL", m_thresholds.p3_min);
+        config->Set("MAX_VAL", m_thresholds.p3_max);
+    } else if (m_thresholds.colourspace == THRESH_YCbCr) {
+        config->Set("MIN_Y", m_thresholds.p1_min);
+        config->Set("MAX_Y", m_thresholds.p1_max);
+        config->Set("MIN_Cb", m_thresholds.p2_min);
+        config->Set("MAX_Cb", m_thresholds.p2_max);
+        config->Set("MIN_Cr", m_thresholds.p3_min);
+        config->Set("MAX_Cr", m_thresholds.p3_max);
+    }
     config->Set("SHOW_BACKEND", m_show_backend);
 }
 
@@ -193,16 +215,36 @@ void CameraStream::GetConfig(Options *config) {
 void CameraStream::SetConfig(Options *config) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     bool refresh = false, decrease = false;
+    int colourspace = THRESH_HSV;
 
     config->SetFamily("CAMERA_STREAM");
     config->GetBool("SHOW_BACKEND", &m_show_backend);
 
-    refresh |= config->GetInt("MIN_HUE", &m_thresholds.hue_min, -180, 180);
-    refresh |= config->GetInt("MAX_HUE", &m_thresholds.hue_max, 0, 180);
-    refresh |= config->GetInt("MIN_SAT", &m_thresholds.sat_min, 0, 255);
-    refresh |= config->GetInt("MAX_SAT", &m_thresholds.sat_max, 0, 255);
-    refresh |= config->GetInt("MIN_VAL", &m_thresholds.val_min, 0, 255);
-    refresh |= config->GetInt("MAX_VAL", &m_thresholds.val_max, 0, 255);
+
+    config->GetInt("THRESH_COLOURSPACE", &colourspace);
+    switch(colourspace) {
+        default: //Deliberate fall-through
+        case THRESH_HSV:
+            m_thresholds.colourspace = THRESH_HSV;
+            refresh |= config->GetInt("MIN_HUE", &m_thresholds.p1_min, -180, 180);
+            refresh |= config->GetInt("MAX_HUE", &m_thresholds.p1_max, 0, 180);
+            refresh |= config->GetInt("MIN_SAT", &m_thresholds.p2_min, 0, 255);
+            refresh |= config->GetInt("MAX_SAT", &m_thresholds.p2_max, 0, 255);
+            refresh |= config->GetInt("MIN_VAL", &m_thresholds.p3_min, 0, 255);
+            refresh |= config->GetInt("MAX_VAL", &m_thresholds.p3_max, 0, 255);
+            break;
+        case THRESH_YCbCr:
+            m_thresholds.colourspace = THRESH_YCbCr;
+            refresh |= config->GetInt("MIN_Y", &m_thresholds.p1_min, 0, 255);
+            refresh |= config->GetInt("MAX_Y", &m_thresholds.p1_max, 0, 255);
+            refresh |= config->GetInt("MIN_Cb", &m_thresholds.p2_min, 0, 255);
+            refresh |= config->GetInt("MAX_Cb", &m_thresholds.p2_max, 0, 255);
+            refresh |= config->GetInt("MIN_Cr", &m_thresholds.p3_min, 0, 255);
+            refresh |= config->GetInt("MAX_Cr", &m_thresholds.p3_max, 0, 255);
+            break;
+    }
+
+    m_learning_thresholds.colourspace = m_thresholds.colourspace;
 
     if (refresh) {
         BuildThreshold(m_lookup_threshold, m_thresholds);
@@ -210,9 +252,9 @@ void CameraStream::SetConfig(Options *config) {
 
     if (config->GetBool("SET_LEARNING_SIZE", &decrease)) {
         if (decrease) {
-            LEARN_SIZE = picopter::clamp(LEARN_SIZE-10, 20, 100);
+            LEARN_SIZE = picopter::clamp(LEARN_SIZE-10, 10, 100);
         } else {
-            LEARN_SIZE = picopter::clamp(LEARN_SIZE+10, 20, 100);
+            LEARN_SIZE = picopter::clamp(LEARN_SIZE+10, 10, 100);
         }
     }
 }
@@ -232,8 +274,15 @@ void CameraStream::SetHUDInfo(HUDInfo *hud) {
 void CameraStream::DoAutoLearning() {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     if (m_mode == CameraMode::MODE_LEARN_COLOUR) {
-        m_thresholds.hue_min = m_learning_thresholds.hue_min;
-        m_thresholds.hue_max = m_learning_thresholds.hue_max;
+        if (m_learning_thresholds.colourspace == THRESH_HSV) {
+            m_thresholds.p1_min = m_learning_thresholds.p1_min;
+            m_thresholds.p1_max = m_learning_thresholds.p1_max;
+        } else if (m_learning_thresholds.colourspace == THRESH_YCbCr) {
+            m_thresholds.p2_min = m_learning_thresholds.p2_min;
+            m_thresholds.p2_max = m_learning_thresholds.p2_max;
+            m_thresholds.p3_min = m_learning_thresholds.p3_min;
+            m_thresholds.p3_max = m_learning_thresholds.p3_max;
+        }
         BuildThreshold(m_lookup_threshold, m_thresholds);
     }
 }
@@ -254,7 +303,7 @@ bool CameraStream::TakePhoto(std::string filename) {
     return false;
 }
 
-/** 
+/**
  * Set an arrow to be displayed from the centre of the image.
  * @param [in] arrow The arrow vector, as percentage ([0-1] range for x,y,z)
  *             E.g. 100% vec.x draws an arrow from centre to the right side
@@ -272,8 +321,19 @@ void CameraStream::SetTrackingArrow(navigation::Point3D arrow) {
  */
 void CameraStream::ProcessImages() {
     static const std::vector<int> saveparams = {CV_IMWRITE_JPEG_QUALITY, 90};
-    int frame_counter = 0, frame_duration = 0;
+    static const std::vector<int> streamparams {CV_IMWRITE_JPEG_QUALITY, 75};
+    int frame_counter = 0, frame_duration = 0, skip_factor = 5;
     auto sampling_start = steady_clock::now();
+#ifdef IS_ON_PI
+    OmxCvJpeg *streamer = nullptr, *saver = nullptr;
+    try {
+        streamer = new OmxCvJpeg(STREAM_WIDTH, STREAM_HEIGHT, 75);
+        saver = new OmxCvJpeg(INPUT_WIDTH, INPUT_HEIGHT, 90);
+        skip_factor = 2;
+    } catch (std::invalid_argument e) {
+        Log(LOG_WARNING, "Cannot start hardware JPEG encoders: %s", e.what());
+    }
+#endif
 
     while (!m_stop) {
         std::unique_lock<std::mutex> lock(m_worker_mutex, std::defer_lock);
@@ -281,12 +341,17 @@ void CameraStream::ProcessImages() {
 
         //Grab image
         m_capture >> image;
-        
+
         //Acquire the mutex
         lock.lock();
-        
+
         //Save it, if requested to.
         if (m_save_photo) {
+#ifdef IS_ON_PI
+            if (saver) {
+                saver->Encode(m_save_filename.c_str(), image, true);
+            } else
+#endif
             cv::imwrite(m_save_filename, image, saveparams);
             m_save_photo = false;
          }
@@ -323,7 +388,8 @@ void CameraStream::ProcessImages() {
                 if(ConnectedComponents(image, backend) > 0) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
                 }
                 break;
@@ -331,7 +397,8 @@ void CameraStream::ProcessImages() {
                 if (CannyGlyphDetection(image, backend)) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
                 }
             break;
@@ -339,10 +406,25 @@ void CameraStream::ProcessImages() {
                 if (ThresholdingGlyphDetection(image, backend)) {
                     for(size_t i=0; i < m_detected.size(); i++) {
                         cv::rectangle(image, m_detected[i].bounds.tl(),
-                            m_detected[i].bounds.br(), m_colours[i%m_colours.size()]);
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
                     }
                 }
             break;
+            case MODE_HOUGH:
+                if (HoughDetection(image, backend)) {
+                    //??????
+                }
+            break;
+            case MODE_HOG_PEOPLE:
+                if (HOGPeople(image, backend)) {
+                    for (size_t i = 0; i < m_detected.size(); i++) {
+                        cv::rectangle(image, m_detected[i].bounds.tl(),
+                            m_detected[i].bounds.br(),
+                            m_colours[i%m_colours.size()], 2);
+                    }
+                }
+           break;
         }
 
         DrawCrosshair(image, cv::Point(image.cols/2, image.rows/2),
@@ -361,21 +443,26 @@ void CameraStream::ProcessImages() {
         }
 
 #ifdef IS_ON_PI
-        m_enc->Encode(image);
+        if (m_enc) {
+            m_enc->Encode(image);
+        }
 #endif
         //Stream image
         //Only write the image out for web streaming every 5th frame
-        if ((frame_counter % 5) == 0) {
-            static const std::vector<int> params {CV_IMWRITE_JPEG_QUALITY, 75};
+        if ((frame_counter % skip_factor) == 0) {
             if (m_show_backend) {
-                cv::imwrite(STREAM_FILE, backend, params);
+                cv::imwrite(STREAM_FILE, backend, streamparams);
             } else {
                 if (STREAM_WIDTH < INPUT_WIDTH) {
                     cv::resize(image, image,
-                        cv::Size(STREAM_WIDTH,
-                            (INPUT_HEIGHT * STREAM_WIDTH) / INPUT_WIDTH));
+                        cv::Size(STREAM_WIDTH, STREAM_HEIGHT));
                 }
-                cv::imwrite(STREAM_FILE, image, params);
+#ifdef IS_ON_PI
+                if (streamer) {
+                    streamer->Encode(STREAM_FILE, image);
+                } else
+#endif
+                cv::imwrite(STREAM_FILE, image, streamparams);
             }
         }
 
@@ -389,6 +476,10 @@ void CameraStream::ProcessImages() {
             //Log(LOG_INFO, "FPS: %.2f", m_fps);
         }
     }
+#ifdef IS_ON_PI
+    delete streamer;
+    delete saver;
+#endif
 }
 
 /**
@@ -408,11 +499,11 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     std::unique_lock<std::mutex> lock(m_aux_mutex);
     HUDInfo hud = m_hud;
     lock.unlock();
-    
+
     char string_buf[128];
     time_t ts = time(NULL) + hud.unix_time_offset;
     struct tm tsp;
-    
+
     //Enter the time
     localtime_r(&ts, &tsp);
     strftime(string_buf, sizeof(string_buf), "%H:%M:%S", &tsp);
@@ -429,7 +520,7 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     sprintf(string_buf, "L: %.2fm", hud.lidar);
     cv::putText(img, string_buf, cv::Point(70*img.cols/100, 20*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
-    
+
     //Enter the position
     sprintf(string_buf, "%.7f, %.7f", hud.pos.lat, hud.pos.lon);
     cv::putText(img, string_buf, cv::Point(5*img.cols/100, 5*img.rows/100),
@@ -446,7 +537,12 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     sprintf(string_buf, "GS: %.1fm/s AS:%.1f m/s", hud.ground_speed, hud.air_speed);
     cv::putText(img, string_buf, cv::Point(5*img.cols/100, 20*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
-    
+    //Enter the battery statistics
+    sprintf(string_buf, "%.2fV, %.1fA (%3d %%)",
+        hud.batt_voltage, hud.batt_current, hud.batt_remaining);
+    cv::putText(img, string_buf, cv::Point(5*img.cols/100, 25*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.32, cv::Scalar(255, 255, 255), 1, 8);
+
     if (hud.status2.size()) {
         cv::putText(img, hud.status2,  cv::Point(5*img.cols/100, 87*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
@@ -520,8 +616,24 @@ void CameraStream::RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t 
     } else {
         *h = 171 + 43 * (r-g)/delta;
     }
-    
+
     *h = (uint8_t)(((int)180*(*h))/255);
+}
+
+/**
+ * Converts to the Y'CbCr colourspace.
+ * @param [in] r The red value.
+ * @param [in] g The green value.
+ * @param [in] b The blue value.
+ * @param [in] y The luma component (0-255).
+ * @param [in] cb The blue difference component (0-255).
+ * @param [in] cr The red difference component (0-255).
+ * @return Return_Description
+ */
+void CameraStream::RGB2YCbCr(uint8_t r, uint8_t g, uint8_t b, uint8_t *y, uint8_t *cb, uint8_t *cr) {
+    *y = 0.299 * r + 0.587 * g + 0.114 * b;
+    *cb = -0.168736 * r - 0.331264 * g + 0.500 * b + 128;
+    *cr = 0.500 * r - 0.418688 * g - 0.081312 * b + 128;
 }
 
 /**
@@ -529,22 +641,35 @@ void CameraStream::RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t 
  * @param [out] lookup The lookup table.
  * @param [in] thresh The thresholding parameters.
  */
-void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], HueThresholds thresh) {
-    uint8_t r, g, b, h, s, v;
+void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], ThresholdParams thresh) {
+    uint8_t r, g, b;
     for(r = 0; r < THRESH_SIZE; r++) {
         for(g = 0; g < THRESH_SIZE; g++) {
             for(b = 0; b < THRESH_SIZE; b++) {
-                RGB2HSV(UNREDUCE(r), UNREDUCE(g), UNREDUCE(b), &h, &s, &v);
-
                 lookup[r][g][b] = 0;
-                if (v >= thresh.val_min && v <= thresh.val_max &&
-                    s >= thresh.sat_min && s <= thresh.sat_max) {
-                    if (thresh.hue_min < 0) {
-                        if ((h >= thresh.hue_min+180 && h <= 180) ||
-                            (h >= 0 && h <= thresh.hue_max)) {
-                                lookup[r][g][b] = 1;
-                            }
-                    } else if (h >= thresh.hue_min && h <= thresh.hue_max) {
+
+                if (thresh.colourspace == THRESH_HSV) {
+                    uint8_t h, s, v;
+                    RGB2HSV(UNREDUCE(r), UNREDUCE(g), UNREDUCE(b), &h, &s, &v);
+
+                    if (v >= thresh.p3_min && v <= thresh.p3_max &&
+                        s >= thresh.p2_min && s <= thresh.p2_max) {
+                        if (thresh.p1_min < 0) {
+                            if ((h >= thresh.p1_min+180 && h <= 180) ||
+                                (h >= 0 && h <= thresh.p1_max)) {
+                                    lookup[r][g][b] = 1;
+                                }
+                        } else if (h >= thresh.p1_min && h <= thresh.p1_max) {
+                            lookup[r][g][b] = 1;
+                        }
+                    }
+                } else if (thresh.colourspace == THRESH_YCbCr) {
+                    uint8_t y, cb, cr;
+                    RGB2YCbCr(UNREDUCE(r), UNREDUCE(g), UNREDUCE(b), &y, &cb, &cr);
+
+                    if (y >= thresh.p1_min && y <= thresh.p1_max &&
+                        cb >= thresh.p2_min && cb <= thresh.p2_max &&
+                        cr >= thresh.p3_min && cr <= thresh.p3_max) {
                         lookup[r][g][b] = 1;
                     }
                 }
@@ -584,20 +709,34 @@ void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
 void CameraStream::LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect roi) {
     cv::Mat sroi(src, roi);
     cv::medianBlur(sroi, sroi, 7);
-    cv::cvtColor(sroi, sroi, CV_BGR2HSV);
-    std::vector<cv::Mat> channels;
-    cv::split(sroi, channels);
+    if (m_learning_thresholds.colourspace == THRESH_HSV) {
+        cv::cvtColor(sroi, sroi, CV_BGR2HSV);
+        std::vector<cv::Mat> channels;
+        cv::split(sroi, channels);
 
-    cv::Scalar mean_hue = cv::mean(channels[0]);
-    m_learning_thresholds.hue_min = mean_hue[0]-10;
-    m_learning_thresholds.hue_max = mean_hue[0]+10;
-    if (m_learning_thresholds.hue_max > 180) {
-        m_learning_thresholds.hue_max -= 180;
+        cv::Scalar mean_hue = cv::mean(channels[0]);
+        m_learning_thresholds.p1_min = mean_hue[0]-10;
+        m_learning_thresholds.p1_max = mean_hue[0]+10;
+        if (m_learning_thresholds.p1_max > 180) {
+            m_learning_thresholds.p1_max -= 180;
+        }
+        if (m_learning_thresholds.p1_min > m_learning_thresholds.p1_max) {
+            m_learning_thresholds.p1_min -= 180;
+        }
+    } else if (m_learning_thresholds.colourspace == THRESH_YCbCr) {
+        cv::cvtColor(sroi, sroi, CV_BGR2YCrCb);
+        std::vector<cv::Mat> channels;
+        cv::split(sroi, channels);
+
+        cv::Scalar mean_cr = cv::mean(channels[1]);
+        cv::Scalar mean_cb = cv::mean(channels[2]);
+
+        m_learning_thresholds.p2_min = std::max((int)mean_cb[0]-15, 0);
+        m_learning_thresholds.p2_max = std::min((int)mean_cb[0]+15, 255);
+
+        m_learning_thresholds.p3_min = std::max((int)mean_cr[0]-15, 0);
+        m_learning_thresholds.p3_max = std::min((int)mean_cr[0]+15, 255);
     }
-    if (m_learning_thresholds.hue_min > m_learning_thresholds.hue_max) {
-        m_learning_thresholds.hue_min -= 180;
-    }
-    
     if (m_demo_mode) {
         cv::imshow("Thresholded image", threshold);
     }
@@ -661,14 +800,15 @@ int CameraStream::ConnectedComponents(cv::Mat& src, cv::Mat& threshold) {
     cv::findContours(threshold, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
     //Calculate the contour moments
-    std::vector<cv::Moments> comps(contours.size());
+    typedef std::pair<std::vector<cv::Point>*, cv::Moments> ctm_t;
+    std::vector<ctm_t> comps(contours.size());
     for(size_t i = 0; i < contours.size(); i++) {
-        comps[i] = cv::moments(contours[i], true);
+        comps[i] = ctm_t(&contours[i], cv::moments(contours[i], true));
     }
     //Sort moments in order of decreasing size (largest first)
     std::sort(comps.begin(), comps.end(),
-    [] (const cv::Moments &a, const cv::Moments &b) {
-        return (int)b.m00 < (int)a.m00;
+    [] (const ctm_t &a, const ctm_t &b) {
+        return (int)b.second.m00 < (int)a.second.m00;
     });
 
     m_detected.clear();
@@ -682,20 +822,19 @@ int CameraStream::ConnectedComponents(cv::Mat& src, cv::Mat& threshold) {
 
     //Calculate the locations on the original image (first 4 only)
     for(int k=0; k < 4 && k < (int)comps.size(); k++) {
-        if(comps[k].m00 > PIXEL_THRESHOLD) {
-            comps[k].m01 *= PIXEL_SKIP;
-            comps[k].m10 *= PIXEL_SKIP;
+        if(comps[k].second.m00 > PIXEL_THRESHOLD) {
+            comps[k].second.m01 *= PIXEL_SKIP;
+            comps[k].second.m10 *= PIXEL_SKIP;
 
             object.id = k;
-            object.position.x = comps[k].m10/comps[k].m00 - nCols/2;
-            object.position.y = -(comps[k].m01/comps[k].m00 - nRows/2);
+            object.position.x = comps[k].second.m10/comps[k].second.m00 - nCols/2;
+            object.position.y = -(comps[k].second.m01/comps[k].second.m00 - nRows/2);
 
-            //1.5: BOX_SIZE
-            int width = (1.5*PIXEL_SKIP*sqrt(comps[k].m00));
-            object.bounds.x = std::max(comps[k].m10/comps[k].m00 - width/2, 0.0);
-            object.bounds.y = std::max(comps[k].m01/comps[k].m00 - width/2, 0.0);
-            object.bounds.width = std::min(width, nCols - object.bounds.x);
-            object.bounds.height = std::min(width, nRows - object.bounds.y);
+            object.bounds = cv::boundingRect(*(comps[k].first));
+            object.bounds.x *= PIXEL_SKIP;
+            object.bounds.y *= PIXEL_SKIP;
+            object.bounds.width *= PIXEL_SKIP;
+            object.bounds.height *= PIXEL_SKIP;
             m_detected.push_back(object);
         }
     }
@@ -764,4 +903,40 @@ bool CameraStream::CamShift(cv::Mat& src, cv::Mat& threshold) {
     }
 
     return false;
+
+}
+
+/**
+ * Uses the HOG descriptor to detect people.
+ * @param [in] src The image to compute from.
+ * @param [in] process The process buffer.
+ * @return true iff people were detected.
+ */
+bool CameraStream::HOGPeople(cv::Mat &src, cv::Mat& process) {
+    std::vector<cv::Rect> found;
+
+    cv::resize(src, process, cv::Size(PROCESS_WIDTH, PROCESS_HEIGHT));
+    cv::cvtColor(process, process, CV_BGR2GRAY);
+    m_hog.detectMultiScale(process, found);
+    m_detected.clear();
+
+    if (m_demo_mode) {
+        cv::imshow("Thresholded image", process);
+    }
+
+    for (size_t i = 0; i < found.size(); i++) {
+        ObjectInfo object{};
+        cv::Rect r(found[i].x*PIXEL_SKIP, found[i].y*PIXEL_SKIP,
+                   found[i].width*PIXEL_SKIP, found[i].height*PIXEL_SKIP);
+
+        object.image_width = INPUT_WIDTH;
+        object.image_height = INPUT_HEIGHT;
+        object.position.x = r.x + r.width/2 - src.cols/2;
+        object.position.y = -(r.y + r.height/2) + src.rows/2;
+        object.bounds = r;
+        m_detected.push_back(object);
+        Log(LOG_DEBUG, "DETECTED HOG");
+    }
+
+    return m_detected.size() > 0;
 }

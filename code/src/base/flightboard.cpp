@@ -6,6 +6,7 @@
  */
 
 #include "common.h"
+#include "watchdog.h"
 #include "flightboard.h"
 #include "navigation.h"
 #include "gps_mav.h"
@@ -28,7 +29,6 @@ using std::chrono::duration_cast;
  */
 FlightBoard::FlightBoard(Options *opts)
 : m_heartbeat_timeout(HEARTBEAT_TIMEOUT_DEFAULT)
-, m_last_heartbeat(999)
 , m_shutdown{false}
 , m_disable_local{false}
 , m_system_id(0)
@@ -38,21 +38,23 @@ FlightBoard::FlightBoard(Options *opts)
 , m_is_rtl{false}
 , m_is_in_air{false}
 , m_is_armed{false}
+, m_has_home_position{false}
 , m_rel_watchdog(0)
 , m_gimbal{}
+, m_home_position{}
 , m_handler_table{}
 {
     if (opts) {
         opts->SetFamily("FLIGHTBOARD");
         m_heartbeat_timeout = opts->GetInt("HEARTBEAT_TIMEOUT", HEARTBEAT_TIMEOUT_DEFAULT);
     }
-    //Some increment past the timeout
-    m_last_heartbeat = m_heartbeat_timeout + 10;
     //m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
     try {
         m_link = new MAVCommsTCP("127.0.0.1", 5760);
+        Log(LOG_NOTICE, "Connected to the simulator on port 5760.");
     } catch (std::invalid_argument e) {
         m_link = new MAVCommsSerial("/dev/ttyAMA0", 115200);
+        Log(LOG_NOTICE, "Connected to the Pixhawk via /dev/ttyAMA0.");
     }
     
     m_gps = new GPSMAV(this, opts);
@@ -110,13 +112,41 @@ void FlightBoard::GetGimbalPose(EulerAngle *p) {
 }
 
 /**
+ * Get the home position, if any.
+ * NOTE: Without MAV_CMD_GET_HOME_POSITION being implemented by ArduCopter,
+ * the value here MAY NOT CORRESPOND to the actual home position of the copter!
+ * Especially if this software is started while the copter is flying!
+ * User beware.
+ * @param [out] p The location to store the home position.
+ * @return true iff the home position was returned.
+ */
+bool FlightBoard::GetHomePosition(navigation::Coord3D *p) {
+    bool has_home_position = m_has_home_position.load(std::memory_order_relaxed);
+    if (has_home_position) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        *p = m_home_position;
+        return true;
+    }
+    return false;
+}
+
+/**
  * Input loop to process MAVLink messages received from the copter (Pixhawk).
  */
 void FlightBoard::InputLoop() {
-    auto last_heartbeat = steady_clock::now() - seconds(m_heartbeat_timeout);
     mavlink_message_t msg;
     mavlink_heartbeat_t heartbeat;
+    std::atomic<bool> needs_refresh{true};
     
+    Watchdog wdog(m_heartbeat_timeout*1000, [this, &needs_refresh] {
+        m_is_auto_mode = false;
+        if (!needs_refresh) {
+            Log(LOG_WARNING, "Heartbeat timeout, disabling auto mode!");
+            needs_refresh = true;
+        }
+    });
+    
+    wdog.Start();
     while (!m_shutdown) {
         if (m_link->ReadMessage(&msg)) {
             switch (msg.msgid) {
@@ -125,6 +155,8 @@ void FlightBoard::InputLoop() {
                     
                     //Skip heartbeats that aren't from the copter
                     if (heartbeat.type != MAV_TYPE_GCS) {
+                        mavlink_message_t smsg;
+                        
                         m_is_auto_mode = (heartbeat.custom_mode == GUIDED);
                         m_is_rtl = (heartbeat.custom_mode == RTL);
                         m_is_in_air = (heartbeat.system_status == MAV_STATE_ACTIVE);
@@ -134,9 +166,35 @@ void FlightBoard::InputLoop() {
                         //heartbeat.type, heartbeat.base_mode, heartbeat.custom_mode, 
                         //heartbeat.system_status, (int)m_is_auto_mode);
                         
-                        if (m_last_heartbeat >= m_heartbeat_timeout) {
+                        if (heartbeat.base_mode & MAV_MODE_FLAG_SAFETY_ARMED) {
+                            if (!m_has_home_position) {
+                                //Apparently the home position is returned as
+                                //the first waypoint. For now, set the home
+                                //position as the current position, and request
+                                //the first waypoint. If we get that, use that
+                                //instead.
+                                GPSData d;
+                                m_gps->GetLatest(&d);
+                                if (!std::isnan(d.fix.lat) && !std::isnan(d.fix.lon)) {
+                                    m_home_position.lat = d.fix.lat;
+                                    m_home_position.lon = d.fix.lon;
+                                    std::atomic_thread_fence(std::memory_order_release);
+                                    m_has_home_position.store(true, std::memory_order_relaxed);
+                                    Log(LOG_NOTICE, "Home position set as: %.7f, %.7f",
+                                        d.fix.lat, d.fix.lon);
+                                }
+                                mavlink_msg_mission_request_pack(
+                                    m_system_id, m_flightboard_id, &smsg,
+                                    m_system_id, m_component_id, 0);
+                                m_link->WriteMessage(&smsg);
+                            }
+                        } else {
+                            //Need a new home position if we're not armed.
+                            m_has_home_position = false;
+                        }
+                        
+                        if (needs_refresh) {
                             mavlink_request_data_stream_t stream{};
-                            mavlink_message_t smsg;
 
                             m_system_id = msg.sysid;
                             m_component_id = msg.compid;
@@ -166,12 +224,35 @@ void FlightBoard::InputLoop() {
                             m_link->WriteMessage(&smsg);
                             //Time at 1Hz - only for syncing w/ copter (GPS).
                             stream.req_stream_id = MAV_DATA_STREAM_EXTRA3;
-                            stream.req_message_rate = 1;
                             mavlink_msg_request_data_stream_encode(
                                 m_system_id, m_flightboard_id, &smsg, &stream);
                             m_link->WriteMessage(&smsg);
+                            //Battery info at 1Hz.
+                            stream.req_stream_id = MAV_DATA_STREAM_EXTENDED_STATUS;
+                            mavlink_msg_request_data_stream_encode(
+                                m_system_id, m_flightboard_id, &smsg, &stream);
+                            m_link->WriteMessage(&smsg);
+                            
+                            needs_refresh = false;
                         }
-                        last_heartbeat = steady_clock::now();
+                        wdog.Touch();
+                    }
+                } break;
+                case MAVLINK_MSG_ID_MISSION_ITEM: {
+                    mavlink_mission_item_t item;
+                    mavlink_msg_mission_item_decode(&msg, &item);
+                    if (item.seq == 0) { //This is supposedly the home position.
+                        m_has_home_position = false;
+                        m_home_position.lat = item.x;
+                        m_home_position.lon = item.y;
+                        std::atomic_thread_fence(std::memory_order_release);
+                        m_has_home_position.store(true, std::memory_order_relaxed);
+                        Log(LOG_NOTICE, "Home position set via MI as: %.7f, %.7f",
+                            item.x, item.y);
+                        
+                    } else {
+                        Log(LOG_DEBUG, "Mission item! %d, %.7f, %.7f, %.1f",
+                            item.seq, item.x, item.y, item.z);
                     }
                 } break;
                 //case MAVLINK_MSG_ID_SYS_STATUS: {
@@ -207,13 +288,8 @@ void FlightBoard::InputLoop() {
                 }
             }
         }
-        m_last_heartbeat = duration_cast<seconds>(steady_clock::now()-last_heartbeat).count();
-        if (m_is_auto_mode && m_last_heartbeat >= m_heartbeat_timeout) {
-            Log(LOG_WARNING, "Heartbeat timeout (%d s); disabling auto mode!",
-                m_last_heartbeat);
-            m_is_auto_mode = false;
-        }
     }
+    wdog.Stop();
 }
 
 /**
@@ -391,9 +467,9 @@ bool FlightBoard::SetBodyVel(Vec3D v) {
         sp.vz = -picopter::clamp(v.z, -2.0, 2.0); //NED coords; flipped alt.
         
         //Safety: Try not to allow it to drop below 2m altitude above ground.
-        if (m_gps->GetLatestRelAlt() < 2.0) {
+        if (m_gps->GetLatestRelAlt() < 2.0 && sp.vz > 0) {
             Log(LOG_WARNING, "1m safety deadband activated!!!");
-            sp.vz = std::min(sp.vz, 0.0f);
+            sp.vz = 0;
         }
         
         m_disable_local = false; //Enable watchdog
