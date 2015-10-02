@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "waypoints.h"
+#include "pathplan.h"
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -21,7 +22,7 @@ using std::chrono::duration_cast;
  * @param [in] pts The set of waypoints to move to.
  * @param [in] method The method for moving through the specified waypoints.
  */
-Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method)
+Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::deque<Coord3D> > zones, WaypointMethod method)
 : m_pts(pts)
 , m_method(method)
 , m_update_interval(100)
@@ -76,13 +77,40 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod met
             m_waypoint_idle = opts->GetInt("SPIRAL_IDLE_TIME", 0);
         }
     }
+    
+    //Avoid collision zones.
+    if (zones.size() > 0) {
+        PathPlan plan;
+        for (std::deque<Coord3D> zone : zones) {
+            plan.addPolygon(zone);
+        }
+        m_pts = std::move(plan.generateFlightPlan(m_pts));
+    }
+    
+    //Write out the waypoints to file.
+    for (size_t i = 0; i < m_pts.size(); i++) {
+        if (m_pts[i].has_roi) {
+            m_log.Write(": Waypoint %d: (%.7f, %.7f, %.3f) [%.7f, %.7f, %.3f]",
+            i+1, m_pts[i].pt.lat, m_pts[i].pt.lon, m_pts[i].pt.alt,
+            m_pts[i].roi.lat, m_pts[i].roi.lon, m_pts[i].roi.alt);
+        } else {
+            m_log.Write(": Waypoint %d: (%.7f, %.7f, %.3f) []",
+            i+1, m_pts[i].pt.lat, m_pts[i].pt.lon, m_pts[i].pt.alt);
+        }
+    }
 }
 
 /** 
  * Constructor. Constructs with default settings.
  */
+Waypoints::Waypoints(std::deque<Waypoint> pts, std::deque<std::deque<Coord3D> > zones, WaypointMethod method)
+: Waypoints(NULL, pts, zones, method) {}
+
 Waypoints::Waypoints(std::deque<Waypoint> pts, WaypointMethod method)
-: Waypoints(NULL, pts, method) {}
+: Waypoints(NULL, pts, std::deque<std::deque<Coord3D> >(), method) {}
+
+Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method)
+: Waypoints(NULL, pts, std::deque<std::deque<Coord3D> >(), method) {}
 
 /**
  * Destructor.
@@ -221,6 +249,9 @@ void Waypoints::Run(FlightController *fc, void *opts) {
     double wp_distance, wp_alt_delta;
     std::vector<ObjectInfo> detected_objects;
     auto last_detection = steady_clock::now()-seconds(30); //Hysteresis for object detection
+    //Write out GPS data at about 2Hz.
+    int writeout_interval = std::max(500/m_update_interval, 1);
+    int writeout_counter = 0;
     
     Log(LOG_INFO, "Waypoints movement initiated; awaiting authorisation...");
     SetCurrentState(fc, STATE_AWAITING_AUTH);
@@ -248,8 +279,13 @@ void Waypoints::Run(FlightController *fc, void *opts) {
             return;
         }
         
+        fc->gps->GetLatest(&d);
+        if ((writeout_counter++ % writeout_interval) == 0) {
+            m_log.Write(": At: (%.7f, %.7f, %.3f) [%.3f]",
+                d.fix.lat, d.fix.lon, d.fix.alt - d.fix.groundalt, d.fix.heading);
+        }
+            
         if (at_seq < req_seq) {
-            fc->gps->GetLatest(&d);
             wp_distance = CoordDistance(d.fix, next_point.pt);
             wp_alt_delta = next_point.pt.alt != 0 ? 
                 std::fabs((d.fix.alt-d.fix.groundalt)-next_point.pt.alt) : 0;
@@ -303,11 +339,11 @@ void Waypoints::Run(FlightController *fc, void *opts) {
                 
                 fc->cam->TakePhoto(path);
                 fc->gps->GetLatest(&d);
-                m_log.Write(" Detected object: ID: %d", object.id);
-                m_log.Write(" Location: (%.7f, %.7f) at %.2fm", 
-                    d.fix.lat, d.fix.lon, d.fix.alt-d.fix.groundalt);
-                m_log.Write(" Image: %s", path.c_str());
-                m_log.Write(" Object count in frame: %d", detected_objects.size());
+                m_log.Write(": Detected object: ID: %d", object.id);
+                m_log.Write(": Location: (%.7f, %.7f, %.3f) [%.3f]", 
+                    d.fix.lat, d.fix.lon, d.fix.alt-d.fix.groundalt, d.fix.heading);
+                m_log.Write(": Image: %s", path.c_str());
+                m_log.Write(": Object count in frame: %d", detected_objects.size());
                 last_detection = steady_clock::now();
                 
                 Log(LOG_INFO, "Continuing...");

@@ -80,6 +80,40 @@ L.NumberedDivIconRed = L.Icon.extend({
 	}
 });
 
+L.NumberedDetectionIcon = L.Icon.extend({
+	options: {
+    // EDIT THIS TO POINT TO THE FILE AT http://www.charliecroom.com/marker_hole.png (or your own marker)
+    iconUrl: 'css/markers/marker_poi.png',
+    number: '',
+    shadowUrl: null,
+    iconSize: new L.Point(25, 41),
+		iconAnchor: new L.Point(13, 41),
+		popupAnchor: new L.Point(0, -33),
+		/*
+		iconAnchor: (Point)
+		popupAnchor: (Point)
+		*/
+		className: 'leaflet-div-icon'
+	},
+
+	createIcon: function () {
+		var div = document.createElement('div');
+		var img = this._createImg(this.options['iconUrl']);
+		var numdiv = document.createElement('div');
+		numdiv.setAttribute ( "class", "number" );
+		numdiv.innerHTML = this.options['number'] || '';
+		div.appendChild ( img );
+		div.appendChild ( numdiv );
+		this._setIconStyles(div, 'icon');
+		return div;
+	},
+
+	//you could change this to add a shadow like in the normal marker if you really wanted
+	createShadow: function () {
+		return null;
+	}
+});
+
 /*********************************PLUGIN START*********************************/
 
 /* Data structure
@@ -135,9 +169,11 @@ L.NumberedDivIconRed = L.Icon.extend({
        * @param [in] location The location to add the marker at.
        * @param [in] draggable Whether or not this marker is draggable.
        * @param [in] readonly Whether or not this marker is editable.
+       * @param [in] icf The icon factory to use, if any.
        */
-      this.addNumberedMarker = function(markerList, location, draggable, readonly) {
-        var iconFactory = draggable ? L.NumberedDivIconRed : L.NumberedDivIcon;
+      this.addNumberedMarker = function(markerList, location, draggable, readonly, icf) {
+        var iconFactory = icf ? icf :
+          draggable ? L.NumberedDivIconRed : L.NumberedDivIcon;
         var icon = new iconFactory({number : (markerList.length + 1)});
         var marker = new L.marker(location, {
           draggable: draggable,
@@ -189,8 +225,9 @@ L.NumberedDivIconRed = L.Icon.extend({
        * @param [in] detection The detection data.
        */
       this.addDetection = function(detection) {
+        var icon = {};
         var latlng = L.latLng(detection.lat, detection.lon);
-        instance.addNumberedMarker(data.dctMarkers, latlng, false, true);
+        instance.addNumberedMarker(data.dctMarkers, latlng, false, true, L.NumberedDetectionIcon);
         var marker = data.dctMarkers[data.dctMarkers.length-1];
         marker.bindPopup("<img src=\""+detection.image+"\">" + 
           "<br>Time: " + detection.timestamp +

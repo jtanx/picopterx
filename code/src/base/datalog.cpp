@@ -28,26 +28,6 @@ static struct tm GetTimestamp() {
 }
 
 /**
- * Generates the timestamp to be used for all log files for this session.
- * @return The timestamp to be used.
- */
-static const char* FileTimestamp() {
-    static char buf[20];
-    static bool initted = false;
-    static std::mutex mutex;
-    
-    std::lock_guard<std::mutex> lock(mutex);
-    if (!initted) {
-        struct tm ts = GetTimestamp();
-        snprintf(buf, 20, "%04d%02d%02dT%02d%02d%02d",
-                 ts.tm_year+1900, ts.tm_mon+1, ts.tm_mday,
-                 ts.tm_hour, ts.tm_min, ts.tm_sec);
-        initted = true;
-    }
-    return buf;
-}
-
-/**
  * Creates a log file for logging *data*.
  * The filename will be of the form 'file-*timestamp*.txt'.
  * The *timestamp* is that from FileTimestamp. If the file exists, it will be
@@ -61,15 +41,17 @@ static const char* FileTimestamp() {
  */
 DataLog::DataLog(const char *file, bool log_startstop, const char *location)
 : m_log_startstop(log_startstop)
-, m_serial(FileTimestamp())
 {
-    char buf[BUFSIZ];
-    snprintf(buf, BUFSIZ, "%s/%s-%s.txt", location, file, m_serial.c_str());
-    m_fp = fopen(buf, "w+");
+    std::string path = GenerateFilename(location, file, ".txt");
+    m_fp = fopen(path.c_str(), "w+");
     if (!m_fp) {
         Log(LOG_WARNING, "Could not open log for writing, falling back to stderr: %s", file);
         m_fp = stderr;
     }
+    
+    size_t off = strlen(file) + strlen(location) + 2;
+    m_serial = path.substr(off, path.size()-off-4);
+    
     if (log_startstop) {
         Write(": Log started");
     }

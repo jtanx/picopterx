@@ -248,6 +248,7 @@
                   <a href="#" class="btn btn-default" onclick='detectionShow()'>Show</a>
                   <a href="#" class="btn btn-default dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></a>
                   <ul class="dropdown-menu">
+                    <li><a href="#" onclick='detectionExport()'>Export (GPX)</a></li>
                     <li><a href="#" onclick='detectionClear()'>Clear</a></li>
                     <li class="divider"></li>
                     <li><a href="#" onclick='getDetectedObjects()'>Refresh</a></li>

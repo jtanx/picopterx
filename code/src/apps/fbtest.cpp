@@ -18,7 +18,7 @@ void loop(FlightController *fc) {
         Vec3D v = {x/100.0*4, y/100.0*4, z/100.0*4};
         fc->fb->SetBodyVel(v);
         if (w != 0) {
-            fc->fb->SetYaw((w*20)/100, true);
+            fc->fb->SetYaw(w, false);
         }
         sleep_for(milliseconds(200));
     }
