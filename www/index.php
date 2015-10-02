@@ -174,6 +174,8 @@
             <tbody>
             </tbody>
             </table>
+            <!-- Hit it with a hammer -->
+            <button class="btn btn-default" onclick="$('#waypoint-editor input').trigger('change')">Update</button>
           </div>
         </div>
         

@@ -437,11 +437,12 @@ L.NumberedDetectionIcon = L.Icon.extend({
             if (type === "lat") {
               ll.lat = value;
             } else if (type === "lon") {
-              ll.lon = value;
+              ll.lng = value;
             } else if (type === "alt") {
               markers[index].alt = value;
             }
             markers[index].setLatLng(ll).update();
+            instance.updateWptPath();
           }
         }
       }
