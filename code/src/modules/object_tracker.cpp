@@ -428,8 +428,8 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     
     double L = FOCAL_LENGTH * object->image_width;     
     Vec3d RelCam(object->position.y, object->position.x, L);    
-    double theta = RAD2DEG(atan2(RelCam[0],RelCam[2])); //Pitch angle of target in camera frame from vertical    
-    double phi   = RAD2DEG(atan2(RelCam[1],RelCam[2])); //Roll angle of target in camera frame from vertical     
+    double phi   = RAD2DEG(-atan2(RelCam[1],RelCam[2])); //Roll angle of target in camera frame from vertical
+    double theta = RAD2DEG( atan2(RelCam[0],RelCam[2])); //Pitch angle of target in camera frame from vertical
     
     Matx33d Mblob = rotationMatrix(phi,theta,0);   //the angle between the camera normal and the blob (deg)
     //find the transformation matrix from camera frame to ground.
@@ -763,9 +763,7 @@ void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *i
     m_pidx.SetSetPoint(0);  //We can't use set-points properly because the PID loops need to cooperate between pitch and roll.
     m_pidy.SetSetPoint(0);  //maybe swap x,y out for PID on distance and object bearing?
 
-    //Now we can take full advantage of this omnidirectional platform.
     //m_pidw.SetProcessValue(-phi);
-
     m_pidx.SetProcessValue(-(phi_mat * offset)(0));
     m_pidy.SetProcessValue(-(phi_mat * offset)(1));
     //m_pidx.SetProcessValue(-offset(0));
