@@ -50,6 +50,7 @@
               <ul class="dropdown-menu">
                 <li><a aria-expanded="false" href="#sidebar-joy" data-toggle="tab">Joystick control</a></li>
                 <li><a aria-expanded="false" href="#sidebar-calibration" data-toggle="tab">Camera calibration</a></li>
+                <li><a aria-expanded="false" href="#sidebar-data-review" data-toggle="tab">Data review</a></li>
                 <li><a aria-expanded="false" href="#sidebar-interface" data-toggle="tab">Interface settings</a></li>
               </ul>
             </li>
@@ -242,23 +243,6 @@
                   <a href="#" class="btn btn-default btn-block btn-control" onclick="beginUserMapping()">Take Picture</a>
                   <a href="pics/" class="btn btn-success btn-block">Download</a>
                 </p>
-                <p>
-                  <select id="detection-review" class="input-large form-control">
-                  </select>
-                </p>
-                <div class="btn-group">
-                  <a href="#" class="btn btn-default" onclick='detectionShow()'>Show</a>
-                  <a href="#" class="btn btn-default dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></a>
-                  <ul class="dropdown-menu">
-                    <li><a href="#" onclick='detectionExport()'>Export (GPX)</a></li>
-                    <li><a href="#" onclick='detectionClear()'>Clear</a></li>
-                    <li class="divider"></li>
-                    <li><a href="#" onclick='getDetectedObjects()'>Refresh</a></li>
-                  </ul>
-                </div>
-                <div class="btn-group">
-                  <a href="#" class="btn btn-default btn-control" onclick='detectionClear()'>Clear</a>
-                </div>
               </div>
             </div>
             <!-- Joystick control sidebar -->
@@ -387,7 +371,32 @@
                 </div>
               </div>
             </div>
-            <!-- General control sidebar -->
+            <!-- Data review sidebar -->
+            <div id="sidebar-data-review" class="tab-pane panel panel-primary">
+              <div class="panel-heading">
+                <h3 class="panel-title">Data review</h3>
+              </div>
+              <div class="panel-body">
+                <p>
+                  <label>Waypoints data log</label>
+                  <select id="detection-review" class="input-large form-control">
+                  </select>
+                </p>
+                
+                <div class="btn-group btn-block">
+                  <a href="#" class="btn btn-primary btn-block-dropdown" onclick='detectionShow()'>Show</a>
+                  <a href="#" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></a>
+                  <ul class="dropdown-menu">
+                    <li><a href="#" onclick='detectionExport()'>Export (GPX)</a></li>
+                    <li><a href="#" onclick='detectionClear()'>Clear</a></li>
+                    <li class="divider"></li>
+                    <li><a href="#" onclick='getDetectedObjects()'>Refresh</a></li>
+                  </ul>
+                </div>
+                <a href="videos" class="btn btn-default btn-block btn-control">Download video</a>
+                <a href="pics" class="btn btn-default btn-block btn-control">Download pictures</a>
+              </div>
+            </div>
             <!--
             <div id="sidebar-general" class="tab-pane panel panel-primary">
               <div class="panel-heading">
