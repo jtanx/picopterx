@@ -41,7 +41,9 @@ static void GlyphUnpickler(const void *val, void *closure) {
                 g.description = vv->GetString();
             }
             
-             g.image = cv::imread(g.path);
+            g.image = cv::imread(g.path);
+            cv::cvtColor(g.image, g.image, CV_BGR2GRAY);
+            cv::inRange(g.image, cv::Scalar(0), cv::Scalar(100), g.image);
             if (g.image.data == NULL) {
                 Log(LOG_WARNING, "Glyph %s does not exist! Skipping!", g.path.c_str());
             } else {
@@ -116,11 +118,11 @@ static std::vector<cv::Point2f> OrderPoints(std::vector<cv::Point>& pts) {
  */
 static bool WarpPerspective(cv::Mat &in, cv::Mat &out, std::vector<cv::Point2f> &src) {
     cv::Rect b = std::move(cv::boundingRect(src));
-    float ratio = static_cast<float>(b.width)/b.height;
+    //float ratio = static_cast<float>(b.width)/b.height;
     
     //Discard largely non-square images
-    if (ratio < 0.4 || ratio > 1.6)
-        return false;
+    //if (ratio < 0.4 || ratio > 1.6)
+    //    return false;
     
     std::vector<cv::Point2f> dst{cv::Point2f(0,0), cv::Point2f(b.width-1, 0),
         cv::Point2f(b.width-1,b.height-1), cv::Point2f(0, b.height-1)};
@@ -146,7 +148,8 @@ bool CameraStream::GlyphDetection(cv::Mat &src, cv::Mat& roi, cv::Rect bounds) {
     if (m_glyphs.size() > 0) {
         cv::resize(roi, rquad, 
             cv::Size(m_glyphs[0].image.cols, m_glyphs[0].image.rows));
-        cv::normalize(rquad, rquad, 0, 255, cv::NORM_MINMAX, CV_8UC3);
+        cv::cvtColor(rquad, rquad, CV_BGR2GRAY);
+        cv::inRange(rquad, cv::Scalar(0), cv::Scalar(100), rquad);
     }
     
     for(size_t i = 0; i < m_glyphs.size(); i++) {
@@ -154,11 +157,15 @@ bool CameraStream::GlyphDetection(cv::Mat &src, cv::Mat& roi, cv::Rect bounds) {
         if (rquad.cols != m_glyphs[i].image.cols || rquad.rows != m_glyphs[i].image.rows) {
             cv::resize(roi, rquad, 
                 cv::Size(m_glyphs[i].image.cols, m_glyphs[i].image.rows));
+            cv::cvtColor(rquad, rquad, CV_BGR2GRAY);
+            cv::inRange(rquad, cv::Scalar(0), cv::Scalar(100), rquad);
         }
         
         //Display the warped and resized image
         if (m_demo_mode) {
             cv::imshow("Test", rquad);
+            //cv::imwrite("test.png", rquad);
+            //cv::waitKey(0);
         }
         
         //Perform template matching. This is the bottleneck if the template image is large.
@@ -200,16 +207,19 @@ bool CameraStream::GlyphContourDetection(cv::Mat& src, std::vector<std::vector<c
     m_detected.clear();
     
     for (size_t i = 0; i < contours.size(); i++) {
-        double perimiter = cv::arcLength(contours[i], true);
-        std::vector<cv::Point> approx;
-        cv::approxPolyDP(contours[i], approx, 0.01*perimiter, true);
-        
-        if (approx.size() == 4 && cv::isContourConvex(approx)) { //We probably have a quad.
-            cv::Mat quad;
-            std::vector<cv::Point2f> pts = std::move(OrderPoints(approx));
+        double area = cv::contourArea(contours[i]);
+        if (area > 10) {
+            double perimiter = cv::arcLength(contours[i], true);
+            std::vector<cv::Point> approx;
+            cv::approxPolyDP(contours[i], approx, 0.01*perimiter, true);
             
-            if (WarpPerspective(src, quad, pts)) {
-                ret = GlyphDetection(src, quad, cv::boundingRect(pts));
+            if (approx.size() == 4 && cv::isContourConvex(approx)) { //We probably have a quad.
+                cv::Mat quad;
+                std::vector<cv::Point2f> pts = std::move(OrderPoints(approx));
+                
+                if (WarpPerspective(src, quad, pts)) {
+                    ret |= GlyphDetection(src, quad, cv::boundingRect(pts));
+                }
             }
         }
     }
@@ -236,6 +246,7 @@ bool CameraStream::CannyGlyphDetection(cv::Mat& src, cv::Mat& proc) {
     
     if (m_demo_mode) {
         cv::imshow("Thresholded image", proc);
+        //cv::imwrite("glyph_canny.png", proc);
         cv::waitKey(1);
     }
     
@@ -243,6 +254,10 @@ bool CameraStream::CannyGlyphDetection(cv::Mat& src, cv::Mat& proc) {
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(proc, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
     std::sort(contours.begin(), contours.end(), ContourSort);
+    if (contours.size() > 10) {
+        contours.resize(10);
+    }
+    
     //Translate from threshold point space back into source point space.
     //I'm sure there's an OpenCV way to do this with matrices, but whatever.
     for (size_t i = 0; i < contours.size(); i++) {
@@ -285,6 +300,10 @@ bool CameraStream::ThresholdingGlyphDetection(cv::Mat& src, cv::Mat& threshold) 
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(threshold, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
     std::sort(contours.begin(), contours.end(), ContourSort);
+    if (contours.size() > 10) {
+        contours.resize(10);
+    }
+    
     //Translate from threshold point space back into source point space.
     //I'm sure there's an OpenCV way to do this with matrices, but whatever.
     for (size_t i = 0; i < contours.size(); i++) {
