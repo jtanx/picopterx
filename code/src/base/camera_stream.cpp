@@ -851,7 +851,7 @@ bool CameraStream::CamShift(cv::Mat& src, cv::Mat& threshold) {
     static cv::Rect roi_bounds(0,0,0,0); //FIXME make non-static
     static cv::Mat hist;
     static int capcount = 0;
-    static int smin = 30, vmin = 10, vmax = 256;
+    static int smin = 100, vmin = 130, vmax = 256;
     // we compute the histogram from the 0-th and 1-st channels
     int channels[] = {0, 1};
     // hue varies from 0 to 179, see cvtColor
@@ -881,9 +881,13 @@ bool CameraStream::CamShift(cv::Mat& src, cv::Mat& threshold) {
             capcount = 0;
         }
     } else {
-        cv::Mat dst;
+        cv::Mat dst, mask;
         cv::cvtColor(src, dst, CV_BGR2HSV);
+        cv::inRange(dst, cv::Scalar(0, smin, std::min(vmin, vmax)),
+                        cv::Scalar(180, 256, std::max(vmin, vmax)), mask);
         cv::calcBackProject(&dst, 1, channels, hist, threshold, ranges);
+        threshold &= mask;
+        
         if (m_demo_mode) {
             cv::imshow("Thresholded image", threshold);
         }
