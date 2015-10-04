@@ -592,6 +592,50 @@ bool FlightBoard::SetYaw(int bearing, bool relative) {
 }
 
 /**
+ * Sets the gimbal pose.
+ * @param [in] pose the desired pose of the gimbal
+ * @return true iff the command was sent.
+ */
+bool FlightBoard::SetGimbalPose(EulerAngle pose) {
+    mavlink_message_t msg;
+    mavlink_command_long_t gimbal = {};
+    gimbal.command = MAV_CMD_DO_MOUNT_CONTROL;
+    gimbal.target_system = m_system_id;
+    gimbal.target_component = m_component_id;
+    gimbal.param1 = pose.pitch; //pitch in deg
+    gimbal.param2 = pose.roll; //roll
+    gimbal.param3 = pose.yaw;   //yaw
+    gimbal.param4 = 0;
+    gimbal.param5 = 0;
+    gimbal.param6 = 0;
+    gimbal.param7 = MAV_MOUNT_MODE_RC_TARGETING;   //mount mode
+    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &gimbal);
+    m_link->WriteMessage(&msg);
+    return true;
+}
+
+/**
+ * Set up the gimbal.
+ * @param [in] pose the desired pose of the gimbal
+ * @return true iff the command was sent.
+ */
+bool FlightBoard::ConfigureGimbal() {
+    mavlink_message_t msg;
+    mavlink_command_long_t gimbal = {};
+    gimbal.command = MAV_CMD_DO_MOUNT_CONFIGURE;
+    gimbal.target_system = m_system_id;
+    gimbal.target_component = m_component_id;
+    gimbal.param1 = MAV_MOUNT_MODE_RC_TARGETING; //pitch in deg
+    gimbal.param1 = 0; //don't stabilize
+    gimbal.param2 = 0; //don't stabilize
+    gimbal.param3 = 0; //don't stabilize
+    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &gimbal);
+    m_link->WriteMessage(&msg);
+    return true;
+}
+
+
+/**
  * Determines if the system is in auto mode.
  * This means that the Pixhawk is in guided mode. Where we can send commands. 
  * @return true iff in auto mode. 

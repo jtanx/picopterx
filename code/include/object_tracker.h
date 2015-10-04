@@ -67,7 +67,8 @@ namespace picopter {
             navigation::Coord3D launch_point;       //centre and orientation of the ground coordinate system
 
             bool m_observation_mode;
-
+            bool m_demo_mode;
+            int waypoint_seq = 0;
             PID m_pidw, m_pidx, m_pidy;//, m_pidz;
             std::atomic<TrackMethod> m_track_method;
             std::atomic<bool> m_finished;
@@ -84,6 +85,7 @@ namespace picopter {
             bool print_observation_map;
             int observation_map_count = 0;
 
+
             //void EstimatePositionFromImageCoords(GPSData *pos, navigation::EulerAngle *gimbal, IMUData *imu_data, ObjectInfo *object, double lidar_range);
 
             //void AbsoluteFromRelative(GPSData *pos, IMUData *imu_data, ObjectInfo *object);
@@ -91,7 +93,7 @@ namespace picopter {
 
             
             void CalculatePath(FlightController *fc, GPSData *pos,  IMUData *imu_data, navigation::Coord3D dest, navigation::Coord3D Poi, navigation::Vec3D *course);
-
+            void PathWaypoint(FlightController *fc, GPSData *pos, IMUData *imu_data, navigation::Coord3D dest, navigation::Coord3D poi);
             bool UseLidar(ObjectInfo *object, double lidar_range);
 
             /** Copy constructor (disabled) **/
