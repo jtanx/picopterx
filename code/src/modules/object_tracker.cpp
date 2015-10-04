@@ -186,14 +186,14 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
     Mat observation_map(observation_image_rows, observation_image_cols, CV_8UC4);
 
-    EulerAngle pose;
-    pose.roll = 0;
-    pose.pitch = 45;
-    pose.yaw = 0;
-    fc->fb->ConfigureGimbal();
+    //EulerAngle pose;
+    //pose.roll = 0;
+    //pose.pitch = 45;
+    //pose.yaw = 0;
+    //fc->fb->ConfigureGimbal();
 
     while (!fc->CheckForStop()) {
-        fc->fb->SetGimbalPose(pose);
+        //fc->fb->SetGimbalPose(pose);
 
         last_loop = loop_start;
         loop_start = steady_clock::now() - m_task_start;
