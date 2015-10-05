@@ -598,18 +598,17 @@ bool FlightBoard::SetYaw(int bearing, bool relative) {
  */
 bool FlightBoard::SetGimbalPose(EulerAngle pose) {
     mavlink_message_t msg;
-    mavlink_command_long_t gimbal = {};
-    gimbal.command = MAV_CMD_DO_MOUNT_CONTROL;
+    mavlink_mount_control_t gimbal = {};
+    //gimbal.command = MAV_CMD_DO_MOUNT_CONTROL;
     gimbal.target_system = m_system_id;
     gimbal.target_component = m_component_id;
-    gimbal.param1 = pose.pitch; //pitch in deg
-    gimbal.param2 = pose.roll; //roll
-    gimbal.param3 = pose.yaw;   //yaw
-    gimbal.param4 = 0;
-    gimbal.param5 = 0;
-    gimbal.param6 = 0;
-    gimbal.param7 = MAV_MOUNT_MODE_RC_TARGETING;   //mount mode
-    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &gimbal);
+    gimbal.input_a = pose.pitch*100; //pitch in deg
+    gimbal.input_b = pose.roll*100; //roll
+    gimbal.input_c = pose.yaw*100;   //yaw
+    gimbal.save_position = 0;
+
+    mavlink_msg_mount_control_encode(m_system_id,  m_flightboard_id, &msg, &gimbal);
+    //mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &gimbal);
     m_link->WriteMessage(&msg);
     return true;
 }
@@ -621,15 +620,17 @@ bool FlightBoard::SetGimbalPose(EulerAngle pose) {
  */
 bool FlightBoard::ConfigureGimbal() {
     mavlink_message_t msg;
-    mavlink_command_long_t gimbal = {};
-    gimbal.command = MAV_CMD_DO_MOUNT_CONFIGURE;
+    mavlink_mount_configure_t gimbal = {};
+    //gimbal.command = MAVLINK_MSG_ID_MOUNT_CONFIGURE;
     gimbal.target_system = m_system_id;
     gimbal.target_component = m_component_id;
-    gimbal.param1 = MAV_MOUNT_MODE_RC_TARGETING; //pitch in deg
-    gimbal.param1 = 0; //don't stabilize
-    gimbal.param2 = 0; //don't stabilize
-    gimbal.param3 = 0; //don't stabilize
-    mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &gimbal);
+    gimbal.mount_mode = MAV_MOUNT_MODE_MAVLINK_TARGETING; //pitch in deg
+    gimbal.stab_roll = 0; //don't stabilize
+    gimbal.stab_pitch = 0; //don't stabilize
+    gimbal.stab_yaw = 0; //don't stabilize
+   
+    mavlink_msg_mount_configure_encode(m_system_id, m_flightboard_id, &msg, &gimbal);
+    //mavlink_msg_command_long_encode(m_system_id, m_flightboard_id, &msg, &gimbal);
     m_link->WriteMessage(&msg);
     return true;
 }
