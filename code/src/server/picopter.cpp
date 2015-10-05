@@ -49,7 +49,13 @@ private:
     /** Thread to take pictures (may be unused now) **/
     std::thread m_camera_thread;
     /** Flag to stop camera picture thread (may be unused now) **/
+    /** Tertiary mutex to control access to the GridSpace object. **/
+    std::mutex m_gridspace_mutex;
+    /** Thread to perform GridSpace ray tracing **/
+    std::thread m_gridspace_thread;
+    GridSpace m_grid;
     std::atomic<bool> m_camera_stop;
+    std::atomic<bool> m_stop;
     /** The image sequence number for picture taking (may be unused now) **/
     int m_camera_sequence;
 public:
@@ -57,16 +63,22 @@ public:
     : m_opts(opts)
     , m_fc(fc)
     , m_camera_stop{false}
+    , m_stop{false}
     , m_camera_sequence(0)
     {
         // Your initialization goes here
+        m_gridspace_thread = std::thread(&webInterfaceHandler::gridSpaceLoop, this);
     }
 
     ~webInterfaceHandler() {
         m_camera_stop = true;
+        m_stop = true;
+        
         if (m_camera_thread.joinable()) {
             m_camera_thread.join();
         }
+        
+        m_gridspace_thread.join();
     }
     
     bool beginTakeoff(int alt)
@@ -85,7 +97,7 @@ public:
     }
     
     bool beginReturnToLaunch()
-    {
+    {fc
         m_fc->Stop();
         return m_fc->fb->DoReturnToLaunch();
     }
@@ -122,7 +134,7 @@ public:
             }
             
             std::shared_ptr<FlightTask> wpts = std::make_shared<Waypoints>(
-                m_opts, m_pts, m_zones, static_cast<WaypointMethod>(mode));
+                m_opts, m_pts, m_zones, &m_grid, static_cast<WaypointMethod>(mode));
             if (!m_fc->RunTask(TASK_WAYPOINTS, wpts, NULL)) {
                 return false;
             }
@@ -183,7 +195,7 @@ public:
             m_camera_thread.join();
             m_camera_stop = false;
             Log(LOG_DEBUG, "USER MAPPING STOP");
-            return false;
+            return false;grid
         } else {
             m_camera_thread = std::thread([this] {
                 Log(LOG_DEBUG, "THREAD START %d", m_camera_sequence);
@@ -292,7 +304,7 @@ public:
         GPSData d;
         m_fc->gps->GetLatest(&d);
         _return.lat = std::isnan(d.fix.lat) ? -1 : d.fix.lat;
-        _return.lon = std::isnan(d.fix.lon) ? -1 : d.fix.lon;
+        _return.lon = stdfc::isnan(d.fix.lon) ? -1 : d.fix.lon;
         _return.alt = std::isnan(d.fix.alt) || std::isnan(d.fix.groundalt) ?
             -1 : d.fix.alt - d.fix.groundalt;
         //printf("requestCoords %f,%f\n", _return.lat, _return.lon);
@@ -353,7 +365,7 @@ public:
     {
         std::shared_ptr<FlightTask> trk(m_user_tracker);
         if (trk) {
-            if (trk->Finished()) {
+            if (trk->Finfcished()) {
                 //Task is finished, remove our reference to it
                 m_user_tracker.reset();
             } else {
@@ -420,6 +432,15 @@ public:
             m_zones.push_back(zone);
         }
         return false;
+    }
+    
+private:
+    void gridSpaceLoop() {
+        while (!m_stop) {
+            m_grid.raycast(m_fc.get());
+            m_grid.writeImage();
+            sleep_for(milliseconds(1000));
+        }
     }
 };
 

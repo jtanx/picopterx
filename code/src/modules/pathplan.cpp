@@ -13,7 +13,7 @@ using namespace picopter::navigation;
 /** 
  * Constructor. Constructs with default settings.
  */
-PathPlan::PathPlan(){
+PathPlan::PathPlan(GridSpace *g){
     numNodes = 0;
     //errorRadius = 2*asin(6.0 / (2*6378137.00) );//6 metres
     errorRadius = 0.00003;
@@ -32,6 +32,10 @@ PathPlan::PathPlan(){
             paths[i][j] = -1.0;
         }
     }
+    
+    //point to gridspace world, create polygons around obstacles
+    gridSpace = g;
+    readGridSpace();
 }
 
 /** 
@@ -404,7 +408,39 @@ void PathPlan::generateGraph(){
 
 }
 
-//
+
+/**
+ * Creates polygons around all voxels that contain an obstacle
+ */
+void PathPlan::readGridSpace(){
+    /*
+    GPSData d;
+    fc->gps->GetLatest(&d);
+    index3D gridLocation = worldToGrid(Coord3D{d.fix.lat, d.fix.lon, d.fix.alt});    
+    double height = gridLocation.z;
+    */
+    
+    for(size_t i = 0; i < gridSpace->grid.size(); i++){
+        for(size_t j = 0; j < gridSpace->grid[0].size(); j++){
+            for(size_t height = 0; j < gridSpace->grid[1].size()/2; height++){
+                if (gridSpace->grid[i][j][height].isFull){
+                
+                    std::deque<Coord3D> collisionZone; collisionZone.resize(4);
+                    collisionZone[0] = gridSpace->gridToWorld( GridSpace::index3D{ i, j, height     } );
+                    collisionZone[1] = gridSpace->gridToWorld( GridSpace::index3D{ i+1, j, height   } );         
+                    collisionZone[2] = gridSpace->gridToWorld( GridSpace::index3D{ i+1, j+1, height } );         
+                    collisionZone[3] = gridSpace->gridToWorld( GridSpace::index3D{ i, j+1, height   } ); 
+
+                    addPolygon(collisionZone); 
+                }
+            }
+        }
+    }    
+}
+
+
+
+
 /**
  * Creates a graphic .svg file displaying collision zones, traversable paths, and flightplan.
  * Used for testing purposes. The picopter should never need to call this function.

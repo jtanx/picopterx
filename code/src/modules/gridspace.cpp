@@ -19,10 +19,9 @@ using namespace picopter::navigation;
 /** 
  * Constructor. Constructs with default settings.
  */
-GridSpace::GridSpace(PathPlan *p, FlightController *fc)
+GridSpace::GridSpace(FlightController *fc)
 : grid (64,vector<vector<voxel> >(64,vector <voxel>(64)))
 {
-    pathPlan = p;
     double copterRadius = 3.0; //metres
     double copterHeight = 3.0; //metres
     
@@ -36,7 +35,6 @@ GridSpace::GridSpace(PathPlan *p, FlightController *fc)
     voxelHeight = copterHeight;
 
 voxelWidth *= 100;
-#include "gridspace.h"
 voxelLength *= 100;    
     
 }
@@ -76,7 +74,7 @@ GridSpace::index3D GridSpace::findEndPoint(FlightController *fc){
 
 
 void GridSpace::raycast(FlightController *fc){
-    
+    std::lock_guard<std::mutex> lock(mutex);
     if ( !(fc->lidar) ) cout << "no lidar. \n";
     
     GPSData d;
@@ -161,21 +159,25 @@ void GridSpace::raycast(FlightController *fc){
     double lidarm = fc->lidar->GetLatest() / 100.0;
     if(lidarm > 0 && grid[window[0]][window[1]][window[2]].isFull==false){
     
-cout << "Requesting collision zone: ";
+
          
          grid[window[0]][window[1]][window[2]].isFull=true;
+         
+/*         
          deque<Coord3D> collisionZone; collisionZone.resize(4);
          collisionZone[0] = gridToWorld( index3D{ (double)window[0], (double)window[1], (double)window[2] } );
-cout << " (" << collisionZone[0].lat << ", " << collisionZone[0].lon << ", " << collisionZone[0].alt << "), ";
+
          collisionZone[1] = gridToWorld( index3D{ (double)(window[0]+1), (double)window[1], (double)window[2]} );         
-cout << " (" << collisionZone[1].lat << ", " << collisionZone[1].lon << ", " << collisionZone[1].alt << "), ";
+
          collisionZone[2] = gridToWorld( index3D{ (double)(window[0]+1), (double)(window[1]+1), (double)window[2]} );         
-cout << " (" << collisionZone[2].lat << ", " << collisionZone[2].lon << ", " << collisionZone[2].alt << "), ";
+
          collisionZone[3] = gridToWorld( index3D{ (double)window[0], (double)(window[1]+1), (double)window[2]} );         
-cout << " (" << collisionZone[3].lat << ", " << collisionZone[3].lon << ", " << collisionZone[3].alt << ")\n";
+
          
-         pathPlan->addPolygon(collisionZone); 
-    }  
+         pathPlan->addPolygon(collisionZone);     
+*/ 
+    }
+  
 }
 
 Coord3D GridSpace::getGPS(){   
@@ -188,7 +190,6 @@ Coord3D GridSpace::getGPS(){
 }
 
 GridSpace::index3D GridSpace::worldToGrid(Coord3D GPSloc){
-    
     index3D loc;
     loc.x = (GPSloc.lon - launchPoint.lon)/voxelLength + 31.00;
     loc.y = (GPSloc.lat - launchPoint.lat)/voxelWidth  + 31.00;
@@ -239,10 +240,12 @@ void GridSpace::writeImage(){
          }
     } 
     
-    vector<int> compression_params;
-    compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-    compression_params.push_back(9);
-
-    imwrite("alpha.png", m, compression_params);   
+    vector<int> compression_params{CV_IMWRITE_PNG_COMPRESSION, 9};
+    //compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    //compression_params.push_back(9);
+    
+    std::string name = GenerateFilename(
+        PICOPTER_HOME_LOCATION "/pics", "gridspace_alpha", ".png");
+    imwrite(name, m, compression_params);   
 }
 

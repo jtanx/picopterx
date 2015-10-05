@@ -6,6 +6,7 @@
 #include "common.h"
 #include "waypoints.h"
 #include "pathplan.h"
+#include "gridspace.h"
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -22,7 +23,7 @@ using std::chrono::duration_cast;
  * @param [in] pts The set of waypoints to move to.
  * @param [in] method The method for moving through the specified waypoints.
  */
-Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::deque<Coord3D> > zones, WaypointMethod method)
+Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::deque<Coord3D> > zones, GridSpace *gridspace, WaypointMethod method)
 : m_pts(pts)
 , m_method(method)
 , m_update_interval(100)
@@ -50,7 +51,7 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::de
     
     if (method == WAYPOINT_LAWNMOWER) {
         if (m_pts.size() < 2) {
-            throw std::invalid_argument("Cannot do lawnmower with less than 2 waypoints");
+            throw std::invalid_argument("Cannot do lawGridSpace *gridspace,nmower with less than 2 waypoints");
         } else {
             int j = 0;
             m_pts = std::move(GenerateLawnmowerPattern(m_pts[0], m_pts[1]));
@@ -79,8 +80,8 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::de
     }
     
     //Avoid collision zones.
-    if (zones.size() > 0) {
-        PathPlan plan;
+    if (zones.size() > 0 && gridspace != NULL) {
+        PathPlan plan(gridspace);
         for (std::deque<Coord3D> zone : zones) {
             plan.addPolygon(zone);
         }
@@ -103,14 +104,14 @@ Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::de
 /** 
  * Constructor. Constructs with default settings.
  */
-Waypoints::Waypoints(std::deque<Waypoint> pts, std::deque<std::deque<Coord3D> > zones, WaypointMethod method)
-: Waypoints(NULL, pts, zones, method) {}
+Waypoints::Waypoints(std::deque<Waypoint> pts, std::deque<std::deque<Coord3D> > zones, GridSpace *gridspace, WaypointMethod method)
+: Waypoints(NULL, pts, zones, gridspace, method) {}
 
 Waypoints::Waypoints(std::deque<Waypoint> pts, WaypointMethod method)
-: Waypoints(NULL, pts, std::deque<std::deque<Coord3D> >(), method) {}
+: Waypoints(NULL, pts, std::deque<std::deque<Coord3D> >(), NULL, method) {}
 
 Waypoints::Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method)
-: Waypoints(NULL, pts, std::deque<std::deque<Coord3D> >(), method) {}
+: Waypoints(NULL, pts, std::deque<std::deque<Coord3D> >(), NULL, method) {}
 
 /**
  * Destructor.
