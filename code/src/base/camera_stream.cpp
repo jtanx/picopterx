@@ -646,7 +646,7 @@ void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], Th
     for(r = 0; r < THRESH_SIZE; r++) {
         for(g = 0; g < THRESH_SIZE; g++) {
             for(b = 0; b < THRESH_SIZE; b++) {
-                lookup[r][g][b] = 0;
+                lookup[r][g][b] = BLACK;
 
                 if (thresh.colourspace == THRESH_HSV) {
                     uint8_t h, s, v;
@@ -657,10 +657,10 @@ void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], Th
                         if (thresh.p1_min < 0) {
                             if ((h >= thresh.p1_min+180 && h <= 180) ||
                                 (h >= 0 && h <= thresh.p1_max)) {
-                                    lookup[r][g][b] = 1;
+                                    lookup[r][g][b] = WHITE;
                                 }
                         } else if (h >= thresh.p1_min && h <= thresh.p1_max) {
-                            lookup[r][g][b] = 1;
+                            lookup[r][g][b] = WHITE;
                         }
                     }
                 } else if (thresh.colourspace == THRESH_YCbCr) {
@@ -670,7 +670,7 @@ void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], Th
                     if (y >= thresh.p1_min && y <= thresh.p1_max &&
                         cb >= thresh.p2_min && cb <= thresh.p2_max &&
                         cr >= thresh.p3_min && cr <= thresh.p3_max) {
-                        lookup[r][g][b] = 1;
+                        lookup[r][g][b] = WHITE;
                     }
                 }
             }
@@ -697,11 +697,7 @@ void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
         destp = out.ptr<uint8_t>(j);
         for (i=0; i < out.cols; i++) {
             k = i*nChannels*skip;
-            if(m_lookup_threshold[srcp[k+2]/THRESH_DIV][srcp[k+1]/THRESH_DIV][srcp[k]/THRESH_DIV]) {
-                destp[i] = WHITE;
-            } else {
-                destp[i] = BLACK;
-            }
+            destp[i] = m_lookup_threshold[srcp[k+2]/THRESH_DIV][srcp[k+1]/THRESH_DIV][srcp[k]/THRESH_DIV];
         }
     }
 }
