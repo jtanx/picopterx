@@ -39,6 +39,7 @@ set (HEADERS
 	 ${PI_INCLUDE}/imu_feed.h
 	 ${PI_INCLUDE}/flightcontroller.h
 	 ${PI_INCLUDE}/PID.h
+	 ${PI_INCLUDE}/threadpool.h
 	 ${PI_INCLUDE}/camera_stream.h
 	 ${PI_INCLUDE}/mavcommslink.h
 	 ${PI_INCLUDE}/lidar.h

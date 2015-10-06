@@ -11,6 +11,7 @@
 #include "common.h"
 #include "navigation.h"
 #include "flightboard.h" //For HUDInfo
+#include "threadpool.h"
 #include <opencv2/opencv.hpp>
 #ifdef IS_ON_PI
 #  include "omxcv.h"
@@ -127,6 +128,8 @@ namespace picopter {
             std::atomic<bool> m_stop;
             /** The current camera mode **/
             CameraMode m_mode;
+            /** Worker thread pool **/
+            ThreadPool m_pool;
 
             /** The main mutex to interact with the thread **/
             std::mutex m_worker_mutex;
@@ -181,6 +184,7 @@ namespace picopter {
             void RGB2HSV(uint8_t r, uint8_t g, uint8_t b, uint8_t *h, uint8_t *s, uint8_t *v);
             void RGB2YCbCr(uint8_t r, uint8_t g, uint8_t b, uint8_t *y, uint8_t *cb, uint8_t *cr);
             void BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], ThresholdParams thresh);
+            void ThresholdSlice(const cv::Mat& src, cv::Mat &out, int skip, int offset, int slice_height);
             void Threshold(const cv::Mat& src, cv::Mat &out, int width);
             void LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect roi);
             bool CentreOfMass(cv::Mat& src, cv::Mat& threshold);

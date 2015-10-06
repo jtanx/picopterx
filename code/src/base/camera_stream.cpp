@@ -35,6 +35,7 @@ CameraStream::CameraStream(Options *opts)
 : m_capture(-1)
 , m_stop{false}
 , m_mode(MODE_NO_PROCESSING)
+, m_pool(4)
 , m_fps(-1)
 , m_show_backend(false)
 , m_save_photo(false)
@@ -679,20 +680,20 @@ void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], Th
 }
 
 /**
- * Thresholds the image using the preset LUT.
- * @param [in] src The input image.
- * @param [out] out The output image.
- * @param [in] width The output processing width.
+ * Threshold a slice of a frame.
+ * @param [in] src The source frame.
+ * @param [in] out The destination frame.
+ * @param [in] skip The pixel skip factor.
+ * @param [in] offset The starting offset.
+ * @param [in] slice_height The number of rows to process.
  */
-void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
-    int i, j, k;
-    const uint8_t* srcp;
-    uint8_t* destp;
-    int skip = src.cols / width;
+void CameraStream::ThresholdSlice(const cv::Mat &src, cv::Mat &out, int skip, int offset, int slice_height) {
+    const uint8_t *srcp;
+    uint8_t *destp;
     int nChannels = src.channels();
-
-    out.create((src.rows * width) / src.cols, width, CV_8UC1);
-    for(j=0; j < out.rows; j++) {
+    int i, j, k;
+    
+    for(j=offset; j < offset+slice_height; j++) {
         srcp = src.ptr<const uint8_t>(j*skip);
         destp = out.ptr<uint8_t>(j);
         for (i=0; i < out.cols; i++) {
@@ -702,6 +703,36 @@ void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
     }
 }
 
+/**
+ * Thresholds the image using the preset LUT.
+ * @param [in] src The input image.
+ * @param [out] out The output image.
+ * @param [in] width The output processing width.
+ */
+void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
+    int skip = src.cols/width;
+    out.create((src.rows * width) / src.cols, width, CV_8UC1);
+    
+    if (width <= 320 || (width%4)) {
+        ThresholdSlice(src, out, skip, 0, src.rows);
+    } else {
+        std::vector<std::future<void>> ret;
+        for (int i = 0; i < 4; i++) {
+            ret.emplace_back(m_pool.enqueue(&CameraStream::ThresholdSlice,
+                this, src, out, skip, (i*src.rows)/4, src.rows/4));
+        }
+        for(auto &&result : ret){
+            result.get();
+        }
+    }
+}
+
+/**
+ * Do auto threshold learning.
+ * @param [in] src The source image.
+ * @param [in] threshold Location to store thresholded image.
+ * @param [in] roi Region of interest to calculate thresholds.
+ */
 void CameraStream::LearnThresholds(cv::Mat& src, cv::Mat& threshold, cv::Rect roi) {
     cv::Mat sroi(src, roi);
     cv::medianBlur(sroi, sroi, 7);
