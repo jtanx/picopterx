@@ -685,7 +685,7 @@ void CameraStream::BuildThreshold(uint8_t lookup[][THRESH_SIZE][THRESH_SIZE], Th
  * @param [in] out The destination frame.
  * @param [in] skip The pixel skip factor.
  * @param [in] offset The starting offset.
- * @param [in] slice_height The number of rows to process.
+ * @param [in] slice_height The number of destination rows to process.
  */
 void CameraStream::ThresholdSlice(const cv::Mat &src, cv::Mat &out, int skip, int offset, int slice_height) {
     const uint8_t *srcp;
@@ -713,13 +713,13 @@ void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
     int skip = src.cols/width;
     out.create((src.rows * width) / src.cols, width, CV_8UC1);
     
-    if (width <= 320 || (width%4)) {
-        ThresholdSlice(src, out, skip, 0, src.rows);
+    if (width <= 320 || (out.rows%4)) {
+        ThresholdSlice(src, out, skip, 0, out.rows);
     } else {
         std::vector<std::future<void>> ret;
         for (int i = 0; i < 4; i++) {
             ret.emplace_back(m_pool.enqueue(&CameraStream::ThresholdSlice,
-                this, src, out, skip, (i*src.rows)/4, src.rows/4));
+                this, src, out, skip, (i*out.rows)/4, out.rows/4));
         }
         for(auto &&result : ret){
             result.get();
