@@ -474,6 +474,7 @@ void CameraStream::ProcessImages() {
             m_fps = (frame_counter * 1000.0) / frame_duration;
             frame_counter = 0;
             sampling_start = steady_clock::now();
+            //printf("%f\n", m_fps);
             //Log(LOG_INFO, "FPS: %.2f", m_fps);
         }
     }
@@ -713,9 +714,13 @@ void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
     int skip = src.cols/width;
     out.create((src.rows * width) / src.cols, width, CV_8UC1);
     
+    ThresholdSlice(src, out, skip, 0, out.rows);
+    
+    /*
     if (width <= 320 || (out.rows%4)) {
         ThresholdSlice(src, out, skip, 0, out.rows);
     } else {
+        //Log(LOG_DEBUG, "SLICING");
         std::vector<std::future<void>> ret;
         for (int i = 0; i < 4; i++) {
             ret.emplace_back(m_pool.enqueue(&CameraStream::ThresholdSlice,
@@ -724,7 +729,7 @@ void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
         for(auto &&result : ret){
             result.get();
         }
-    }
+    }*/
 }
 
 /**
