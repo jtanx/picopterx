@@ -1,0 +1,5 @@
+/dev/mmcblk0p1 /boot vfat defaults 0 2
+/dev/mmcblk0p2 / ext4 errors=remount-ro,noatime 0 1
+tmpfs /mnt/ramdisk tmpfs nodev,nosuid,size=10M 0 0
+# a swapfile is not a swap partition, no line here
+#   use  dphys-swapfile swap[on|off]  for that
