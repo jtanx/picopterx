@@ -139,7 +139,8 @@
           $ans = $client->updateExclusions($zones);
           print count($zones) . " exclusion zones added.\n";
         } else {
-          print "updateExclusions failed.\n";
+          $ans = $client->updateExclusions(array());
+          print "Clearing exclusions: " . $b[$ans];
         }
         break;
         

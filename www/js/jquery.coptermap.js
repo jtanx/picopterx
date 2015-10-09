@@ -638,8 +638,9 @@ L.NumberedDetectionIcon = L.Icon.extend({
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
           instance.removeMapLayer(data.map, data, 'boundRegion');
           instance.removeMapLayer(data.map, data, 'upperBoundRegion');
-          for (var i = 0; i < data.exclusionZones.length; i++)
-            instance.removeMapLayer(data.map, data, 'exclusionZones');
+          //Always display exclusion zones since they affect everything
+          //for (var i = 0; i < data.exclusionZones.length; i++)
+          //  instance.removeMapLayer(data.map, data, 'exclusionZones');
         } else if (pattern === "manual") {
           hide(data.wptMarkers, data.map);
           instance.removeMapLayer(data.map, data.paths, 'wptPath');
@@ -653,7 +654,7 @@ L.NumberedDetectionIcon = L.Icon.extend({
         } else if (pattern === "exclusion") {
           for (var i = 0; i < data.excMarkers.length; i++)
             hide(data.excMarkers[i], data.map);
-          instance.removeMapLayer(data.map, data, 'exclusionZones');
+          //instance.removeMapLayer(data.map, data, 'exclusionZones');
         }
       };
 
