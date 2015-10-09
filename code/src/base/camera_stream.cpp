@@ -216,7 +216,7 @@ void CameraStream::GetConfig(Options *config) {
 void CameraStream::SetConfig(Options *config) {
     std::lock_guard<std::mutex> lock(m_worker_mutex);
     bool refresh = false, decrease = false;
-    int colourspace = THRESH_HSV;
+    int colourspace = m_thresholds.colourspace;
 
     config->SetFamily("CAMERA_STREAM");
     config->GetBool("SHOW_BACKEND", &m_show_backend);
@@ -224,7 +224,6 @@ void CameraStream::SetConfig(Options *config) {
 
     config->GetInt("THRESH_COLOURSPACE", &colourspace);
     switch(colourspace) {
-        default: //Deliberate fall-through
         case THRESH_HSV:
             m_thresholds.colourspace = THRESH_HSV;
             refresh |= config->GetInt("MIN_HUE", &m_thresholds.p1_min, -180, 180);
