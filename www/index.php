@@ -348,12 +348,12 @@
                   </div>
                   <div class="btn-group btn-group-justified">
                     <div class="btn-group">
-                      <button type="button" class="btn btn-default" onclick="setCameraLearningSize(true)" data-toggle="tooltip" data-placement="top" title="" data-original-title="Increase learning size">
+                      <button type="button" class="btn btn-default" onclick="setCameraLearningSize(true)" data-toggle="tooltip" data-placement="top" title="" data-original-title="Decrease learning size">
                         <span class="glyphicon glyphicon glyphicon-triangle-bottom" aria-hidden="true"></span>
                       </button>
                     </div>
                     <div class="btn-group">
-                      <button type="button" class="btn btn-default" onclick="setCameraLearningSize(false)" data-toggle="tooltip" data-placement="top" title="" data-original-title="Decrease learning size">
+                      <button type="button" class="btn btn-default" onclick="setCameraLearningSize(false)" data-toggle="tooltip" data-placement="top" title="" data-original-title="Increase learning size">
                         <span class="glyphicon glyphicon-triangle-top" aria-hidden="true"></span>
                       </button>
                     </div>
