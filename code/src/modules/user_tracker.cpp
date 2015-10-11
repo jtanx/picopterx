@@ -29,11 +29,11 @@ UserTracker::UserTracker(Options *opts)
 {
     if (opts) {
         opts->SetFamily("USER_TRACKER");
-        opts->GetReal("GEOFENCE_SW_LAT", &m_geofence_sw.lat);
-        opts->GetReal("GEOFENCE_SW_LON", &m_geofence_sw.lon);
-        opts->GetReal("GEOFENCE_NE_LAT", &m_geofence_ne.lat);
-        opts->GetReal("GEOFENCE_NE_LON", &m_geofence_ne.lon);
-        opts->GetInt("LEASH_RADIUS", &m_leash_radius);
+        m_geofence_sw.lat = opts->GetReal("GEOFENCE_SW_LAT", m_geofence_sw.lat);
+        m_geofence_sw.lon = opts->GetReal("GEOFENCE_SW_LON", m_geofence_sw.lon);
+        m_geofence_ne.lat = opts->GetReal("GEOFENCE_NE_LAT", m_geofence_ne.lat);
+        m_geofence_ne.lon = opts->GetReal("GEOFENCE_NE_LON", m_geofence_ne.lon);
+        m_leash_radius = opts->GetInt("LEASH_RADIUS", m_leash_radius);
     }
 }
 
@@ -85,8 +85,12 @@ void UserTracker::Run(FlightController *fc, void *opts) {
             if (distance > 100) {
                 Log(LOG_WARNING, "User is over 100m away! Discarding waypoint.");
             } else if (distance > m_leash_radius) {
-                Coord3D lwpt = std::move(CoordAddOffset(m_wpt, m_leash_radius, bearing);
-                fc->fb->SetGuidedWaypoint(seq++, 1, 0, lwpt, true);
+                Coord3D lwpt = std::move(CoordAddOffset(m_wpt, m_leash_radius, bearing));
+                if (CoordInBounds(lwpt, m_geofence_sw, m_geofence_ne)) {
+                    fc->fb->SetGuidedWaypoint(seq++, 1, 0, lwpt, true);
+                } else {
+                    fc->fb->Stop();
+                }
             }
             m_wpt_available = false;
         }
