@@ -8,18 +8,12 @@ import pytz
 
 time_fmt = r"%d/%m/%Y %H:%M:%S"
 #gps_fmt = re.compile(r"^([^:]+ \d+:\d+:\d+): \(([-\.\d]+), ([-\.\d]+)\) \[([-\.\d]+) at ([-\.\d]+)\] \(([-\.\d]+) m\)$")
-gps_fmt = re.compile(r"^([^:]+ \d+:\d+:\d+): \(([-\.\d]+)[^,]*, ([-\.\d]+)[^)]*\) \[(.*?) at ([-\.\d]+)[^\]]*\]$");
+gps_fmt = re.compile(r"^([^:]+ \d+:\d+:\d+): \(([^,]+), ([^,]+), ([^)]+)\) \[([^\]]+)\]$");
 
 def parse_time(t):
     ctime = datetime(*(time.strptime(t, time_fmt)[0:6]),
                      tzinfo=pytz.timezone("Australia/Perth"))
     return ctime.astimezone(pytz.utc)
-    
-def f7(seq):
-    # http://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-in-python-whilst-preserving-order
-    seen = set()
-    seen_add = seen.add
-    return [x for x in seq if not (x in seen or seen_add(x))]
     
 def main(gps_log):
     with open(gps_log) as fp:
