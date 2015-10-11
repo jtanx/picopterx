@@ -89,7 +89,8 @@ namespace picopter {
             bool SetBodyVel(navigation::Vec3D v);
             bool SetBodyPos(navigation::Vec3D p);
             bool SetYaw(int bearing, bool relative);
-            
+            bool SetGimbalPose(navigation::EulerAngle pose);
+            bool ConfigureGimbal();
             bool SetRegionOfInterest(navigation::Coord3D roi);
             bool UnsetRegionOfInterest();
 

@@ -38,7 +38,7 @@ ObjectTracker::ObjectTracker(Options *opts, TrackMethod method)
     //Observation mode: Don't actually send the commands to the props
     opts->SetFamily("GLOBAL");
     m_observation_mode = opts->GetBool("OBSERVATION_MODE", false);
-
+    m_demo_mode = opts->GetBool("DEMO_MODE", false);
     //The gain has been configured for a 320x240 image, so scale accordingly.
     opts->SetFamily("OBJECT_TRACKER");
 
@@ -186,7 +186,15 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
 
     Mat observation_map(observation_image_rows, observation_image_cols, CV_8UC4);
 
+    EulerAngle pose;
+    pose.roll = 0;
+    pose.pitch = 45;
+    pose.yaw = 0;
+    fc->fb->ConfigureGimbal();
+
     while (!fc->CheckForStop()) {
+        fc->fb->SetGimbalPose(pose);
+
         last_loop = loop_start;
         loop_start = steady_clock::now() - m_task_start;
         TIME_TYPE loop_period = (loop_start - last_loop);
@@ -241,7 +249,7 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
                 i--;
             }
         }//blur the location.
-        LogSimple(LOG_DEBUG,"Tracking %d Objects", knownThings.size());
+        //LogSimple(LOG_DEBUG,"Tracking %d Objects", knownThings.size());
 
         //start making observation structures
         Observation lidarObservation = ObservationFromLidar(loop_start, &gps_position, &gimbal, &imu_data, lidar_range);
@@ -291,8 +299,8 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             Coord3D object_gps_location = GPSFromGround(knownThings.front().getLocation().vect);
             
             //LogSimple(LOG_DEBUG, "last observation at: %u", duration_cast<microseconds>(loop_start).count());
-            LogSimple(LOG_DEBUG, "Object %d observed %uuS ago", 0, duration_cast<microseconds>(loop_start - knownThings.at(0).lastObservation()).count());
-            LogSimple(LOG_DEBUG, "Object is at: lat: %.4f, lon: %.4f, alt %.4f", object_gps_location.lat, object_gps_location.lon, object_gps_location.alt);
+            //LogSimple(LOG_DEBUG, "Object %d observed %uuS ago", 0, duration_cast<microseconds>(loop_start - knownThings.at(0).lastObservation()).count());
+            LogSimple(LOG_DEBUG, "Object is at: lat: %.8f, lon: %.8f, alt %.4f", object_gps_location.lat, object_gps_location.lon, object_gps_location.alt);
         }
 
 
@@ -325,9 +333,10 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             Coord3D poi_point = GPSFromGround(knownThings.front().getLocation().vect);
             //Coord3D vantage = CalculateVantagePoint(&gps_position, &testThing, true);
             if (!m_observation_mode) {
-                CalculatePath(fc, &gps_position, &imu_data, vantage, poi_point, &course);
+                PathWaypoint(fc, &gps_position, &imu_data, vantage, poi_point);
+                //CalculatePath(fc, &gps_position, &imu_data, vantage, poi_point, &course);
                 //CalculatePath(fc, &gps_position, &imu_data, testpoint, poi_point, &course);
-                fc->fb->SetBodyVel(course);
+                //fc->fb->SetBodyVel(course);
             }
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
@@ -345,8 +354,9 @@ void ObjectTracker::Run(FlightController *fc, void *opts) {
             Coord3D vantage = CalculateVantagePoint(&gps_position, &knownThings.front(), true);
             Coord3D poi_point = GPSFromGround(knownThings.front().getLocation().vect);
             if (!m_observation_mode) {
-                CalculatePath(fc, &gps_position, &imu_data, vantage, poi_point, &course);
-                fc->fb->SetBodyVel(course);
+                PathWaypoint(fc, &gps_position, &imu_data, vantage, poi_point);
+                //CalculatePath(fc, &gps_position, &imu_data, vantage, poi_point, &course);
+                //fc->fb->SetBodyVel(course);
             }
             LogSimple(LOG_DEBUG, "x: %.1f y: %.1f z: %.1f G: (%03.1f, %03.1f, %03.1f)\r",
                 course.x, course.y, course.z, gimbal.roll, gimbal.pitch, gimbal.yaw);
@@ -434,9 +444,17 @@ Observation ObjectTracker::ObservationFromImageCoords(TIME_TYPE sample_time, GPS
     Matx33d Mblob = rotationMatrix(phi,theta,0);   //the angle between the camera normal and the blob (deg)
     //find the transformation matrix from camera frame to ground.
     Matx33d Mbody = GimbalToBody(gimbal);
+
+    Matx33d MGnd;
+    if(m_demo_mode){
+        MGnd = LevelToGround(imu_data);    //Disable the pitch and roll in simulation
+    }else{
+        MGnd = BodyToGround(imu_data);      //Enable them during live tests
+    }
     //Matx33d Mstable = BodyToLevel(imu_data);
     //Matx33d MYaw = LevelToGround(imu_data);
-    Matx33d MGnd = BodyToGround(imu_data);
+    //Matx33d MGnd = BodyToGround(imu_data);
+
     Matx33d axes (
         0.5, 0,   0,
         0,   0.5, 0,
@@ -496,9 +514,16 @@ Observation ObjectTracker::ObservationFromLidar(TIME_TYPE sample_time, GPSData *
     Matx33d MLidar = rotationMatrix(-6,-3,0);   //the angle between the camera and the lidar (deg)
     //find the transformation matrix from camera frame to ground.
     Matx33d Mbody = GimbalToBody(gimbal);
+    
+    Matx33d MGnd;
+    if(m_demo_mode){
+        MGnd = LevelToGround(imu_data);    //Disable the pitch and roll in simulation
+    }else{
+        MGnd = BodyToGround(imu_data);      //Enable them during live tests
+    }
     //Matx33d Mstable = BodyToLevel(imu_data);
     //Matx33d MYaw = LevelToGround(imu_data);
-    Matx33d MGnd = BodyToGround(imu_data);
+    //Matx33d MGnd = BodyToGround(imu_data);
 
     Distrib lidarspot = generatedistrib();
     
@@ -725,6 +750,22 @@ Coord3D ObjectTracker::CalculateVantagePoint(GPSData *pos, Observations *object,
 }
 
 
+void ObjectTracker::PathWaypoint(FlightController *fc, GPSData *pos, IMUData *imu_data, Coord3D dest, Coord3D poi){
+    Coord3D copter_coord = {pos->fix.lat, pos->fix.lon, pos->fix.alt};
+    Vec3d copter_loc = GroundFromGPS(copter_coord);
+    Vec3d poi_loc = GroundFromGPS(poi);
+    Vec3d poi_offset = poi_loc - copter_loc;
+    double phi = RAD2DEG(atan2(poi_offset(1),poi_offset(0)));   //yaw Angle to object (what is our current yaw?)
+    if(phi<0) phi +=360;
+    
+    LogSimple(LOG_DEBUG, "Sending alt %3.2f",dest.alt);
+    dest.alt=0; //hack to not change altitude
+    fc->fb->SetGuidedWaypoint(waypoint_seq++, 1, 0, dest, true);
+    //sequence number, radius, dwell time, waypoint, is relative
+    fc->fb->SetYaw(phi, false);
+
+}
+
 /**
  * Execute a control loop to put the copter at the vantage point
  * @param [in] fc The flight controller.
@@ -791,8 +832,6 @@ void ObjectTracker::CalculatePath(FlightController *fc, GPSData *pos, IMUData *i
     //course->gimbal = 50;
     fc->cam->SetTrackingArrow({course->x/TRACK_SPEED_LIMIT_X,
         -course->y/TRACK_SPEED_LIMIT_Y, trackw/TRACK_SPEED_LIMIT_W});
-
-
 
 }
 //using North, East, Down coordinates

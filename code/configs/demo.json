@@ -21,7 +21,7 @@
 		"TRACK_TauDx" : 0.000,
 		"TRACK_TauDy" : 0.000,
 		"TRACK_TauDz" : 0.000,
-		"TRACK_SLOPE" : 10,
+		"TRACK_SLOPE" : 1,
 		"OBS_IMAGE_ROWS" : 240,
 		"OBS_IMAGE_COLS" : 320,
 		"PRINT_OBS_MAP" : false
