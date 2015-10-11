@@ -228,7 +228,9 @@
               </div>
               <div class="panel-body">
                 <p>
-                  <a href="#" class="btn btn-default btn-block btn-control" onclick="beginUserTracking()">Track User</a>
+                  <a href="#" class="btn btn-default btn-block btn-control" id="user-tracker" onclick="beginUserTracking()" data-toggle="tooltip" data-placement="top" title="" data-original-title="When tracking is possible, this button turns blue.">Track User</a>
+                </p>
+                <p>
                   <a href="#" class="btn btn-default btn-block btn-control" onclick="beginObjectTracking()">Track Object</a>
                 </p>
               </div>

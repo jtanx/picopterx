@@ -64,13 +64,31 @@ function cameraInit() {
   });
 }
 
+// FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME
+// Hard-coded safety bounds.
+var jamesOvalBounds = new L.latLngBounds(
+    [[-31.9803622462528, 115.817576050758],[-31.9797547847258, 115.818262696266]]);
+// FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME FIXME
+
 /**
  * Worker thread to continuously poll the server for its status.
  * @param hud The structure containing the HUD objects.
  */
 function statusWorker(hud) {
   var data = {'action': 'requestAll'};
-  $("#map-canvas").copterMap('getUserPosition', data);
+  var userPosition = {};
+  
+  $("#map-canvas").copterMap('getUserPosition', userPosition);
+  if (userPosition.hasOwnProperty('lat') && userPosition.hasOwnProperty('lon') &&
+      jamesOvalBounds.contains(L.latLng(userPosition.lat, userPosition.lon))) {
+        
+    data.lat = userPosition.lat;
+    data.lon = userPosition.lon;
+    $("#user-tracker").removeClass("btn-default").addClass("btn-primary");
+  } else {
+    $("#user-tracker").removeClass("btn-primary").addClass("btn-default");
+  }
+  
 
   $.ajax({
     type: "POST",

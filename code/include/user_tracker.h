@@ -31,6 +31,10 @@ namespace picopter {
             std::condition_variable m_signaller;
             /** The current user location **/
             navigation::Coord3D m_wpt;
+            /** The geofence south-west coordinate. **/
+            navigation::Coord2D m_geofence_sw;
+            /** The geofence north-east coordinate. **/
+            navigation::Coord2D m_geofence_ne;
             /** Indicates that there is a new user location for the worker thread **/
             bool m_wpt_available;
             /** Indicates whether or not we've finished running **/

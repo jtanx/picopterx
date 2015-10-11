@@ -21,6 +21,8 @@ using std::this_thread::sleep_for;
  */
 UserTracker::UserTracker(Options *opts)
 : m_wpt{}
+, m_geofence_sw{-31.9803622462528, 115.817576050758}
+, m_geofence_ne{-31.9797547847258, 115.818262696266}
 , m_wpt_available(false)
 , m_finished{false}
 {
@@ -77,14 +79,19 @@ void UserTracker::Run(FlightController *fc, void *opts) {
  * @param [in] wpt The location of the user
  */
 void UserTracker::UpdateUserPosition(Coord2D wpt) {
-    std::unique_lock<std::mutex> lock(m_worker_mutex);
-    m_wpt.lat = wpt.lat;
-    m_wpt.lon = wpt.lon;
-    m_wpt.alt = 0;
-    m_wpt_available = true;
-    lock.unlock();
-    m_signaller.notify_one();
-    Log(LOG_DEBUG, "Got user wpt: %.6f, %.6f", wpt.lat, wpt.lon);
+    if (CoordInBounds(wpt, m_geofence_sw, m_geofence_ne)) {
+        std::unique_lock<std::mutex> lock(m_worker_mutex);
+        m_wpt.lat = wpt.lat;
+        m_wpt.lon = wpt.lon;
+        m_wpt.alt = 0;
+        m_wpt_available = true;
+        lock.unlock();
+        m_signaller.notify_one();
+        Log(LOG_DEBUG, "Got user wpt: %.6f, %.6f", wpt.lat, wpt.lon);
+    } else {
+        Log(LOG_DEBUG, "Rejected user wpt (outside geofence): %.6f, %.6f",
+            wpt.lat, wpt.lon);
+    }
 }
 
 /**

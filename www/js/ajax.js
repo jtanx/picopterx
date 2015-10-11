@@ -106,8 +106,10 @@ function beginWaypoints() {
  *  Begin the autnonomous user tracking function
  */
 function beginUserTracking() {
-  if ((navigator.geolocation)) {
+  if ((navigator.geolocation) && $("#user-tracker").hasClass("btn-primary")) {
     ajaxSend('beginUserTracking');
+  } else {
+    alert("You are not in the geofence. Not activating user tracking!");
   }
 }
 
