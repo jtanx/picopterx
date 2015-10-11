@@ -242,7 +242,8 @@
               </div>
               <div class="panel-body">
                 <p>
-                  <a href="#" class="btn btn-default btn-block btn-control" onclick="beginUserMapping()">Take Picture</a>
+                  <a href="#" class="btn btn-default btn-block btn-control" onclick="beginTakingPictures()">Take Pictures</a>
+                  <a href="#" class="btn btn-default btn-block btn-control" onclick="beginUserMapping()">Begin Mapping</a>
                   <a href="pics/" class="btn btn-success btn-block">Download</a>
                 </p>
               </div>

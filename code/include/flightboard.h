@@ -42,6 +42,8 @@ namespace picopter {
         
         /** LIDAR reading (m) **/
         float lidar;
+        /** Gimbal position **/
+        navigation::EulerAngle gimbal;
         
         /** Battery voltage, in Volts **/
         float batt_voltage;

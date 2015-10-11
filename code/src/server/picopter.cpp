@@ -158,6 +158,24 @@ public:
             return true;
         }
     }
+    
+    bool beginPicturesThread()
+    {
+        if (m_fc->GetCurrentTaskId() != TASK_NONE) {
+            // ALREADY RUNNING
+            return false;
+        } else if (m_fc->cam == NULL) {
+            Log(LOG_WARNING, "Not running pictures without camera!");
+            return false;
+        } else {
+            std::shared_ptr<FlightTask> utl = std::make_shared<UtilityModule>(
+                m_opts, UtilityModule::UTILITY_PICTURES);
+            if (!m_fc->RunTask(TASK_UTILITY, utl, NULL)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     bool beginUserMappingThread()
     {

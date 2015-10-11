@@ -17,6 +17,7 @@ using std::chrono::steady_clock;
 using std::chrono::duration_cast;
 using std::chrono::seconds;
 using std::chrono::milliseconds;
+using std::chrono::microseconds;
 
 #ifdef IS_ON_PI
     using namespace omxcv;
@@ -521,6 +522,9 @@ void CameraStream::DrawHUD(cv::Mat& img) {
     sprintf(string_buf, "L: %.2fm", hud.lidar);
     cv::putText(img, string_buf, cv::Point(70*img.cols/100, 20*img.rows/100),
         cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
+    sprintf(string_buf, "P: %.1f, R: %.1f", hud.gimbal.pitch, hud.gimbal.roll);
+    cv::putText(img, string_buf, cv::Point(70*img.cols/100, 25*img.rows/100),
+        cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255, 255, 255), 1, 8);
 
     //Enter the position
     sprintf(string_buf, "%.7f, %.7f", hud.pos.lat, hud.pos.lon);
@@ -710,13 +714,17 @@ void CameraStream::ThresholdSlice(const cv::Mat &src, cv::Mat &out, int skip, in
  * @param [in] width The output processing width.
  */
 void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
+    //auto start = steady_clock::now();
     int skip = src.cols/width;
     out.create((src.rows * width) / src.cols, width, CV_8UC1);
     
     ThresholdSlice(src, out, skip, 0, out.rows);
     
+    //GDB really does not like thread pooling and GDB will segfault
+    //if threaded thresholding is enabled. Probably fixed by upgrading
+    //GDB.
     /*
-    if (width <= 320 || (out.rows%4)) {
+    if ((out.rows%4)) {
         ThresholdSlice(src, out, skip, 0, out.rows);
     } else {
         //Log(LOG_DEBUG, "SLICING");
@@ -728,7 +736,9 @@ void CameraStream::Threshold(const cv::Mat& src, cv::Mat &out, int width) {
         for(auto &&result : ret){
             result.get();
         }
-    }*/
+    }
+    */
+    //printf("%d\n", (int)duration_cast<microseconds>(steady_clock::now()-start).count());
 }
 
 /**

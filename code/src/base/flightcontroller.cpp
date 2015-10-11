@@ -157,6 +157,7 @@ void FlightController::HUDParser(const mavlink_message_t *msg) {
             } else {
                 m_hud.status2.clear();
             }
+            m_fb->GetGimbalPose(&m_hud.gimbal);
             m_camera->SetHUDInfo(&m_hud);
         }
     } else if (msg->msgid == MAVLINK_MSG_ID_SYSTEM_TIME) {
@@ -365,6 +366,8 @@ namespace picopter {
                 stream << "Performing takeoff."; break;
             case STATE_UTILITY_JOYSTICK:
                 stream << "Under joystick control."; break;
+            case STATE_UTILITY_PICTURES:
+                stream << "Taking pictures"; break;
         }
         return stream;
     }

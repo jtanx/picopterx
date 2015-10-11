@@ -107,6 +107,25 @@ void UtilityModule::Run(FlightController *fc, void *opts) {
                 }
             }
         } break;
+        case UTILITY_PICTURES: {
+            SetCurrentState(fc, STATE_UTILITY_PICTURES);
+            Log(LOG_INFO, "Taking pictures!");
+            std::string f = GenerateFilename(
+                PICOPTER_HOME_LOCATION "/pics", "utility_pics", "");
+        
+            int i = 0;
+            while (!fc->CheckForStop()) {
+                char buf[20];
+                sprintf(buf, "-%03d.jpg", i);
+        
+                if (fc->cam) {
+                    if (fc->cam->TakePhoto(f + buf)) {
+                        i++;
+                    }
+                }
+                fc->Sleep(200);
+            }
+        } break;
             
     }
     

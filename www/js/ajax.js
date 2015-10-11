@@ -114,6 +114,13 @@ function beginUserTracking() {
 }
 
 /**
+ * Begin the taking pictures thread.
+ */
+function beginTakingPictures() {
+    ajaxSend('beginTakingPictures');
+}
+
+/**
  *  Begin the Environmental Mapping
  */
 function beginUserMapping() {

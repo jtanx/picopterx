@@ -54,6 +54,8 @@ namespace picopter {
         STATE_UTILITY_TAKEOFF,
         /** Joystick control **/
         STATE_UTILITY_JOYSTICK,
+        /** Taking pictures **/
+        STATE_UTILITY_PICTURES,
     } ControllerState;
     
     /**

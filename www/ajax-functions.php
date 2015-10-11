@@ -178,7 +178,12 @@
         $ans = $client->beginJoystickControl();
         print "beginJoystickControl " . $b[$ans] . "\n";
         break;
-
+        
+      case "beginTakingPictures":
+        $ans = $client->beginPicturesThread();
+        print "beginTakingPictures" . $b[$ans] . "\n";
+        break;
+        
       case "beginUserMapping":
           $ans = $client->beginUserMappingThread();
           print "beginUserMappingThread " . $b[$ans] . "\n";

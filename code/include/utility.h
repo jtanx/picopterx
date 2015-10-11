@@ -19,7 +19,8 @@ namespace picopter {
         public:
             typedef enum {
                 UTILITY_TAKEOFF,
-                UTILITY_JOYSTICK
+                UTILITY_JOYSTICK,
+                UTILITY_PICTURES
             } UtilityMethod;
             
             UtilityModule(Options *opts, UtilityMethod method);

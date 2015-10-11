@@ -36,6 +36,7 @@ service webInterface {
 	bool		beginWaypointsThread(1: i32 mode);
 	bool		beginUserTrackingThread();
 	bool		beginObjectTrackingThread(1: i32 method);
+	bool		beginPicturesThread();
 	bool		beginUserMappingThread();
 	bool		beginJoystickControl();
 
