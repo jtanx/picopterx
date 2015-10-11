@@ -15,6 +15,8 @@ using picopter::CameraGlyph;
 using picopter::Options;
 using namespace rapidjson;
 
+#define GLYPH_BLACK_THRESHOLD 140
+
 /**
  * Unpacks a glyph from the given options entry.
  * @param [in] val The entry to decode.
@@ -43,7 +45,7 @@ static void GlyphUnpickler(const void *val, void *closure) {
             
             g.image = cv::imread(g.path);
             cv::cvtColor(g.image, g.image, CV_BGR2GRAY);
-            cv::inRange(g.image, cv::Scalar(0), cv::Scalar(100), g.image);
+            cv::inRange(g.image, cv::Scalar(0), cv::Scalar(GLYPH_BLACK_THRESHOLD), g.image);
             if (g.image.data == NULL) {
                 Log(LOG_WARNING, "Glyph %s does not exist! Skipping!", g.path.c_str());
             } else {
@@ -149,7 +151,7 @@ bool CameraStream::GlyphDetection(cv::Mat &src, cv::Mat& roi, cv::Rect bounds) {
         cv::resize(roi, rquad, 
             cv::Size(m_glyphs[0].image.cols, m_glyphs[0].image.rows));
         cv::cvtColor(rquad, rquad, CV_BGR2GRAY);
-        cv::inRange(rquad, cv::Scalar(0), cv::Scalar(100), rquad);
+        cv::inRange(rquad, cv::Scalar(0), cv::Scalar(GLYPH_BLACK_THRESHOLD), rquad);
     }
     
     for(size_t i = 0; i < m_glyphs.size(); i++) {
@@ -158,7 +160,7 @@ bool CameraStream::GlyphDetection(cv::Mat &src, cv::Mat& roi, cv::Rect bounds) {
             cv::resize(roi, rquad, 
                 cv::Size(m_glyphs[i].image.cols, m_glyphs[i].image.rows));
             cv::cvtColor(rquad, rquad, CV_BGR2GRAY);
-            cv::inRange(rquad, cv::Scalar(0), cv::Scalar(100), rquad);
+            cv::inRange(rquad, cv::Scalar(0), cv::Scalar(GLYPH_BLACK_THRESHOLD), rquad);
         }
         
         //Display the warped and resized image
