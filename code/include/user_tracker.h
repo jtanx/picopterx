@@ -35,6 +35,8 @@ namespace picopter {
             navigation::Coord2D m_geofence_sw;
             /** The geofence north-east coordinate. **/
             navigation::Coord2D m_geofence_ne;
+            /** The leash radius (distance to maintain from user) **/
+            int m_leash_radius;
             /** Indicates that there is a new user location for the worker thread **/
             bool m_wpt_available;
             /** Indicates whether or not we've finished running **/
