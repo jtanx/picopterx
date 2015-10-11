@@ -229,7 +229,7 @@ L.NumberedDetectionIcon = L.Icon.extend({
         var latlng = L.latLng(detection.lat, detection.lon);
         instance.addNumberedMarker(data.dctMarkers, latlng, false, true, L.NumberedDetectionIcon);
         var marker = data.dctMarkers[data.dctMarkers.length-1];
-        marker.bindPopup("<img src=\""+detection.image+"\">" + 
+        marker.bindPopup("<img src=\""+detection.image+"\" style='width:100%;'>" + 
           "<br>Time: " + detection.timestamp +
           "<br>At: " + detection.lat + ", " + detection.lon +
           "<br>Detection altitude: " +
@@ -425,7 +425,7 @@ L.NumberedDetectionIcon = L.Icon.extend({
           if (data.pattern === "manual") {
             markers = data.wptMarkers;
           } else if (data.pattern === "lawnmower") {
-            markers === data.rctMarkers;
+            markers = data.rctMarkers;
           } else if (data.pattern === "spiral") {
             markers = data.splMarkers;
           } else if (data.pattern === "exclusion") {
@@ -443,6 +443,8 @@ L.NumberedDetectionIcon = L.Icon.extend({
             }
             markers[index].setLatLng(ll).update();
             instance.updateWptPath();
+            instance.updateBounds();
+            instance.updateExclusions();
           }
         }
       }
