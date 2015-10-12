@@ -49,6 +49,14 @@ void EnvironmentalMapping::GotoLocation(FlightController *fc, Coord3D l, Coord3D
     fc->fb->SetRegionOfInterest(roi);
     
     do {
+        if (fc->lidar) {
+            float v = fc->lidar->GetLatest() / 100;
+            if (v > 0.1 && v < 2) {
+                //STAHP
+                fc->fb->Stop();
+                break;
+            }
+        }
         fc->gps->GetLatest(&d);
         wp_distance = CoordDistance(d.fix, l);
         wp_alt_delta = l.alt != 0 ? 
@@ -57,30 +65,8 @@ void EnvironmentalMapping::GotoLocation(FlightController *fc, Coord3D l, Coord3D
     } while ((wp_distance > 2 || wp_alt_delta > 0.2) && !fc->CheckForStop());
 }
 
-void EnvironmentalMapping::Run(FlightController *fc, void *opts) {
-    Log(LOG_INFO, "Environmental mapping initiated; awaiting authorisation...");
-    SetCurrentState(fc, STATE_AWAITING_AUTH);
-
-    if (!fc->WaitForAuth()) {
-        Log(LOG_INFO, "All stop acknowledged; quitting!");
-        return;
-    }
-
-    Log(LOG_INFO, "Authorisation acknowledged.");
-    if (!fc->gps->WaitForFix(200)) {
-        Log(LOG_WARNING, "No GPS fix; quitting.");
-        return;
-    }
-
-    //Takeoff if we're not in the air
-    if (!fc->fb->IsInAir()) {
-        UtilityModule module(UtilityModule::UTILITY_TAKEOFF);
-        module.Run(fc, reinterpret_cast<void*>(5));
-    }
-    
-    SetCurrentState(fc, STATE_ENV_MAPPING);
-    std::vector<ObjectInfo> objects;
-    
+/*
+void EnvironmentalMapping::SearchingMapping(FlightController *fc) {
     //Rotate to search
     while (!fc->CheckForStop()) {
         fc->fb->SetYaw(5, true);
@@ -107,42 +93,68 @@ void EnvironmentalMapping::Run(FlightController *fc, void *opts) {
             }
         }
     }
+}
+*/
+
+void EnvironmentalMapping::Run(FlightController *fc, void *opts) {
+    Log(LOG_INFO, "Environmental mapping initiated; awaiting authorisation...");
+    SetCurrentState(fc, STATE_AWAITING_AUTH);
+
+    if (!fc->WaitForAuth()) {
+        Log(LOG_INFO, "All stop acknowledged; quitting!");
+        return;
+    }
+
+    Log(LOG_INFO, "Authorisation acknowledged.");
+    if (!fc->gps->WaitForFix(200)) {
+        Log(LOG_WARNING, "No GPS fix; quitting.");
+        return;
+    }
+
+    //Takeoff if we're not in the air
+    if (!fc->fb->IsInAir()) {
+        UtilityModule module(UtilityModule::UTILITY_TAKEOFF);
+        module.Run(fc, reinterpret_cast<void*>(3));
+    }
+    
+    SetCurrentState(fc, STATE_ENV_MAPPING);
+    std::vector<ObjectInfo> objects;
     
     //while (!fc->CheckForStop()){
     //    o.bounds.area > 0.1*(o.image_width * o.image_height))
-        
     
-        //double start_radius = fc->lidar->GetLatest();
-        //double alt  = fc->gps->GetLatestRelAlt();
-        GPSData d;
-        fc->gps->GetLatest(&d);
-        Coord3D centre = {d.fix.lat, d.fix.lon, d.fix.alt - d.fix.groundalt};
-        centre = CoordAddOffset(centre, 10, fc->imu->GetLatestYaw()); //10m in front of copter
-        //centre = CoordAddOffset(centre, Vec3D{-10, 0, 0}); //5m To west of copter.
+    
+    //double start_radius = fc->lidar->GetLatest();
+    //double alt  = fc->gps->GetLatestRelAlt();
+    GPSData d;
+    fc->gps->GetLatest(&d);
+    Coord3D centre = {d.fix.lat, d.fix.lon, d.fix.alt - d.fix.groundalt};
+    centre = CoordAddOffset(centre, 7, fc->imu->GetLatestYaw()); //10m in front of copter
+    //centre = CoordAddOffset(centre, Vec3D{-7, 0, 0}); //5m To west of copter.
 
-        fc->fb->SetRegionOfInterest(centre);
-        for (int j=0; j<3; j+=1) {
-            for (int i=0; i<360 && !fc->CheckForStop(); i=i+5) {
-                Coord3D location = CoordAddOffset(centre, 10/*start_radius*/, i);
-                GotoLocation(fc, location, centre, false);
-                Log(LOG_DEBUG, "%d", i);
-                
-                fc->cam->GetDetectedObjects(&objects);
-                if (objects.size() > 0) {
-                    //Log(LOG_DEBUG, "%.7f, %.7f", centre.lat, centre.lon);
-                    std::string path = std::string(PICOPTER_HOME_LOCATION "/pics/mappingimages") +"_" +
-                    std::to_string(location.lat) + "_"+
-                    std::to_string(location.lon) + "_" +
-                    std::to_string(location.alt) +
-                    std::string(".jpg");
+    fc->fb->SetRegionOfInterest(centre);
+    for (int j=0; j<4; j+=1) {
+        for (int i=0; i<360 && !fc->CheckForStop(); i=i+5) {
+            Coord3D location = CoordAddOffset(centre, 7/*start_radius*/, i);
+            GotoLocation(fc, location, centre, false);
+            Log(LOG_DEBUG, "%d", i);
+            
+            fc->cam->GetDetectedObjects(&objects);
+            if (objects.size() > 0) {
+                //Log(LOG_DEBUG, "%.7f, %.7f", centre.lat, centre.lon);
+                std::string path = std::string(PICOPTER_HOME_LOCATION "/pics/mappingimages") +"_" +
+                std::to_string(location.lat) + "_"+
+                std::to_string(location.lon) + "_" +
+                std::to_string(location.alt) +
+                std::string(".jpg");
 
-                    fc->cam->TakePhoto(path);
-                }
-                fc->Sleep(100);
+                fc->cam->TakePhoto(path);
             }
-            centre.alt += j;
-            Log(LOG_DEBUG, "NEW LOOP");
+            fc->Sleep(100);
         }
+        centre.alt += j;
+        Log(LOG_DEBUG, "NEW LOOP");
+    }
     //}
 
     fc->fb->UnsetRegionOfInterest();
