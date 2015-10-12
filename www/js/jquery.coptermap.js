@@ -237,6 +237,19 @@ L.NumberedDetectionIcon = L.Icon.extend({
       }
       
       /**
+       * Add a detection track to the map.
+       * @param [in] track The track positon.
+       */
+      this.addDetectionTrack = function(track) {
+        if (!data.paths.copterTrack) {
+          instance.addPath('copterTrack', 'red');
+        }
+        
+        var latlng = L.latLng(track.lat, track.lon);
+        data.paths.copterTrack.addLatLng(latlng);
+      }
+      
+      /**
        * Add a new exclusion zone.
        */
       this.addExclusionZone = function() {
@@ -338,6 +351,7 @@ L.NumberedDetectionIcon = L.Icon.extend({
        */
       this.clearDetectionMarkers = function() {
         instance.clearMarkers(data.dctMarkers);
+        instance.removeMapLayer(data.map, data.paths, 'copterTrack');
       }
 
       /**
@@ -384,10 +398,12 @@ L.NumberedDetectionIcon = L.Icon.extend({
         if (!data.editMode || force) { //Don't send if we're editing...
           if (data.pattern === "manual") {
             callback(data.pattern, packageCoordinates(data.wptMarkers));
-          } else if (data.pattern == "lawnmower") {
+          } else if (data.pattern === "lawnmower") {
             callback(data.pattern, packageCoordinates(data.rctMarkers));
-          } else if (data.pattern == "spiral") {
+          } else if (data.pattern === "spiral") {
             callback(data.pattern, packageCoordinates(data.splMarkers));
+          } else if (data.pattern === "exclusion") {
+            callback(data.pattern, packageCoordinates(data.excMarkers[0]));
           }
         }
       };

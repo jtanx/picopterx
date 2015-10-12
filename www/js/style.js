@@ -84,6 +84,9 @@ function detectionShow() {
   $.each(data.detected, function(i,v) {
       $("#map-canvas").copterMap('addDetection', v);
   });
+  $.each(data.gpslog, function(i, v) {
+      $("#map-canvas").copterMap('addDetectionTrack', v);
+  });
   
   console.log(data);
 }
