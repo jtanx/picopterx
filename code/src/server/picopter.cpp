@@ -177,7 +177,7 @@ public:
         return true;
     }
 
-    bool beginUserMappingThread()
+    bool beginUserMappingThread(bool isauto, int radius)
     {
         if (m_fc->GetCurrentTaskId() != TASK_NONE) {
             // ALREADY RUNNING
@@ -187,8 +187,17 @@ public:
             return false; //Cannot run without camera and LIDAR
         } else {
             Log(LOG_DEBUG, "Running environmental mapping!");
+            if (isauto) {
+                radius = m_fc->lidar->GetLatest() / 100;
+            }
+            
+            if (radius < 3 || radius > 15) {
+                Log(LOG_WARNING, "Not mapping using radius of %d!", radius);
+                return false;
+            }
+            
             std::shared_ptr<FlightTask> mapper = 
-                std::make_shared<EnvironmentalMapping>(m_opts);
+                std::make_shared<EnvironmentalMapping>(m_opts, radius);
             if (!m_fc->RunTask(TASK_ENVIRONMENTAL_MAPPING, mapper, NULL)) {
                 return false;
             }
@@ -352,6 +361,14 @@ public:
             }
             return 0;
         }
+    }
+    
+    double requestLidar()
+    {
+        if (m_fc->lidar) {
+            return m_fc->lidar->GetLatest() / 100.0;
+        }
+        return -1;
     }
 
     void requestAttitude(attitude& _return)

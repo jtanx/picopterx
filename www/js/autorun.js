@@ -111,7 +111,8 @@ function statusWorker(hud) {
         "Pitch: "+ data.pitch.toFixed(1) + "&deg;" +
         " Roll: " + data.roll.toFixed(1) + "&deg;" +
         " Yaw: " + data.yaw.toFixed(1) + "&deg;" +
-        " Alt: " + data.alt.toFixed(1) + "m");
+        " Alt: " + data.alt.toFixed(1) + "m" + 
+        " Lidar: " + data.lidar.toFixed(1)  + "m");
     },
     error: function() {
       $("#status-bar")

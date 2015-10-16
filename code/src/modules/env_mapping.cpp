@@ -28,15 +28,15 @@
 using namespace picopter;
 using namespace picopter::navigation;
 
-EnvironmentalMapping::EnvironmentalMapping(Options *opts)
+EnvironmentalMapping::EnvironmentalMapping(Options *opts, int radius)
 : m_finished{false}
+, m_radius(radius)
 {
 
 }
 
-EnvironmentalMapping::EnvironmentalMapping() {
-
-}
+EnvironmentalMapping::EnvironmentalMapping(int radius)
+: EnvironmentalMapping(NULL, radius) {}
 
 EnvironmentalMapping::~EnvironmentalMapping() {
 
@@ -129,13 +129,15 @@ void EnvironmentalMapping::Run(FlightController *fc, void *opts) {
     GPSData d;
     fc->gps->GetLatest(&d);
     Coord3D centre = {d.fix.lat, d.fix.lon, d.fix.alt - d.fix.groundalt};
-    centre = CoordAddOffset(centre, 7, fc->imu->GetLatestYaw()); //10m in front of copter
+    centre = CoordAddOffset(centre, 7, 90-fc->imu->GetLatestYaw()); //10m in front of copter
     //centre = CoordAddOffset(centre, Vec3D{-7, 0, 0}); //5m To west of copter.
 
+    //Ah, magic offsets
+    float initial_yaw = 270-fc->imu->GetLatestYaw();
     fc->fb->SetRegionOfInterest(centre);
-    for (int j=0; j<4; j+=1) {
+    for (int j=1; j<4; j+=1) {
         for (int i=0; i<360 && !fc->CheckForStop(); i=i+5) {
-            Coord3D location = CoordAddOffset(centre, 7/*start_radius*/, i);
+            Coord3D location = CoordAddOffset(centre, m_radius /*7 start_radius*/, i+initial_yaw);
             GotoLocation(fc, location, centre, false);
             Log(LOG_DEBUG, "%d", i);
             

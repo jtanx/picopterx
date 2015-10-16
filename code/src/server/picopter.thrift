@@ -37,7 +37,7 @@ service webInterface {
 	bool		beginUserTrackingThread();
 	bool		beginObjectTrackingThread(1: i32 method);
 	bool		beginPicturesThread();
-	bool		beginUserMappingThread();
+	bool		beginUserMappingThread(1: bool isauto, 2: i32 radius);
 	bool		beginJoystickControl();
 
 
@@ -52,6 +52,7 @@ service webInterface {
 	string		requestStatus();
 	coordDeg	requestCoords();
 	double		requestBearing();
+	double		requestLidar();
 	attitude	requestAttitude();
 	string		requestSettings();
 	bool		updateSettings(1: string settings);

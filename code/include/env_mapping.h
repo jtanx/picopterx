@@ -13,8 +13,8 @@
 namespace picopter {
     class EnvironmentalMapping : public FlightTask {
         public:
-            EnvironmentalMapping(Options *opts);
-            EnvironmentalMapping();
+            EnvironmentalMapping(Options *opts, int radius=7);
+            EnvironmentalMapping(int radius=7);
             virtual ~EnvironmentalMapping() override;
             
             void Run(FlightController *fc, void *opts) override;
@@ -22,6 +22,8 @@ namespace picopter {
         private:
             /** Flag to indicate if we're finished **/
             std::atomic<bool> m_finished;
+            /** The rotation radius **/
+            int m_radius;
 
 
             void GotoLocation(FlightController *fc, navigation::Coord3D l, navigation::Coord3D roi, bool relative_alt);

@@ -123,8 +123,12 @@ function beginTakingPictures() {
 /**
  *  Begin the Environmental Mapping
  */
-function beginUserMapping() {
-    ajaxSend('beginUserMapping');
+function beginUserMapping(radius) {
+  if (typeof radius !== "undefined" && radius > 2 && radius < 20) {
+    ajaxSend('beginUserMapping', radius);
+  } else {
+    ajaxSend('beginUserMapping', -1);
+  }
 }
 
 /**

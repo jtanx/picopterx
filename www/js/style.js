@@ -303,4 +303,13 @@ $(document).ready(function () {
       takeOff(alt);
     }
   });
+  
+  $("#mapping-modal-manual").on('click', function(e) {
+    var radius = parseInt($("#mapping-alt").val(), 10);
+    beginUserMapping(radius);
+  });
+  
+  $("#mapping-modal-auto").on('click', function(e) {
+    beginUserMapping();
+  });
 });

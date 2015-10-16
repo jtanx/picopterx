@@ -32,7 +32,7 @@
         $ans = array('lat' => $coords->lat, 'lon' => $coords->lon, 
                'alt' => $coords->alt, 'bearing' => $client->requestBearing(),
                'roll' => $att->roll, 'pitch' => $att->pitch, 'yaw' => $att->yaw,
-               'status' => $client->requestStatus());
+               'status' => $client->requestStatus(), 'lidar' => $client->requestLidar());
 
         echo json_encode($ans);
         break;
@@ -185,9 +185,17 @@
         break;
         
       case "beginUserMapping":
-          $ans = $client->beginUserMappingThread();
-          print "beginUserMappingThread " . $b[$ans] . "\n";
-          break;
+        if (isset($source["data"])) {
+          $radius = intval($source["data"]);
+          if ($radius <= 0) {
+            $ans = $client->beginUserMappingThread(true, -1);
+            print "beginUserMapping " . $b[$ans] . "\n";
+          } else {
+            $ans = $client->beginUserMappingThread(false, $radius);
+            print "beginUserMapping " . $b[$ans] . "\n";
+          }
+        }
+        break;
 
       case "beginObjectTracking":
         if (isset($source["data"])) {
