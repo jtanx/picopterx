@@ -19,40 +19,59 @@ using namespace picopter::navigation;
 /** 
  * Constructor. Constructs with default settings.
  */
-GridSpace::GridSpace(FlightController *fc)
-: grid (64,vector<vector<voxel> >(64,vector <voxel>(64)))
+GridSpace::GridSpace( FlightController *fc )
+: grid (128,vector<vector<voxel> >(128,vector <voxel>(128)))
 {
-    double copterRadius = 3.0; //metres
-    double copterHeight = 3.0; //metres
+    double copterDiameter = 1.5; //metres
+    double copterHeight   = 3.0; //metres
     
-    fc->fb->GetHomePosition(&launchPoint);
+    //get starting GPS position
+    //fc->fb->GetHomePosition(&launchPoint);
+    GPSData d;
+    fc->gps->WaitForFix();
+    fc->gps->GetLatest(&d);
+    assert(!std::isnan(d.fix.lat) && !std::isnan(d.fix.lon) && !std::isnan(d.fix.alt));
+    launchPoint = Coord3D{d.fix.lat, d.fix.lon, d.fix.alt};
     
-    double earthRadius = 6378137.00; //metres
-    double R2 = earthRadius * cos( degToRad(launchPoint.lat) );
-    
-    voxelLength = 2*asin(copterRadius / (2*earthRadius) ); //the north-south distance increment, equal to the fuzzyCopter diameter, expressed in geographic degrees.
-    voxelWidth = 2*asin(copterRadius / (2*R2) ); //the East-West distance increment, equal to the fuzzyCopter diameter, expressed in geographic degrees.
-    voxelHeight = copterHeight;
+    launchIndex = index3D{(double)grid.size()/2, (double)grid[0].size()/2, (double)grid[0][0].size()/2};
 
-voxelWidth *= 100;
-voxelLength *= 100;    
+
+    Coord3D DiamNorth =  navigation::CoordAddOffset( launchPoint, navigation::Point3D{0, copterDiameter, 0} );
+	voxelLength = abs( DiamNorth.lat - launchPoint.lat);
+	
+	Coord3D DiamEast =  navigation::CoordAddOffset( launchPoint, navigation::Point3D{copterDiameter, 0, 0} );
+	voxelWidth = abs( DiamEast.lon - launchPoint.lon);
+	
+	//Coord3D DiamDown =  navigation::CoordAddOffset( launchPoint, navigation::Point3D{0, 0, copterHeight} );
+	//voxelHeight = abs( DiamDown.alt - launchPoint.alt);
+    voxelHeight = copterHeight;
+    
+    //voxelWidth *= 0.001;
+    //voxelWidth *= 0.001;
+    
     
 }
+
 
 
 
 GridSpace::index3D GridSpace::findEndPoint(FlightController *fc){
 
     if (fc->lidar){        
-        
+       
         double lidarm = fc->lidar->GetLatest() / 100.0;
         Vec3d ray(0, 0, lidarm);                                                //Vector representing the lidar ray
         
         Matx33d MLidar = rotationMatrix(-6,-3,0);                               //the angle between the camera and the lidar (deg)
-        
+
+ //only works if GetGimbalPose() works
+ /*        
         EulerAngle gimbal;
         fc->fb->GetGimbalPose(&gimbal);
         Matx33d Mbody = rotationMatrix(gimbal.roll, gimbal.pitch, gimbal.yaw);  //find the transformation matrix from camera frame to the body.
+*/
+        //assume Gimbal isn't working: fix to point straight ahead.
+        Matx33d Mbody = rotationMatrix(0.0, 90, 0.0);
         
         IMUData imu;
         fc->imu->GetLatest(&imu);
@@ -65,10 +84,14 @@ GridSpace::index3D GridSpace::findEndPoint(FlightController *fc){
         fc->gps->GetLatest(&d);
           
         return worldToGrid( navigation::CoordAddOffset( navigation::Coord3D{d.fix.lat, d.fix.lon, d.fix.alt}, navigation::Point3D{ray(0), ray(1), ray(2)} ) );
+
+        
+        
     }
     
     index3D voxelLoc{ 0,0,0};
     return voxelLoc;
+    
 }
 
 
@@ -77,17 +100,17 @@ void GridSpace::raycast(FlightController *fc){
     std::lock_guard<std::mutex> lock(mutex);
     if ( !(fc->lidar) ) cout << "no lidar. \n";
     
+    if (!fc->gps->HasFix()) {
+		return;
+	}
     GPSData d;
     fc->gps->GetLatest(&d);
+    assert(!std::isnan(d.fix.lat) && !std::isnan(d.fix.lon) && !std::isnan(d.fix.alt));
     index3D startPoint = worldToGrid(Coord3D{d.fix.lat, d.fix.lon, d.fix.alt});
     index3D endPoint   = findEndPoint(fc);
-    /*
-    index3D startPoint = worldToGrid(getGPS());
-    index3D endPoint = startPoint; 
-    endPoint.x += 1.0;
-    endPoint.y += 1.0;
-    */
-    
+/*
+ std::cout << "(" << startPoint.x << ", " << startPoint.y << ", " << startPoint.z << "), " << "(" << endPoint.x << ", " << endPoint.y << ", " << endPoint.z << ")\n";
+ */   
     double dx = endPoint.x-startPoint.x;
     double dy = endPoint.y-startPoint.y;
     double dz = endPoint.z-startPoint.z;
@@ -191,9 +214,9 @@ Coord3D GridSpace::getGPS(){
 
 GridSpace::index3D GridSpace::worldToGrid(Coord3D GPSloc){
     index3D loc;
-    loc.x = (GPSloc.lon - launchPoint.lon)/voxelLength + 31.00;
-    loc.y = (GPSloc.lat - launchPoint.lat)/voxelWidth  + 31.00;
-    loc.z = (GPSloc.alt - launchPoint.alt)/voxelHeight + 31.00;
+    loc.x = (GPSloc.lon - launchPoint.lon)/voxelLength + launchIndex.x;
+    loc.y = (GPSloc.lat - launchPoint.lat)/voxelWidth  + launchIndex.y;
+    loc.z = (GPSloc.alt - launchPoint.alt)/voxelHeight + launchIndex.z;
     
     return loc;
 }
@@ -201,9 +224,9 @@ GridSpace::index3D GridSpace::worldToGrid(Coord3D GPSloc){
 Coord3D GridSpace::gridToWorld(index3D loc){
     
     Coord3D GPSloc;
-    GPSloc.lon = voxelLength*(loc.x-31.00) + launchPoint.lon;
-    GPSloc.lat = voxelWidth*(loc.y-31.00) + launchPoint.lat;
-    GPSloc.alt = voxelHeight*(loc.z-31.00) + launchPoint.alt;
+    GPSloc.lon = (loc.x-launchIndex.x)*voxelLength + launchPoint.lon;
+    GPSloc.lat = (loc.y-launchIndex.y)*voxelWidth  + launchPoint.lat;
+    GPSloc.alt = (loc.z-launchIndex.z)*voxelHeight + launchPoint.alt;
     
     return GPSloc;
 }

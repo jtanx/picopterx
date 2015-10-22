@@ -40,6 +40,7 @@ namespace picopter {
 	        std::vector<int> polygonSides;
 	        
 	        void addNode(double lat, double lon);
+            void addFencePost(double lat, double lon);
 	        void deleteNode(int index);
 	        void deleteFencePost(int index);    
 	        void addCollisionEdge(int n1, int n2);

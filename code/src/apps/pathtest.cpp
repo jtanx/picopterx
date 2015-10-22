@@ -11,7 +11,10 @@ using namespace picopter::navigation;
 using namespace std;
 
 int main(int argc, char *argv[]) {
-	PathPlan pathPlan;
+    LogInit();
+    FlightController fc;
+    GridSpace world(&fc);
+	PathPlan pathPlan(&world);
     
     
     Coord3D coords[14];

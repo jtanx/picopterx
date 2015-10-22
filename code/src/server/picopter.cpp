@@ -62,6 +62,7 @@ public:
     webInterfaceHandler(Options *opts, std::unique_ptr<picopter::FlightController> &fc)
     : m_opts(opts)
     , m_fc(fc)
+    , m_grid(fc.get())
     , m_camera_stop{false}
     , m_stop{false}
     , m_camera_sequence(0)
@@ -97,7 +98,7 @@ public:
     }
     
     bool beginReturnToLaunch()
-    {fc
+    {
         m_fc->Stop();
         return m_fc->fb->DoReturnToLaunch();
     }
@@ -304,7 +305,7 @@ public:
         GPSData d;
         m_fc->gps->GetLatest(&d);
         _return.lat = std::isnan(d.fix.lat) ? -1 : d.fix.lat;
-        _return.lon = stdfc::isnan(d.fix.lon) ? -1 : d.fix.lon;
+        _return.lon = std::isnan(d.fix.lon) ? -1 : d.fix.lon;
         _return.alt = std::isnan(d.fix.alt) || std::isnan(d.fix.groundalt) ?
             -1 : d.fix.alt - d.fix.groundalt;
         //printf("requestCoords %f,%f\n", _return.lat, _return.lon);
@@ -365,7 +366,7 @@ public:
     {
         std::shared_ptr<FlightTask> trk(m_user_tracker);
         if (trk) {
-            if (trk->Finfcished()) {
+            if (trk->Finished()) {
                 //Task is finished, remove our reference to it
                 m_user_tracker.reset();
             } else {
@@ -437,8 +438,10 @@ public:
 private:
     void gridSpaceLoop() {
         while (!m_stop) {
-            m_grid.raycast(m_fc.get());
-            m_grid.writeImage();
+            if (m_fc->gps->HasFix()) {
+                m_grid.raycast(m_fc.get());
+                m_grid.writeImage();
+            }
             sleep_for(milliseconds(1000));
         }
     }

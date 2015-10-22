@@ -19,6 +19,7 @@ PathPlan::PathPlan(GridSpace *g){
     errorRadius = 0.00003;
     
     //set up edge matrices
+    /*
     edgeMatrixSize =64;
     collisionBoundary.resize(edgeMatrixSize);
     paths.resize(edgeMatrixSize);
@@ -32,7 +33,7 @@ PathPlan::PathPlan(GridSpace *g){
             paths[i][j] = -1.0;
         }
     }
-    
+    */
     //point to gridspace world, create polygons around obstacles
     gridSpace = g;
     readGridSpace();
@@ -43,21 +44,16 @@ PathPlan::PathPlan(GridSpace *g){
  * @param [in] c a std::deque of coordinates describing the points of the polygon.
  */
 void PathPlan::addPolygon(std::deque<Coord3D> c){
-	polygonSides.push_back(c.size());
-std::cout << "Creating collision zone:   ";   
+	polygonSides.push_back(c.size());  
     int startpoint = numNodes;
     
     for (size_t i=0; i<c.size(); i++){
         addNode(c[i].lat, c[i].lon);
-std::cout << " (" << c[i].lat << ", " << c[i].lon << ", " << c[i].alt << "), ";     
         //join node to previous node with edge
         if(numNodes-1 > startpoint) addCollisionEdge(numNodes-2, numNodes-1);
     }
     //close the polygon by creating an edge 'twixt first and last nodes
     addCollisionEdge(numNodes-1, startpoint);
- 
-std::cout << "\n";
-    
 }
 
 /**
@@ -67,19 +63,18 @@ std::cout << "\n";
  */
 std::deque<Waypoints::Waypoint> PathPlan::generateFlightPlan(std::deque<Waypoints::Waypoint> waypoints){
     std::deque<Waypoints::Waypoint> flightPlan;
-    generateGraph();
-   
+    generateGraph();  
     if(fencePosts.size() == 0) return waypoints;
-    
+     
     while(waypoints.size() > 1){
         std::deque<int> path = detour(waypoints[0].pt, waypoints[1].pt);
-        
+   
         for(size_t i =0; i < path.size()-1; i++){
             Waypoints::Waypoint waypoint = waypoints[0]; 
             waypoint.pt.lon = fencePosts[path[i]].x;
             waypoint.pt.lat = fencePosts[path[i]].y;
             flightPlan.push_back(waypoint);
-        }
+       }
         
         waypoints.pop_front();
     }
@@ -100,9 +95,35 @@ void PathPlan::addNode(double lat, double lon){
     node n;
     n.y = lat;
     n.x = lon;
-    nodes.push_back(n);  
+    nodes.push_back(n); 
+    
+    std::vector <double> edges;
+    edges.resize(nodes.size());
+    for(size_t i=0; i<nodes.size(); i++) edges[i] = -1;
+    collisionBoundary.push_back(edges); 
+    for(size_t i=0; i<nodes.size()-1; i++) collisionBoundary[i].push_back( -1.0);
     
     numNodes++; 
+}
+
+/**
+ * Adds a node to the traversable graph.
+ * @param [in] lat the latitude of the node's location.
+ * @param [in] lon the longitude of the node's location.
+ */
+void PathPlan::addFencePost(double lon, double lat){
+    
+    node n;
+    n.y = lat;
+    n.x = lon;
+    fencePosts.push_back(n); 
+    
+    std::vector <double> edges;
+    edges.resize(fencePosts.size());
+    for(size_t i=0; i<fencePosts.size(); i++) edges[i] = -1;
+    paths.push_back(edges); 
+    for(size_t i=0; i<fencePosts.size()-1; i++) paths[i].push_back( -1.0); 
+    
 }
 
 /**
@@ -116,7 +137,6 @@ void PathPlan::deleteNode(int index){
         collisionBoundary[i].erase (collisionBoundary[i].begin()+index);
     }
     //remove edge matrices' column
-    paths.erase (paths.begin()+index);
     collisionBoundary.erase (collisionBoundary.begin()+index);
     
     numNodes--;
@@ -267,9 +287,9 @@ std::deque<int> PathPlan::detour(Coord3D A, Coord3D B ){
 	node start; start.x = A.lon; start.y = A.lat;
 	node end; end.x = B.lon; end.y = B.lat;
 	int startIndex = fencePosts.size();
-	fencePosts.push_back(start);
+	addFencePost(start.x, start.y);//fencePosts.push_back(start); 
 	int endIndex = fencePosts.size();
-	fencePosts.push_back(end);
+	addFencePost(end.x, end.y);//fencePosts.push_back(end);
 	
 	//add new start and end nodes to graph, generate traversable paths to nodes
 	for(size_t i =0; i<fencePosts.size(); i++){
@@ -380,8 +400,8 @@ void PathPlan::generateGraph(){
         n1.x = B.x + normalVectorX; n1.y = B.y + normalVectorY;
         n2.x = B.x - normalVectorX; n2.y = B.y - normalVectorY;
 
-        if (!checkInsidePolygon(n1)) fencePosts.push_back(n1);
-        if (!checkInsidePolygon(n2)) fencePosts.push_back(n2);
+        if (!checkInsidePolygon(n1)) addFencePost(n1.x, n1.y);//fencePosts.push_back(n1);
+        if (!checkInsidePolygon(n2)) addFencePost(n2.x, n2.y);//fencePosts.push_back(n2);
     }
     
     //generate traversable edges
@@ -422,14 +442,14 @@ void PathPlan::readGridSpace(){
     
     for(size_t i = 0; i < gridSpace->grid.size(); i++){
         for(size_t j = 0; j < gridSpace->grid[0].size(); j++){
-            for(size_t height = 0; j < gridSpace->grid[1].size()/2; height++){
+            for(size_t height = 0; height < gridSpace->grid[1].size()/2; height++){
                 if (gridSpace->grid[i][j][height].isFull){
                 
                     std::deque<Coord3D> collisionZone; collisionZone.resize(4);
-                    collisionZone[0] = gridSpace->gridToWorld( GridSpace::index3D{ i, j, height     } );
-                    collisionZone[1] = gridSpace->gridToWorld( GridSpace::index3D{ i+1, j, height   } );         
-                    collisionZone[2] = gridSpace->gridToWorld( GridSpace::index3D{ i+1, j+1, height } );         
-                    collisionZone[3] = gridSpace->gridToWorld( GridSpace::index3D{ i, j+1, height   } ); 
+                    collisionZone[0] = gridSpace->gridToWorld( GridSpace::index3D{ (double)i, 	(double)j, 		(double)height } );
+                    collisionZone[1] = gridSpace->gridToWorld( GridSpace::index3D{ (double)i+1,	(double)j, 		(double)height } );         
+                    collisionZone[2] = gridSpace->gridToWorld( GridSpace::index3D{ (double)i+1, (double)j+1, 	(double)height } );         
+                    collisionZone[3] = gridSpace->gridToWorld( GridSpace::index3D{ (double)i, 	(double)j+1, 	(double)height } ); 
 
                     addPolygon(collisionZone); 
                 }
@@ -506,9 +526,10 @@ void PathPlan::writeGraphSVGJamesOval(const char *fileName, std::deque<Waypoints
  * Used for testing purposes. The picopter should never need to call this function.
  */
 void PathPlan::printAdjacencyMatrix(){
+	std::cout.precision(4);
     for(size_t i=0; i< nodes.size(); i++){        
         for(size_t j=0; j< nodes.size(); j++){
-            std::cout << collisionBoundary[i][j] << " ";
+            std::cout << std::fixed << collisionBoundary[i][j] << " ";
         }
         std::cout << "\n";
     }

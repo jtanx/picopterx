@@ -38,6 +38,7 @@ namespace picopter {
             double voxelWidth;
             double voxelHeight;           
             navigation::Coord3D launchPoint;
+            index3D launchIndex;
             std::mutex mutex;
             
             index3D findEndPoint(FlightController *fc);
