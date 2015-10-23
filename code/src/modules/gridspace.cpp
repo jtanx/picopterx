@@ -45,9 +45,7 @@ GridSpace::GridSpace( FlightController *fc )
 	//Coord3D DiamDown =  navigation::CoordAddOffset( launchPoint, navigation::Point3D{0, 0, copterHeight} );
 	//voxelHeight = abs( DiamDown.alt - launchPoint.alt);
     voxelHeight = copterHeight;
-    
-    //voxelWidth *= 0.001;
-    //voxelWidth *= 0.001;
+
     
     
 }
@@ -57,9 +55,11 @@ GridSpace::GridSpace( FlightController *fc )
 
 GridSpace::index3D GridSpace::findEndPoint(FlightController *fc){
 
+    double lidar_range = 35.0;//metres
     if (fc->lidar){        
        
         double lidarm = fc->lidar->GetLatest() / 100.0;
+        if (lidarm < 0.2) lidarm = lidar_range;                                  // LIDAR = 0: no obstacles
         Vec3d ray(0, 0, lidarm);                                                //Vector representing the lidar ray
         
         Matx33d MLidar = rotationMatrix(-6,-3,0);                               //the angle between the camera and the lidar (deg)
@@ -71,7 +71,7 @@ GridSpace::index3D GridSpace::findEndPoint(FlightController *fc){
         Matx33d Mbody = rotationMatrix(gimbal.roll, gimbal.pitch, gimbal.yaw);  //find the transformation matrix from camera frame to the body.
 */
         //assume Gimbal isn't working: fix to point straight ahead.
-        Matx33d Mbody = rotationMatrix(0.0, 90, 0.0);
+        Matx33d Mbody = rotationMatrix(-90.0, 00.0, 180.0);
         
         IMUData imu;
         fc->imu->GetLatest(&imu);
@@ -108,9 +108,9 @@ void GridSpace::raycast(FlightController *fc){
     assert(!std::isnan(d.fix.lat) && !std::isnan(d.fix.lon) && !std::isnan(d.fix.alt));
     index3D startPoint = worldToGrid(Coord3D{d.fix.lat, d.fix.lon, d.fix.alt});
     index3D endPoint   = findEndPoint(fc);
-/*
+
  std::cout << "(" << startPoint.x << ", " << startPoint.y << ", " << startPoint.z << "), " << "(" << endPoint.x << ", " << endPoint.y << ", " << endPoint.z << ")\n";
- */   
+    
     double dx = endPoint.x-startPoint.x;
     double dy = endPoint.y-startPoint.y;
     double dz = endPoint.z-startPoint.z;
@@ -180,25 +180,10 @@ void GridSpace::raycast(FlightController *fc){
     
     //fill voxel with observation
     double lidarm = fc->lidar->GetLatest() / 100.0;
-    if(lidarm > 0 && grid[window[0]][window[1]][window[2]].isFull==false){
-    
+    if(lidarm > 0.15){ //if the lidar has hit something
 
-         
          grid[window[0]][window[1]][window[2]].isFull=true;
          
-/*         
-         deque<Coord3D> collisionZone; collisionZone.resize(4);
-         collisionZone[0] = gridToWorld( index3D{ (double)window[0], (double)window[1], (double)window[2] } );
-
-         collisionZone[1] = gridToWorld( index3D{ (double)(window[0]+1), (double)window[1], (double)window[2]} );         
-
-         collisionZone[2] = gridToWorld( index3D{ (double)(window[0]+1), (double)(window[1]+1), (double)window[2]} );         
-
-         collisionZone[3] = gridToWorld( index3D{ (double)window[0], (double)(window[1]+1), (double)window[2]} );         
-
-         
-         pathPlan->addPolygon(collisionZone);     
-*/ 
     }
   
 }
@@ -246,20 +231,32 @@ void GridSpace::printToConsole(int rangeMin, int rangeMax, int zDepth){
 
 
 void GridSpace::writeImage(){
-    int bravado = 8;
-    Mat m(64, 64, CV_8UC4);
-    for(int i=0; i<64; i++){
-        for(int j=0; j<64; j++){
+    int bravado = 16;
+    Mat m(128, 128, CV_8UC4);
+    for(int i=0; i<128; i++){
+        for(int j=0; j<128; j++){
             int sum = 0;
-            for(int k=0; k<64; k++) sum += grid[i][j][k].observations;
-            if(sum/bravado >= 1) sum = bravado;
+            bool isFull = false;
+            for(int k=0; k<128; k++){
+                sum += grid[i][j][k].observations;
+                if(grid[i][j][k].isFull == true) isFull = true;
+            }
+            if(sum > bravado) sum = bravado;
             sum = UCHAR_MAX * sum / bravado;
             
-            Vec4b& rgba = m.at<Vec4b>(i, j);
-            rgba[0] = sum;
-            rgba[1] = sum;
-            rgba[2] = sum;
-            rgba[3] = UCHAR_MAX; 
+            Vec4b& bgra = m.at<Vec4b>(127-j, i);
+            if(isFull){
+                bgra[0] = 0;
+                bgra[1] = 0;
+                bgra[2] = sum;
+                bgra[3] = UCHAR_MAX;
+            }else{   
+                
+                bgra[0] = sum;
+                bgra[1] = sum;
+                bgra[2] = sum;
+                bgra[3] = UCHAR_MAX; 
+            }
          }
     } 
     
