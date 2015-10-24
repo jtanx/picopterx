@@ -99,7 +99,7 @@ void DataLog::Write(const char *fmt, ...) {
     
     struct tm ts = GetTimestamp();
     fprintf(m_fp, "%02d/%02d/%04d %02d:%02d:%02d%s\n", 
-            ts.tm_mday, ts.tm_mon, ts.tm_year+1900,
+            ts.tm_mday, ts.tm_mon+1, ts.tm_year+1900,
             ts.tm_hour, ts.tm_min, ts.tm_sec, buf);
     fflush(m_fp);
 }
