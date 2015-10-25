@@ -9,6 +9,7 @@ This is the web interface. It is written in a mix of HTML, PHP, JavaScript and C
 	 sudo lighty-enable-mod fastcgi
 	 sudo lighty-enable-mod fastcgi-php
 	 ~~~~~
+
 2. You must set the web root to be this folder. I've found it easiest to just symlink it to this so that changes are reflected immediately plus you get version control:
 
      ~~~~~
