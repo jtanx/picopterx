@@ -8,15 +8,17 @@ written in C++, conforming to the C++11 standard.
 * cmake >= 2.8 (version 3 is recommended)
 * make
 * gcc/g++ >= 4.7 (4.8 or later is recommended)
-* gpsd, libgps-dev (hexacopter only, or otherwise *nix with a GPS/`gpsfake`)
-* wiringPi
-* ServoBlaster - experimental version
+* wiringPi (if compiling on the RPi)
 * boost - only for `shared_ptr` and only for the server (src/server/picopter.cpp) due to Thrift dependency
+* OpenCV - version 2.4 or higher (anything lower is not supported!)
+* Thrift >= 0.9 (0.9.2 is used) - need the Thrift compiler, as well as the Thrift C++ and PHP backends.
 
 ### Optionals
 * Doxygen (for generating source code documentation)
 * LaTeX (for generating source code documentation)
+* `libgps-dev` (GPSD) - if you want to use the XSens GPS via GPSD (e.g. never because it's a POS).
 * `python-gps` (for `gpsfake`), `gpsd-clients` (for `cgps`)
+* [ArduCopter](https://github.com/diydrones/ardupilot) compiled for SITL (if you want to run it on your own computer)
 
 ## Installation
 Ensure you have git installed:
@@ -30,7 +32,7 @@ Now install the compiler:
 sudo apt-get install make cmake gcc g++
 ~~~~~
 
-If you are building on the hexacopter (RPi),
+If you want the GPSD GPS backend (unnecessary now with Pixhawk/MAVLink), install these too:
 
     sudo apt-get install gpsd libgps-dev python-gps gpsd-clients
 	
@@ -56,7 +58,7 @@ cd picopterx/code
 make
 ~~~~~
 
-To force emulation of RPi specific components, specify `-DFORCE_EMULATION=ON`.
+To force emulation of RPi specific components, specify `-DFORCE_EMULATION=ON`. To not build the server component, which depends on Boost and Thrift, specify `-DDISABLE_SERVER=YES`. To build the test applications in the `apps` folder, specify `-DBUILD_OPTIONALS=YES`. There may also be other options - look in the top-level CMakeLists.txt to see what else there is.
 
 To make the source code documentation (CMake version 3 or greater only):
 
