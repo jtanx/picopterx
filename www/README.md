@@ -31,11 +31,13 @@ This is the web interface. It is written in a mix of HTML, PHP, JavaScript and C
     ~~~~~
 	chmod 777 ~/logs 
 	~~~~~
+
 6. Furthermore, you need to install the python dependencies:
     ~~~~~
 	sudo apt-get install python python-pip
 	sudo pip install gpxpy pytz numpy
 	~~~~~
+
 7. At this stage, the web interface *should* be working. If it's not, you can check the PHP error log:
     ~~~~~
 	sudo cat /var/log/lighttpd/error.log
