@@ -21,6 +21,12 @@ written in C++, conforming to the C++11 standard.
 * [ArduCopter](https://github.com/diydrones/ardupilot) compiled for SITL (if you want to run it on your own computer)
 
 ## Installation
+#### Quickstart
+
+     sudo apt-get install git cmake make gcc g++ libboost-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libevent-dev automake libtool flex bison pkg-config g++ libssl-dev ant php5-dev php5-cli lighttpd php5-cgi libopencv-dev gdb libgoogle-perftools-dev google-perftools valgrind python-pip libpython-dev python-numpy gawk realpath
+
+#### Extendend guide
+
 Ensure you have git installed:
 
     sudo apt-get install git
