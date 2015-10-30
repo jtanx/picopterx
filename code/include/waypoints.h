@@ -12,6 +12,9 @@
 #include "PID.h"
 
 namespace picopter {
+    /* Forward declaration of GridSpace class */
+    class GridSpace;
+    
     /**
      * The method to be used to navigate to the waypoints
      */
@@ -38,8 +41,8 @@ namespace picopter {
                 bool has_roi;
             } Waypoint;
             
-            Waypoints(std::deque<Waypoint> pts, std::deque<std::deque<navigation::Coord3D>> zones, WaypointMethod method);
-            Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::deque<navigation::Coord3D>> zones, WaypointMethod method);
+            Waypoints(std::deque<Waypoint> pts, std::deque<std::deque<navigation::Coord3D>> zones, GridSpace *gridspace, WaypointMethod method);
+            Waypoints(Options *opts, std::deque<Waypoint> pts, std::deque<std::deque<navigation::Coord3D>> zones, GridSpace *gridspace, WaypointMethod method);
             Waypoints(std::deque<Waypoint> pts, WaypointMethod method);
             Waypoints(Options *opts, std::deque<Waypoint> pts, WaypointMethod method);
             virtual ~Waypoints() override;

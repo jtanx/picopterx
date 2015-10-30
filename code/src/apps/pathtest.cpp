@@ -5,11 +5,16 @@
 
 #include "picopter.h"
 #include "pathplan.h"
+#include "gridspace.h"
 using namespace picopter;
 using namespace picopter::navigation;
+using namespace std;
 
 int main(int argc, char *argv[]) {
-	PathPlan pathPlan;
+    LogInit();
+    FlightController fc;
+    GridSpace world(&fc);
+	PathPlan pathPlan(&world);
     
     
     Coord3D coords[14];
@@ -36,7 +41,7 @@ int main(int argc, char *argv[]) {
         coords[16].lat=-31.98022097622701;   coords[16].lon=115.818327069282532;
         coords[17].lat=-31.9799183824092031; coords[17].lon=115.818088352680206;
         
-    std::deque<Coord3D> czone[4];
+    deque<Coord3D> czone[4];
     for(int i=0;i<5;i++){
         czone[0].push_front(coords[i]);
     }
@@ -58,7 +63,7 @@ int main(int argc, char *argv[]) {
     pathPlan.addPolygon(czone[2]);
     pathPlan.addPolygon(czone[3]);*/
     
-    std::deque<Waypoints::Waypoint> waypoints;
+    deque<Waypoints::Waypoint> waypoints;
     
     Waypoints::Waypoint waypoint2;
     waypoint2.roi = coords[13];

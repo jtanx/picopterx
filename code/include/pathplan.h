@@ -9,6 +9,7 @@
 /* For the Options class */
 #include "opts.h"
 #include "waypoints.h"
+#include "gridspace.h"
 
 namespace picopter {
     class PathPlan{
@@ -19,12 +20,15 @@ namespace picopter {
 	            double y;
             } node;
             
-	        PathPlan();
+	        PathPlan(GridSpace *g);
 	        void addPolygon(std::deque<navigation::Coord3D> c);
 	        std::deque<Waypoints::Waypoint> generateFlightPlan(std::deque<Waypoints::Waypoint> waypoints);
 	        void writeGraphSVGJamesOval(const char *fileName, std::deque<Waypoints::Waypoint> flightPlan);
 	        void printAdjacencyMatrix();
         private:
+        
+            GridSpace *gridSpace;
+            
             double errorRadius;
         
             int numNodes;
@@ -36,6 +40,7 @@ namespace picopter {
 	        std::vector<int> polygonSides;
 	        
 	        void addNode(double lat, double lon);
+            void addFencePost(double lat, double lon);
 	        void deleteNode(int index);
 	        void deleteFencePost(int index);    
 	        void addCollisionEdge(int n1, int n2);
@@ -46,6 +51,7 @@ namespace picopter {
 		    bool checkInsidePolygon(node n);
 		    std::deque<int> detour(navigation::Coord3D A, navigation::Coord3D B);
 		    void generateGraph();
+		    void readGridSpace();
     };
 }
 

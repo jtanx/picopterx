@@ -23,6 +23,7 @@
 #include "user_tracker.h"
 #include "env_mapping.h"
 #include "utility.h"
-
+#include "pathplan.h"
+#include "gridspace.h"
 
 #endif // _PICOPTERX_PICOPTER_H
